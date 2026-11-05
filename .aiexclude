@@ -1,0 +1,6 @@
+# Exclude secrets from agent context as per Agent Usage Rules
+local.properties
+*.jks
+*.keystore
+secrets.properties
+google-services.json
