@@ -1,6 +1,14 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)
+}
+
+// secrets.properties
+val secrets = Properties().apply {
+    val file = rootProject.file("secrets.properties")
+    if (file.exists()) load(file.inputStream())
 }
 
 android {
@@ -17,6 +25,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // kakao keys
+        buildConfigField("String", "KAKAO_REST_API_KEY", "\"${secrets.getProperty("KAKAO_REST_API_KEY", "")}\"")
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"${secrets.getProperty("KAKAO_NATIVE_APP_KEY", "")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
     }
 
     buildTypes {
