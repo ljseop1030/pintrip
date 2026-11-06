@@ -1,4 +1,7 @@
 {
-  "_comment": "TODO: Discuss with the team which MCP servers to use and update this structure after the meeting. Keep all tokens REDACTED.",
-  "mcpServers": {}
+  "mcpServers": {
+    "figma": {
+      "httpUrl": "https://mcp.figma.com/mcp"
+    }
+  }
 }
