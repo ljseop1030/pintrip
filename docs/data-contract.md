@@ -1,7 +1,6 @@
 # PinTrip Data Contract
 
 Single source of truth for Firestore schema, in-memory models, and the Gemini/Kakao formats.
-Mock data: `docs/mock-data.json`
 
 ---
 
@@ -272,13 +271,3 @@ Re-fetch after saving: search with room coordinates first; if the ID isn't found
 
 - `status`: how to show it on screen now. Memory only.
 - `matchType`: how a saved place was confirmed. Stored in Firestore.
-
----
-
-## 10. Mock data (`docs/mock-data.json`)
-
-- `firestore`: exact Firestore shape (Timestamps as ISO strings).
-- `placeDetails`: what the mock Repository returns. **Hand-written approximations, not Kakao responses.** Delete when real Kakao calls are wired.
-- `extractionScenario`: sample Gemini responses and MatchResults for the share flow.
-- IDs starting with `mock_` are fake. Replace with real Kakao IDs for integration tests.
-- Covered cases: 0-like place, link source, `manual` match, `notFound` re-fetch, undated room, empty room, outside-region place.
