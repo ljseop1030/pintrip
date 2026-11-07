@@ -5,11 +5,31 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.pintrip.app.data.TestConfig
+
+enum class StepStatus {
+    COMPLETED,
+    IN_PROGRESS,
+    PENDING,
+    ERROR
+}
+
+data class ProgressStepsState(
+    val step1Status: StepStatus = StepStatus.COMPLETED,
+    val step2Status: StepStatus = StepStatus.IN_PROGRESS,
+    val step3Status: StepStatus = StepStatus.IN_PROGRESS,
+    val matchedCount: Int? = null,
+)
 
 class ShareReceiveViewModel : ViewModel() {
 
     private val _shareInput = MutableLiveData<ShareInput>()
     val shareInput: LiveData<ShareInput> = _shareInput
+
+    private val _stepsState = MutableLiveData(ProgressStepsState())
+    val stepsState: LiveData<ProgressStepsState> = _stepsState
+
+    val selectedRoomId: String = TestConfig.TEST_ROOM_ID
 
     fun processIntent(intent: Intent?) {
         if (_shareInput.value != null) return
@@ -23,7 +43,30 @@ class ShareReceiveViewModel : ViewModel() {
     private fun parseAndSetInput(intent: Intent?) {
         val input = ShareIntentParser.parse(intent)
         _shareInput.value = input
+
+        val step1Status = when (input) {
+            is ShareInput.Screenshots, is ShareInput.LinkText -> StepStatus.COMPLETED
+            ShareInput.Empty -> StepStatus.ERROR
+        }
+
+        _stepsState.value = _stepsState.value?.copy(
+            step1Status = step1Status,
+            step2Status = StepStatus.IN_PROGRESS,
+            step3Status = StepStatus.IN_PROGRESS
+        )
+
         logShareInput(input)
+    }
+
+    fun updateStep2Status(status: StepStatus) {
+        _stepsState.value = _stepsState.value?.copy(step2Status = status)
+    }
+
+    fun updateStep3Status(status: StepStatus, matchedCount: Int? = null) {
+        _stepsState.value = _stepsState.value?.copy(
+            step3Status = status,
+            matchedCount = matchedCount
+        )
     }
 
     private fun logShareInput(input: ShareInput) {
