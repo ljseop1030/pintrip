@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_gray"
+    android:background="@color/pintrip_bg_gray"
     tools:context=".extract.ShareReceiveActivity">
 
     <androidx.core.widget.NestedScrollView
@@ -37,7 +37,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/share_receive_header"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/text_sub_gray"
                 android:textSize="14sp" />
 
             <!-- Header Main Title -->
@@ -47,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/share_receive_title_initial"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/text_dark"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -73,11 +73,11 @@
                         android:id="@+id/ivItemIcon"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:background="@color/primary_container"
+                        android:background="@color/badge_blue_bg"
                         android:contentDescription="@null"
                         android:padding="12dp"
                         android:src="@drawable/ic_image"
-                        app:tint="@color/primary" />
+                        app:tint="@color/pintrip_blue" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -90,7 +90,7 @@
                             android:id="@+id/tvItemTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/text_dark"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             tools:text="스크린샷 1장" />
@@ -100,7 +100,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/text_sub_gray"
                             android:textSize="13sp"
                             tools:text="갤러리에서 공유됨" />
                     </LinearLayout>
@@ -146,7 +146,7 @@
                                 android:id="@+id/pbStep1Loading"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:indeterminateTint="@color/primary"
+                                android:indeterminateTint="@color/pintrip_blue"
                                 android:visibility="gone" />
                         </FrameLayout>
 
@@ -155,7 +155,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/text_dark"
                             android:textSize="15sp"
                             android:textStyle="bold"
                             tools:text="@string/share_receive_step1_image_completed" />
@@ -193,7 +193,7 @@
                                 android:id="@+id/pbStep2Loading"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:indeterminateTint="@color/primary"
+                                android:indeterminateTint="@color/pintrip_blue"
                                 android:visibility="visible" />
                         </FrameLayout>
 
@@ -202,7 +202,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/text_dark"
                             android:textSize="15sp"
                             tools:text="@string/share_receive_step2_in_progress" />
                     </LinearLayout>
@@ -239,7 +239,7 @@
                                 android:id="@+id/pbStep3Loading"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:indeterminateTint="@color/primary"
+                                android:indeterminateTint="@color/pintrip_blue"
                                 android:visibility="visible" />
                         </FrameLayout>
 
@@ -248,7 +248,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/text_dark"
                             android:textSize="15sp"
                             tools:text="@string/share_receive_step3_in_progress" />
                     </LinearLayout>
@@ -262,7 +262,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="@string/share_receive_room_label"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/text_sub_gray"
                 android:textSize="14sp" />
 
             <com.google.android.material.card.MaterialCardView
@@ -288,7 +288,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="@color/text_primary"
+                        android:textColor="@color/text_dark"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         tools:text="test_room_1" />
@@ -298,7 +298,7 @@
                         android:layout_height="20dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_chevron_down"
-                        app:tint="@color/text_secondary" />
+                        app:tint="@color/text_sub_gray" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -315,7 +315,7 @@
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:backgroundTint="@color/primary"
+        app:backgroundTint="@color/pintrip_blue"
         app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
