@@ -10,12 +10,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.databinding.ActivityTestLoginBinding
-import com.pintrip.app.room.TestRoomActivity
+import com.pintrip.app.room.TestRoomListActivity
 
 /**
  * 개발(Debug) 전용 테스트 로그인 화면.
  *
- * 로그인에 성공하면 테스트 방 화면([TestRoomActivity])으로 이동하며,
+ * 로그인에 성공하면 방 목록 화면([TestRoomListActivity])으로 이동하며,
  * 비밀번호 입력 시 공백을 임의로 제거하지 않습니다.
  */
 class TestLoginActivity : AppCompatActivity() {
@@ -32,9 +32,9 @@ class TestLoginActivity : AppCompatActivity() {
             return
         }
 
-        // 이미 로그인된 상태라면 바로 테스트 방 화면으로 이동
+        // 이미 로그인된 상태라면 바로 방 목록 화면으로 이동
         if (auth.currentUser != null) {
-            navigateToTestRoom()
+            navigateToTestRoomList()
             return
         }
 
@@ -81,7 +81,7 @@ class TestLoginActivity : AppCompatActivity() {
             .addOnCompleteListener(this) { task ->
                 binding.btnLogin.isEnabled = true
                 if (task.isSuccessful) {
-                    navigateToTestRoom()
+                    navigateToTestRoomList()
                 } else {
                     val errorMsg = task.exception?.localizedMessage ?: getString(R.string.error_login_failed_default)
                     binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
@@ -89,8 +89,8 @@ class TestLoginActivity : AppCompatActivity() {
             }
     }
 
-    private fun navigateToTestRoom() {
-        startActivity(Intent(this, TestRoomActivity::class.java))
+    private fun navigateToTestRoomList() {
+        startActivity(Intent(this, TestRoomListActivity::class.java))
         finish()
     }
 }
