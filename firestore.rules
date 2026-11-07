@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------
+
+    // 로그인된 사용자 확인
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // 대상 방(roomId)의 memberIds에 로그인한 사용자가 포함되어 있는지 확인
+    function isRoomMember(roomId) {
+      return isSignedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.memberIds;
+    }
+
+    // -------------------------------------------------------------
+    // 1. 방 컬렉션 규칙 (rooms/test_room_1 한정 테스트)
+    // -------------------------------------------------------------
+    match /rooms/{roomId} {
+
+      function isTestRoom() {
+        return roomId == 'test_room_1';
+      }
+
+      // 방 읽기 (get, list): 방 멤버만 허용
+      allow read: if isTestRoom() && isSignedIn() && request.auth.uid in resource.data.memberIds;
+
+      // 방 생성 및 삭제 차단
+      allow create, delete: if false;
+
+      // 방 수정 (update): placeCount만 수정 허용 + 정수 및 기존보다 증가 검사 (updatedAt 제외)
+      allow update: if isTestRoom()
+        && isSignedIn()
+        && request.auth.uid in resource.data.memberIds
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.memberIds == resource.data.memberIds
+        && request.resource.data.members == resource.data.members
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.region == resource.data.region
+        && request.resource.data.icon == resource.data.icon
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.createdAt == resource.data.createdAt
+        && resource.data.placeCount is int
+        && request.resource.data.placeCount is int
+        && request.resource.data.placeCount > resource.data.placeCount
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['placeCount']);
+
+      // -----------------------------------------------------------
+      // 2. 장소 서브컬렉션 규칙 (rooms/test_room_1/places/{placeId})
+      // -----------------------------------------------------------
+      match /places/{placeId} {
+
+        // 읽기 (get, list): 방 멤버만 허용 (트랜잭션 시 미존재 문서 get 검사 포함)
+        allow read: if isTestRoom() && isRoomMember(roomId);
+
+        // 장소 생성 (create)
+        allow create: if isTestRoom()
+          && isRoomMember(roomId)
+          // 문서 ID와 kakaoPlaceId 일치 검사
+          && placeId == request.resource.data.kakaoPlaceId
+          // 작성자 uid 일치 검사
+          && request.resource.data.addedBy == request.auth.uid
+          // 필수 필드 및 타입/허용값 검사
+          && request.resource.data.kakaoPlaceId is string && request.resource.data.kakaoPlaceId.size() > 0
+          && request.resource.data.kakaoPlaceUrl is string && request.resource.data.kakaoPlaceUrl.size() > 0
+          && request.resource.data.searchKeyword is string && request.resource.data.searchKeyword.size() > 0
+          && request.resource.data.matchType in ['auto', 'confirmed', 'manual']
+          && request.resource.data.sourceType in ['screenshot', 'link']
+          && request.resource.data.addedByNickname is string && request.resource.data.addedByNickname.size() > 0
+          // 초기값 검사 (빈 좋아요 목록, 정수 0인 좋아요 수, 서버 생성 시각)
+          && request.resource.data.likedBy == []
+          && request.resource.data.likeCount is int
+          && request.resource.data.likeCount == 0
+          && request.resource.data.createdAt == request.time
+          // 허용 필드 제한 (카카오 장소명/주소/좌표 등 금지 필드 저장 엄격 차단)
+          && request.resource.data.keys().hasOnly([
+            'kakaoPlaceId', 'kakaoPlaceUrl', 'searchKeyword', 'searchRegion',
+            'matchType', 'sourceType', 'sourceUrl', 'addedBy', 'addedByNickname',
+            'likedBy', 'likeCount', 'createdAt'
+          ])
+          // 선택 필드 검사 (생략, null, 또는 문자열 허용)
+          && (!('searchRegion' in request.resource.data) || request.resource.data.searchRegion == null || request.resource.data.searchRegion is string)
+          && (!('sourceUrl' in request.resource.data) || request.resource.data.sourceUrl == null || request.resource.data.sourceUrl is string)
+          // 트랜잭션 동시 실행 검증: 같은 트랜잭션 요청에서 부모 방의 placeCount도 함께 증가했는지 getAfter로 확인
+          && getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount > get(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount;
+
+        // 장소 수정/삭제: 이번 테스트 범위 차단
+        allow update, delete: if false;
+      }
+    }
+
+    // 기타 모든 경로 접근 기본 차단
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
