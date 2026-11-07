@@ -2,6 +2,7 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
     <color name="primary_container">#EFF6FF</color>
     <color name="background_gray">#F8F9FA</color>
     <color name="card_background">#FFFFFF</color>
@@ -16,4 +17,12 @@
     <color name="primary">#1976D2</color>
     <color name="on_primary">#FFFFFFFF</color>
     <color name="result_background">#10000000</color>
+    <!-- Figma S01/S03 Design System Colors -->
+    <color name="pintrip_blue">#3A4A90</color>
+    <color name="pintrip_bg_gray">#F5F6FA</color>
+    <color name="text_dark">#1A1C26</color>
+    <color name="text_sub_gray">#7B7A88</color>
+    <color name="badge_blue_bg">#EBF0FF</color>
+    <color name="badge_blue_text">#3A4A90</color>
+    <color name="icon_bg_light">#F0F3FA</color>
 </resources>
