@@ -18,9 +18,14 @@ enum class StepStatus {
 
 data class ProgressStepsState(
     val step1Status: StepStatus = StepStatus.COMPLETED,
-    val step2Status: StepStatus = StepStatus.IN_PROGRESS,
-    val step3Status: StepStatus = StepStatus.IN_PROGRESS,
+    val step2Status: StepStatus = StepStatus.PENDING,
+    val step3Status: StepStatus = StepStatus.PENDING,
     val matchedCount: Int? = null,
+)
+
+data class NavigateToExtractArgs(
+    val roomId: String,
+    val shareInput: ShareInput,
 )
 
 sealed interface ShareNoticeEvent {
@@ -41,7 +46,12 @@ class ShareReceiveViewModel : ViewModel() {
     private val _noticeEvent = MutableLiveData<Event<ShareNoticeEvent>>()
     val noticeEvent: LiveData<Event<ShareNoticeEvent>> = _noticeEvent
 
+    private val _navigateToExtract = MutableLiveData<Event<NavigateToExtractArgs>>()
+    val navigateToExtract: LiveData<Event<NavigateToExtractArgs>> = _navigateToExtract
+
     val selectedRoomId: String = TestConfig.TEST_ROOM_ID
+
+    private var isProceeded = false
 
     fun processIntent(intent: Intent?) {
         if (_shareInput.value != null) return
@@ -49,7 +59,31 @@ class ShareReceiveViewModel : ViewModel() {
     }
 
     fun processNewIntent(intent: Intent?) {
+        isProceeded = false
         parseAndSetInput(intent)
+    }
+
+    fun onCheckPlacesClicked() {
+        if (isProceeded) return
+
+        val input = _shareInput.value ?: return
+        if (input is ShareInput.Empty) return
+        if ((input is ShareInput.LinkText) && (input.url == null)) return
+
+        isProceeded = true
+
+        _stepsState.value = _stepsState.value?.copy(
+            step2Status = StepStatus.IN_PROGRESS,
+            step3Status = StepStatus.IN_PROGRESS,
+        )
+
+        Log.d(TAG, "onCheckPlacesClicked: Connecting to next step with roomId=$selectedRoomId, input=$input")
+        _navigateToExtract.value = Event(
+            NavigateToExtractArgs(
+                roomId = selectedRoomId,
+                shareInput = input,
+            ),
+        )
     }
 
     private fun parseAndSetInput(intent: Intent?) {
@@ -60,8 +94,8 @@ class ShareReceiveViewModel : ViewModel() {
             is ShareInput.Screenshots -> {
                 _stepsState.value = ProgressStepsState(
                     step1Status = StepStatus.COMPLETED,
-                    step2Status = StepStatus.IN_PROGRESS,
-                    step3Status = StepStatus.IN_PROGRESS,
+                    step2Status = StepStatus.PENDING,
+                    step3Status = StepStatus.PENDING,
                 )
 
                 if (input.originalCount > MAX_SCREENSHOTS) {
@@ -78,8 +112,8 @@ class ShareReceiveViewModel : ViewModel() {
                 if (input.url != null) {
                     _stepsState.value = ProgressStepsState(
                         step1Status = StepStatus.COMPLETED,
-                        step2Status = StepStatus.IN_PROGRESS,
-                        step3Status = StepStatus.IN_PROGRESS,
+                        step2Status = StepStatus.PENDING,
+                        step3Status = StepStatus.PENDING,
                     )
                 } else {
                     _stepsState.value = ProgressStepsState(
@@ -90,7 +124,7 @@ class ShareReceiveViewModel : ViewModel() {
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
                             messageResId = R.string.share_receive_error_no_url,
-                        )
+                        ),
                     )
                 }
             }
@@ -104,7 +138,7 @@ class ShareReceiveViewModel : ViewModel() {
                 _noticeEvent.value = Event(
                     ShareNoticeEvent.ToastNotice(
                         messageResId = R.string.share_receive_error_empty,
-                    )
+                    ),
                 )
             }
         }

@@ -33,6 +33,7 @@ class ShareReceiveActivity : AppCompatActivity() {
         }
 
         setupRoomSelection()
+        setupListeners()
         observeViewModel()
 
         viewModel.processIntent(intent)
@@ -46,6 +47,12 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     private fun setupRoomSelection() {
         binding.tvRoomName.text = getString(R.string.share_receive_room_name_format, viewModel.selectedRoomId)
+    }
+
+    private fun setupListeners() {
+        binding.btnCheckPlaces.setOnClickListener {
+            viewModel.onCheckPlacesClicked()
+        }
     }
 
     private fun observeViewModel() {
@@ -63,6 +70,19 @@ class ShareReceiveActivity : AppCompatActivity() {
                 handleNoticeEvent(notice)
             }
         }
+
+        viewModel.navigateToExtract.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { args ->
+                Log.d(TAG, "Navigating to next step (Extract -> Match -> SelectPlaces) with roomId=${args.roomId}, shareInput=${args.shareInput}")
+                startExtractStep(args.roomId, args.shareInput)
+            }
+        }
+    }
+
+    private fun startExtractStep(roomId: String, shareInput: ShareInput) {
+        // Connection point to next step (추출 -> 매칭 -> 장소 선택)
+        // Next step implementation will receive roomId and shareInput from here
+        Log.d(TAG, "Connection point triggered: roomId=$roomId, shareInput=$shareInput")
     }
 
     private fun handleNoticeEvent(event: ShareNoticeEvent) {
@@ -79,10 +99,27 @@ class ShareReceiveActivity : AppCompatActivity() {
     }
 
     private fun bindShareInput(input: ShareInput) {
+        val isValidInput = when (input) {
+            is ShareInput.Screenshots -> true
+            is ShareInput.LinkText -> input.url != null
+            ShareInput.Empty -> false
+        }
+
+        if (!isValidInput) {
+            binding.tvHeaderTitle.text = getString(R.string.share_receive_title_error)
+            binding.btnCheckPlaces.isEnabled = false
+        } else {
+            val isExtracting = (viewModel.stepsState.value?.step2Status == StepStatus.IN_PROGRESS)
+            binding.tvHeaderTitle.text = if (isExtracting) {
+                getString(R.string.share_receive_title_in_progress)
+            } else {
+                getString(R.string.share_receive_title_initial)
+            }
+            binding.btnCheckPlaces.isEnabled = !isExtracting
+        }
+
         when (input) {
             is ShareInput.Screenshots -> {
-                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
-                binding.btnCheckPlaces.isEnabled = true
                 binding.ivItemIcon.setImageResource(R.drawable.ic_image)
                 binding.tvItemTitle.text = getString(R.string.share_receive_screenshot_count_format, input.uris.size)
                 binding.tvItemSubtitle.text = getString(R.string.share_receive_source_gallery)
@@ -90,26 +127,17 @@ class ShareReceiveActivity : AppCompatActivity() {
             }
 
             is ShareInput.LinkText -> {
+                binding.ivItemIcon.setImageResource(R.drawable.ic_link)
+                binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
+                binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
                 if (input.url != null) {
-                    binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
-                    binding.btnCheckPlaces.isEnabled = true
-                    binding.ivItemIcon.setImageResource(R.drawable.ic_link)
-                    binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
-                    binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
                     binding.tvStep1Text.text = getString(R.string.share_receive_step1_text_completed)
                 } else {
-                    binding.tvHeaderTitle.text = getString(R.string.share_receive_title_error)
-                    binding.btnCheckPlaces.isEnabled = false
-                    binding.ivItemIcon.setImageResource(R.drawable.ic_link)
-                    binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
-                    binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
                     binding.tvStep1Text.text = getString(R.string.share_receive_step1_empty)
                 }
             }
 
             ShareInput.Empty -> {
-                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_error)
-                binding.btnCheckPlaces.isEnabled = false
                 binding.ivItemIcon.setImageResource(R.drawable.ic_image)
                 binding.tvItemTitle.text = getString(R.string.share_receive_empty_label)
                 binding.tvItemSubtitle.text = getString(R.string.share_receive_source_none)
@@ -119,6 +147,22 @@ class ShareReceiveActivity : AppCompatActivity() {
     }
 
     private fun bindStepsState(stepsState: ProgressStepsState) {
+        val input = viewModel.shareInput.value
+        val isValidInput = when (input) {
+            is ShareInput.Screenshots -> true
+            is ShareInput.LinkText -> input.url != null
+            else -> false
+        }
+
+        if (isValidInput) {
+            if (stepsState.step2Status == StepStatus.IN_PROGRESS) {
+                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
+                binding.btnCheckPlaces.isEnabled = false
+            } else {
+                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_initial)
+            }
+        }
+
         bindStepItem(
             status = stepsState.step1Status,
             ivStatus = binding.ivStep1Status,
