@@ -5,10 +5,11 @@
     <string name="share_receive_header">PinTrip 공유</string>
     <string name="share_receive_title_in_progress">장소 찾는 중…</string>
     <string name="share_receive_title_completed">장소 찾기 완료</string>
+    <string name="share_receive_title_error">공유 내용을 확인할 수 없습니다</string>
 
     <string name="share_receive_step1_image_completed">이미지 받기 완료</string>
     <string name="share_receive_step1_text_completed">링크 받기 완료</string>
-    <string name="share_receive_step1_empty">공유 데이터 확인 중</string>
+    <string name="share_receive_step1_empty">공유 데이터 없음</string>
 
     <string name="share_receive_step2_in_progress">텍스트 추출 (Gemini)</string>
     <string name="share_receive_step2_completed">텍스트 추출 완료</string>
@@ -29,4 +30,8 @@
     <string name="share_receive_screenshot_count_format">스크린샷 %1$d장</string>
     <string name="share_receive_link_text_label">링크 텍스트</string>
     <string name="share_receive_empty_label">공유된 데이터 없음</string>
+
+    <string name="share_receive_error_empty">공유된 내용을 찾을 수 없거나 지원하지 않는 형식입니다.</string>
+    <string name="share_receive_error_no_url">공유된 텍스트에 웹 링크(URL)가 포함되어 있지 않습니다.</string>
+    <string name="share_receive_notice_exceed_max_screenshots">공유된 %1$d장의 스크린샷 중 최대 %2$d장만 처리됩니다.</string>
 </resources>

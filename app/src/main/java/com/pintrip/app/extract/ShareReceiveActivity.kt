@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -56,11 +57,32 @@ class ShareReceiveActivity : AppCompatActivity() {
         viewModel.stepsState.observe(this) { stepsState ->
             bindStepsState(stepsState)
         }
+
+        viewModel.noticeEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { notice ->
+                handleNoticeEvent(notice)
+            }
+        }
+    }
+
+    private fun handleNoticeEvent(event: ShareNoticeEvent) {
+        when (event) {
+            is ShareNoticeEvent.ToastNotice -> {
+                val message = if (event.formatArgs.isNotEmpty()) {
+                    getString(event.messageResId, *event.formatArgs.toTypedArray())
+                } else {
+                    getString(event.messageResId)
+                }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun bindShareInput(input: ShareInput) {
         when (input) {
             is ShareInput.Screenshots -> {
+                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
+                binding.btnCheckPlaces.isEnabled = true
                 binding.ivItemIcon.setImageResource(R.drawable.ic_image)
                 binding.tvItemTitle.text = getString(R.string.share_receive_screenshot_count_format, input.uris.size)
                 binding.tvItemSubtitle.text = getString(R.string.share_receive_source_gallery)
@@ -68,13 +90,26 @@ class ShareReceiveActivity : AppCompatActivity() {
             }
 
             is ShareInput.LinkText -> {
-                binding.ivItemIcon.setImageResource(R.drawable.ic_link)
-                binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
-                binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
-                binding.tvStep1Text.text = getString(R.string.share_receive_step1_text_completed)
+                if (input.url != null) {
+                    binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
+                    binding.btnCheckPlaces.isEnabled = true
+                    binding.ivItemIcon.setImageResource(R.drawable.ic_link)
+                    binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
+                    binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
+                    binding.tvStep1Text.text = getString(R.string.share_receive_step1_text_completed)
+                } else {
+                    binding.tvHeaderTitle.text = getString(R.string.share_receive_title_error)
+                    binding.btnCheckPlaces.isEnabled = false
+                    binding.ivItemIcon.setImageResource(R.drawable.ic_link)
+                    binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
+                    binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
+                    binding.tvStep1Text.text = getString(R.string.share_receive_step1_empty)
+                }
             }
 
             ShareInput.Empty -> {
+                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_error)
+                binding.btnCheckPlaces.isEnabled = false
                 binding.ivItemIcon.setImageResource(R.drawable.ic_image)
                 binding.tvItemTitle.text = getString(R.string.share_receive_empty_label)
                 binding.tvItemSubtitle.text = getString(R.string.share_receive_source_none)
@@ -93,7 +128,7 @@ class ShareReceiveActivity : AppCompatActivity() {
         bindStepItem(
             status = stepsState.step2Status,
             ivStatus = binding.ivStep2Status,
-            pbLoading = binding.pbStep2Loading
+            pbLoading = binding.pbStep2Loading,
         )
         binding.tvStep2Text.text = when (stepsState.step2Status) {
             StepStatus.COMPLETED -> getString(R.string.share_receive_step2_completed)
@@ -104,7 +139,7 @@ class ShareReceiveActivity : AppCompatActivity() {
         bindStepItem(
             status = stepsState.step3Status,
             ivStatus = binding.ivStep3Status,
-            pbLoading = binding.pbStep3Loading
+            pbLoading = binding.pbStep3Loading,
         )
         binding.tvStep3Text.text = when (stepsState.step3Status) {
             StepStatus.COMPLETED -> {
@@ -120,7 +155,7 @@ class ShareReceiveActivity : AppCompatActivity() {
     private fun bindStepItem(
         status: StepStatus,
         ivStatus: ImageView,
-        pbLoading: ProgressBar
+        pbLoading: ProgressBar,
     ) {
         when (status) {
             StepStatus.COMPLETED -> {
@@ -134,7 +169,13 @@ class ShareReceiveActivity : AppCompatActivity() {
                 pbLoading.visibility = View.VISIBLE
             }
 
-            StepStatus.PENDING, StepStatus.ERROR -> {
+            StepStatus.PENDING -> {
+                ivStatus.visibility = View.VISIBLE
+                pbLoading.visibility = View.GONE
+                ivStatus.setImageResource(R.drawable.ic_pending_circle)
+            }
+
+            StepStatus.ERROR -> {
                 ivStatus.visibility = View.VISIBLE
                 pbLoading.visibility = View.GONE
                 ivStatus.setImageResource(R.drawable.ic_pending_circle)
