@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">pintrip</string>
+    <string name="title_activity_share_receive">PinTrip</string>
 </resources>
