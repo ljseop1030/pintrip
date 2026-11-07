@@ -76,7 +76,7 @@ class PlaceRepository(
             require(place.searchKeyword.isNotBlank()) { "searchKeyword는 필수입니다." }
             require(place.addedBy.isNotBlank()) { "addedBy는 필수입니다." }
             require(place.addedBy == currentUid) {
-                "addedBy($place.addedBy)가 현재 로그인된 사용자의 uid($currentUid)와 일치하지 않습니다."
+                "addedBy(${place.addedBy})가 현재 로그인된 사용자의 uid($currentUid)와 일치하지 않습니다."
             }
             require(place.addedByNickname.isNotBlank()) { "addedByNickname은 필수입니다." }
             require(place.matchType in VALID_MATCH_TYPES) {
