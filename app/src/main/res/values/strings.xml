@@ -1,3 +1,37 @@
 <resources>
     <string name="app_name">pintrip</string>
+    <string name="test_login_title">개발용 테스트 로그인</string>
+    <string name="email_hint">이메일</string>
+    <string name="password_hint">비밀번호</string>
+    <string name="btn_login">로그인</string>
+    <string name="btn_logout">로그아웃</string>
+    <string name="status_logged_out">상태: 미로그인</string>
+    <string name="status_logged_in">상태: 로그인 성공\nUID: %1$s</string>
+    <string name="status_login_failed">상태: 로그인 실패\n원인: %1$s</string>
+    <string name="status_logging_in">상태: 로그인 시도 중&#8230;</string>
+    <string name="error_empty_email">이메일을 입력해 주세요.</string>
+    <string name="error_empty_password">비밀번호를 입력해 주세요.</string>
+    <string name="error_login_failed_default">로그인 실패</string>
+    <string name="btn_open_test_login">개발용 테스트 로그인 화면 열기</string>
+    <string name="test_room_title">개발용 테스트 방 (test_room_1)</string>
+    <string name="test_room_info">대상 방: %1$s\n로그인 UID: %2$s</string>
+    <string name="kakao_place_id_hint">카카오 장소 ID (kakaoPlaceId)</string>
+    <string name="kakao_place_url_hint">카카오 장소 URL (kakaoPlaceUrl)</string>
+    <string name="search_keyword_hint">검색 키워드 (searchKeyword)</string>
+    <string name="btn_add_place">장소 추가 (addPlaces)</string>
+    <string name="btn_get_places">서버에서 장소 조회 (Source.SERVER)</string>
+    <string name="btn_logout_room">로그아웃 및 로그인 화면으로 이동</string>
+    <string name="error_empty_place_id">카카오 장소 ID를 입력해 주세요.</string>
+    <string name="error_empty_place_url">카카오 장소 URL을 입력해 주세요.</string>
+    <string name="error_empty_search_keyword">검색 키워드를 입력해 주세요.</string>
+    <string name="error_not_logged_in">로그인이 필요합니다.</string>
+    <string name="status_add_in_progress">장소 추가 시도 중 (roomId: %1$s)&#8230;</string>
+    <string name="status_add_success">✅ [장소 추가 성공]\n- 추가된 개수 (addedCount): %1$d개\n- 중복 스킵 (skippedCount): %2$d개</string>
+    <string name="status_add_failed">❌ [장소 추가 실패]\n- 원인: %1$s</string>
+    <string name="status_get_in_progress">서버에서 장소 목록 조회 중 (Source.SERVER)&#8230;</string>
+    <string name="status_get_empty">ℹ️ [서버 조회 성공]\n저장된 장소가 없습니다 (places list is empty).</string>
+    <string name="status_get_success">✅ [서버 조회 성공 - 총 %1$d개]\n\n</string>
+    <string name="status_get_failed">❌ [서버 조회 실패]\n- 원인: %1$s</string>
+    <string name="place_item_date_just_now">방금 전 (서버 타임스탬프)</string>
+    <string name="place_item_format">%1$d. 장소 ID: %2$s\n   - 검색어: %3$s\n   - 작성자: %4$s (%5$s)\n   - 생성 시각: %6$s\n   - Kakao URL: %7$s\n\n</string>
 </resources>
