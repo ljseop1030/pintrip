@@ -16,5 +16,6 @@ class GeminiExtractorTest {
         val extractor = GeminiExtractor(context)
         assertNotNull(extractor)
         assertEquals("gemini-3.6-flash", GeminiExtractor.MODEL_NAME)
+        assertEquals(1080, GeminiExtractor.MAX_IMAGE_WIDTH)
     }
 }

@@ -69,8 +69,14 @@ class GeminiExtractor(
 
     private fun loadBitmap(context: Context, uri: Uri): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
-        return ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+        return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             decoder.isMutableRequired = true
+            val currentWidth = info.size.width
+            if (currentWidth > MAX_IMAGE_WIDTH) {
+                val targetWidth = MAX_IMAGE_WIDTH
+                val targetHeight = ((info.size.height.toFloat() * targetWidth) / currentWidth.toFloat()).toInt()
+                decoder.setTargetSize(targetWidth, targetHeight)
+            }
         }
     }
 
@@ -100,5 +106,6 @@ class GeminiExtractor(
 
     companion object {
         const val MODEL_NAME = "gemini-3.6-flash"
+        const val MAX_IMAGE_WIDTH = 1080
     }
 }
