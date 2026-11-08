@@ -70,7 +70,7 @@ service cloud.firestore {
           && request.resource.data.kakaoPlaceUrl is string && request.resource.data.kakaoPlaceUrl.size() > 0
           && request.resource.data.searchKeyword is string && request.resource.data.searchKeyword.size() > 0
           && request.resource.data.matchType in ['auto', 'confirmed', 'manual']
-          && request.resource.data.sourceType in ['screenshot', 'link']
+          && request.resource.data.sourceType in ['screenshot', 'link', 'text']
           && request.resource.data.addedByNickname is string && request.resource.data.addedByNickname.size() > 0
           // 초기값 검사 (빈 좋아요 목록, 정수 0인 좋아요 수, 서버 생성 시각)
           && request.resource.data.likedBy == []
