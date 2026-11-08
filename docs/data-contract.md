@@ -45,8 +45,7 @@ There is no `likes` collection. Likes live in each place's `likedBy` array.
 | Field | Type | Req | Notes |
 |---|---|---|---|
 | name | String | ✓ | "Busan" |
-| region | String | ✓ | Preset key: `seoul`, `busan`, `jeju`, `gangneung`, `gyeongju`, `yeosu`, `etc` |
-| regionName | String? | | User-typed region name, only when `region == etc` |
+| region | String | ✓ | Korean region name: "서울", "부산", "제주", "강릉", "경주", "여수" 등 |
 | startDate | Timestamp? | | null → "Date to be determined" |
 | endDate | Timestamp? | | |
 | icon | String | ✓ | `sea` / `food` / `nature` / `city` / `healing` |
@@ -60,8 +59,6 @@ There is no `likes` collection. Likes live in each place's `likedBy` array.
 
 `Member = { nickname: String, avatarColor: String, lastSeenAt: Timestamp? }`
 `lastSeenAt` is for the "NEW n" badge (low priority). Update it on entering room home.
-
-Region center coordinates are **app constants** (preset key → lat/lng), not stored in Firestore. `etc` rooms have no coordinates; prepend `regionName` to the search query instead.
 
 ### rooms/{roomId}/places/{kakaoPlaceId}  (doc ID = Kakao place ID, prevents duplicates per room)
 
@@ -106,7 +103,7 @@ Repository merges `Place` (Firestore) + live Kakao search result.
 | category | String? | Mapped from `category_group_code` |
 | phone | String? | Kakao `phone` (for `ACTION_DIAL`) |
 
-**Category mapping:** `FD6` → `dining`, `CE7` → `cafe`, `AT4` / `CT1` → `sights`, anything else → `etc`
+**Category mapping:** `FD6` → `dining`, `CE7` → `cafe`, `AT4` / `CT1` → `sights`, `AD5` → `stay`, anything else → `etc`
 
 **notFound:** show `searchKeyword` as the name, list only (no map pin), only "Open in KakaoMap" enabled.
 
@@ -203,9 +200,10 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
 
 ### Search strategy
 
-- `outsideRoomRegion == false`: room center coordinates + radius (`x`, `y`, `radius`). Prepend narrow `region` to the query if present.
-- `outsideRoomRegion == true`: no room coordinates. Query = `"{region or regionHint} {name}"`.
-- `etc` room: query = `"{regionName} {name}"`.
+> For now we search with a region-prefixed query instead of coordinates. If integration shows we need another method, update this section and §9 Re-fetch.
+
+- `outsideRoomRegion == false`: query = `"{room region} {region} {name}"` (`region` only if present).
+- `outsideRoomRegion == true`: query = `"{region or regionHint} {name}"`.
 - If `categoryHint` is set, also pass `category_group_code`: dining → `FD6`, cafe → `CE7`, sights → `AT4`, stay → `AD5`.
 
 ---
@@ -256,6 +254,8 @@ One Kakao keyword search per Gemini place. Passed to the Select Places and Confi
 | searchKeyword | `extracted.name` (never the Kakao name). For `manual`, the user's query |
 | searchRegion | `extracted.region` (never from the candidate address). If outside room region and null, use `regionHint` |
 | matchType | MATCHED → `auto`, chosen in CHECK → `confirmed`, manual search → `manual` |
+| sourceType | Screenshot → `screenshot`, text with a URL → `link`, text without a URL → `text` |
+| sourceUrl | The URL in the shared text (`link` only), otherwise null |
 
 ### Region mismatch
 
@@ -265,7 +265,7 @@ One Kakao keyword search per Gemini place. Passed to the Select Places and Confi
 
 UI: on entering Select Places, show a popup "n places are outside {room region}". Mark those items with a warning badge and start them unchecked. The user can still check and add them.
 
-Re-fetch after saving: search with room coordinates first; if the ID isn't found, search `"{searchRegion} {searchKeyword}"` without radius. So outside-region places must have `searchRegion` set.
+Re-fetch after saving: search with the same query rule as §8 using `searchKeyword` and `searchRegion`, then pick the result whose `id == kakaoPlaceId`. So outside-region places must have `searchRegion` set.
 
 ### status vs matchType
 
