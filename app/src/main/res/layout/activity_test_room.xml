@@ -91,6 +91,14 @@
             android:text="@string/btn_get_places" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnViewPlaceList"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/btn_view_place_list" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"

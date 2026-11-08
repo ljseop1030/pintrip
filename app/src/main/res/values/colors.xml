@@ -20,6 +20,7 @@
     <color name="place_icon_container_bg">#EEF2FF</color>
     <color name="place_icon_tint">#3A4A90</color>
     <color name="place_heart_tint">#F09C6B</color>
+    <color name="place_list_empty_text">#7B7A88</color>
     <!-- Figma S01/S03 Design System Colors -->
     <color name="pintrip_blue">#3A4A90</color>
     <color name="pintrip_bg_gray">#F5F6FA</color>

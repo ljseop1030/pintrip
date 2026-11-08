@@ -112,6 +112,7 @@
     <string name="search_keyword_hint">검색 키워드 (searchKeyword)</string>
     <string name="btn_add_place">장소 추가 (addPlaces)</string>
     <string name="btn_get_places">서버에서 장소 조회 (Source.SERVER)</string>
+    <string name="btn_view_place_list">장소 리스트 보기</string>
     <string name="btn_logout_room">로그아웃 및 로그인 화면으로 이동</string>
     <string name="error_empty_place_id">카카오 장소 ID를 입력해 주세요.</string>
     <string name="error_empty_place_url">카카오 장소 URL을 입력해 주세요.</string>
@@ -126,5 +127,12 @@
     <string name="status_get_failed">❌ [서버 조회 실패]\n- 원인: %1$s</string>
     <string name="place_item_date_just_now">방금 전 (서버 타임스탬프)</string>
     <string name="place_item_format">%1$d. 장소 ID: %2$s\n   - 검색어: %3$s\n   - 작성자: %4$s (%5$s)\n   - 생성 시각: %6$s\n   - Kakao URL: %7$s\n\n</string>
-    <string name="place_added_by">Added by %1$s</string>
+    <string name="place_added_by">%1$s님이 추가</string>
+
+    <!-- Place List Screen -->
+    <string name="title_activity_place_list">장소 목록</string>
+    <string name="place_list_empty">아직 저장한 장소가 없어요</string>
+    <string name="place_list_error_no_room_id">방 정보를 찾을 수 없습니다.</string>
+    <string name="place_list_error_default">장소 목록을 불러오지 못했습니다.</string>
+    <string name="place_list_error_cannot_open_url">링크를 열 수 있는 앱이 설치되어 있지 않습니다.</string>
 </resources>

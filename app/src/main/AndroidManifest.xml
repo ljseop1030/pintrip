@@ -64,6 +64,11 @@
             android:name=".room.TestRoomListActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".place.PlaceListActivity"
+            android:exported="false"
+            android:label="@string/title_activity_place_list" />
     </application>
 
 </manifest>
