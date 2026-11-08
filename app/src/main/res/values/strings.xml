@@ -34,4 +34,5 @@
     <string name="status_get_failed">❌ [서버 조회 실패]\n- 원인: %1$s</string>
     <string name="place_item_date_just_now">방금 전 (서버 타임스탬프)</string>
     <string name="place_item_format">%1$d. 장소 ID: %2$s\n   - 검색어: %3$s\n   - 작성자: %4$s (%5$s)\n   - 생성 시각: %6$s\n   - Kakao URL: %7$s\n\n</string>
+    <string name="place_added_by">Added by %1$s</string>
 </resources>
