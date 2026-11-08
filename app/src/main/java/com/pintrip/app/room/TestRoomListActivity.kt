@@ -13,6 +13,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.auth.TestLoginActivity
+import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.databinding.ActivityTestRoomListBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -30,6 +31,7 @@ class TestRoomListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTestRoomListBinding
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val db: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+    private val userRepository: UserRepository by lazy { UserRepository(auth = auth) }
 
     companion object {
         private const val TEST_ROOM_ID = "test_room_1"
@@ -70,12 +72,31 @@ class TestRoomListActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        loadUserProfileHeader()
         fetchTestRoom()
     }
 
-    private fun fetchTestRoom() {
+    private fun loadUserProfileHeader() {
         val currentUser = auth.currentUser ?: return
+        lifecycleScope.launch {
+            try {
+                val profile = userRepository.getUserProfile(currentUser.uid)
+                val nickname = profile?.nickname
+                if (!nickname.isNullOrBlank()) {
+                    binding.tvGreeting.text = getString(R.string.greeting_format, nickname)
+                    binding.tvHeaderAvatar.text = nickname.take(1).uppercase()
+                } else {
+                    binding.tvGreeting.text = getString(R.string.greeting_default)
+                    binding.tvHeaderAvatar.text = "U"
+                }
+            } catch (_: Exception) {
+                binding.tvGreeting.text = getString(R.string.greeting_default)
+                binding.tvHeaderAvatar.text = "U"
+            }
+        }
+    }
 
+    private fun fetchTestRoom() {
         showLoading()
 
         lifecycleScope.launch {
@@ -111,22 +132,13 @@ class TestRoomListActivity : AppCompatActivity() {
                     binding.roomCard.tvRoomDate.visibility = View.GONE
                 }
 
-                // 2. members 맵에서 현재 로그인 유저의 닉네임 추출 및 헤더 표시
-                @Suppress("UNCHECKED_CAST")
-                val members = snapshot.get("members") as? Map<String, Any>
-                @Suppress("UNCHECKED_CAST")
-                val myMemberMap = members?.get(currentUser.uid) as? Map<String, Any>
-                val myNickname = myMemberMap?.get("nickname") as? String
-
-                if (!myNickname.isNullOrBlank()) {
-                    binding.tvGreeting.text = getString(R.string.greeting_format, myNickname)
-                    binding.tvHeaderAvatar.text = myNickname.take(1).uppercase()
-                } else {
-                    binding.tvGreeting.text = getString(R.string.greeting_default)
-                    binding.tvHeaderAvatar.text = "U"
-                }
-
                 showContent()
+            } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
+                if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                    showError(getString(R.string.notice_no_participating_rooms))
+                } else {
+                    showError(getString(R.string.error_room_load_failed, e.localizedMessage ?: e.message.orEmpty()))
+                }
             } catch (e: Exception) {
                 showError(getString(R.string.error_room_load_failed, e.localizedMessage ?: e.message.orEmpty()))
             }
