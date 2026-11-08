@@ -1,10 +1,51 @@
 <resources>
     <string name="app_name">pintrip</string>
-    <string name="test_login_title">개발용 테스트 로그인</string>
-    <string name="email_hint">이메일</string>
-    <string name="password_hint">비밀번호</string>
-    <string name="btn_login">로그인</string>
-    <string name="btn_logout">로그아웃</string>
+    <string name="title_activity_share_receive">PinTrip</string>
+
+    <string name="share_receive_header">PinTrip 공유</string>
+    <string name="share_receive_title_initial">공유 내용 확인</string>
+    <string name="share_receive_title_in_progress">장소 찾는 중…</string>
+    <string name="share_receive_title_completed">장소 찾기 완료</string>
+    <string name="share_receive_title_error">공유 내용을 확인할 수 없습니다</string>
+
+    <string name="share_receive_step1_image_completed">이미지 받기 완료</string>
+    <string name="share_receive_step1_text_completed">링크 받기 완료</string>
+    <string name="share_receive_step1_empty">공유 데이터 없음</string>
+
+    <string name="share_receive_step2_in_progress">텍스트 추출 (Gemini)</string>
+    <string name="share_receive_step2_completed">텍스트 추출 완료</string>
+    <string name="share_receive_step2_pending">텍스트 추출 대기 중</string>
+
+    <string name="share_receive_step3_in_progress">장소 매칭 중…</string>
+    <string name="share_receive_step3_completed_format">장소 매칭 완료 (%1$d개 장소 발견)</string>
+    <string name="share_receive_step3_pending">장소 매칭 대기 중</string>
+
+    <string name="share_receive_room_label">여행 방</string>
+    <string name="share_receive_room_name_format">%1$s</string>
+    <string name="share_receive_button_check_places">장소 확인하기</string>
+
+    <string name="share_receive_source_gallery">갤러리에서 공유됨</string>
+    <string name="share_receive_source_text">외부 앱에서 공유됨</string>
+    <string name="share_receive_source_none">공유된 소스 없음</string>
+
+    <string name="share_receive_screenshot_count_format">스크린샷 %1$d장</string>
+    <string name="share_receive_link_text_label">링크 텍스트</string>
+    <string name="share_receive_empty_label">공유된 데이터 없음</string>
+
+    <string name="share_receive_error_empty">공유된 내용을 찾을 수 없거나 지원하지 않는 형식입니다.</string>
+    <string name="share_receive_error_no_url">공유된 텍스트에 웹 링크(URL)가 포함되어 있지 않습니다.</string>
+    <string name="share_receive_notice_exceed_max_screenshots">공유된 %1$d장의 스크린샷 중 최대 %2$d장만 처리됩니다.</string>
+
+    <string name="app_subtitle">Fill your travel map together with a single share</string>
+
+    <!-- S01 Login -->
+    <string name="test_login_title">Login</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Password</string>
+    <string name="sample_email_hint">travel@email.com</string>
+    <string name="sample_password_hint">••••••••</string>
+    <string name="btn_login">Login</string>
+    <string name="btn_logout">Logout</string>
     <string name="status_logged_out">상태: 미로그인</string>
     <string name="status_logged_in">상태: 로그인 성공\nUID: %1$s</string>
     <string name="status_login_failed">상태: 로그인 실패\n원인: %1$s</string>
@@ -13,6 +54,57 @@
     <string name="error_empty_password">비밀번호를 입력해 주세요.</string>
     <string name="error_login_failed_default">로그인 실패</string>
     <string name="btn_open_test_login">개발용 테스트 로그인 화면 열기</string>
+
+    <!-- S02 Sign Up -->
+    <string name="title_join_membership">join membership</string>
+    <string name="signup_headline">Shall we create\na travel map together?</string>
+    <string name="signup_subtext">Sign up easily with your email</string>
+    <string name="nickname_hint">Nickname</string>
+    <string name="confirm_password_hint">Confirm Password</string>
+    <string name="sample_nickname_hint">Minji</string>
+    <string name="sample_confirm_password_hint">Re-enter password</string>
+    <string name="terms_agreement">I agree to the Terms of Service (required)</string>
+    <string name="btn_signup">Sign Up</string>
+    <string name="signup_link_prefix">Don\'t have an account?</string>
+    <string name="signup_link_action">join membership</string>
+
+    <string name="error_empty_nickname">닉네임을 입력해 주세요.</string>
+    <string name="error_invalid_email">올바른 이메일 형식이 아닙니다.</string>
+    <string name="error_password_too_short">비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
+    <string name="error_terms_required">약관에 동의해 주세요.</string>
+    <string name="status_creating_account">Auth 계정 및 프로필 생성 중&#8230;</string>
+    <string name="status_signup_success">회원가입이 완료되었습니다.</string>
+    <string name="status_existing_account_logged_in">이미 등록된 계정입니다. 기존 프로필로 로그인되었습니다.</string>
+    <string name="status_signup_and_profile_success">회원가입 및 프로필 생성이 완료되었습니다.</string>
+    <string name="status_profile_restored">누락되었던 프로필 생성이 완료되었습니다.</string>
+    <string name="status_auth_success_profile_failed">인증 계정은 생성/인증되었으나 프로필 생성에 실패했습니다. 아래 버튼을 눌러 프로필 저장을 재시도해 주세요.</string>
+    <string name="notice_new_user_title">가입 완료 안내</string>
+    <string name="notice_new_user_message">계정 및 프로필 작성이 완료되었습니다.\n\n여행방 생성 및 초대 참여 기능은 다음 버전에서 제공될 예정입니다.</string>
+    <string name="error_email_already_in_use">이미 등록된 이메일입니다. 비밀번호를 확인하시거나 로그인해 주세요.</string>
+    <string name="error_profile_load_failed">프로필 정보를 불러오지 못했습니다.</string>
+    <string name="error_profile_save_failed">프로필 저장에 실패했습니다. 다시 시도해 주세요.</string>
+    <string name="btn_retry_profile">프로필 저장 재시도</string>
+
+    <!-- Profile Dialog for Existing Accounts without Profile -->
+    <string name="profile_dialog_title">프로필 닉네임 설정</string>
+    <string name="profile_dialog_message">계정에 저장된 프로필이 없습니다. 사용할 닉네임을 입력해 주세요.</string>
+    <string name="btn_save_profile">프로필 저장</string>
+
+    <!-- S03 Room List -->
+    <string name="my_travel_room_title">My Travel Room</string>
+    <string name="greeting_format">Hello, %1$s</string>
+    <string name="greeting_default">Hello, User</string>
+    <string name="location_count_format">Location %1$d</string>
+    <string name="date_to_be_determined">Date to be determined</string>
+    <string name="btn_retry">다시 시도</string>
+    <string name="status_room_loading">test_room_1 불러오는 중&#8230;</string>
+    <string name="error_room_load_failed">test_room_1 조회를 실패했습니다.\n원인: %1$s</string>
+    <string name="error_room_not_found">test_room_1 문서를 찾을 수 없습니다.</string>
+    <string name="error_invalid_room_name">방 이름 정보가 올바르지 않습니다.</string>
+    <string name="notice_no_participating_rooms">참여 중인 여행방이 없습니다.\n새 사용자용 방 생성 기능은 다음 업데이트에서 제공됩니다.</string>
+
+    <!-- Test Room Detail (TestRoomActivity) -->
     <string name="test_room_title">개발용 테스트 방 (test_room_1)</string>
     <string name="test_room_info">대상 방: %1$s\n로그인 UID: %2$s</string>
     <string name="kakao_place_id_hint">카카오 장소 ID (kakaoPlaceId)</string>

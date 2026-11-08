@@ -37,7 +37,7 @@ class PlaceRepository(
 
     companion object {
         private val VALID_MATCH_TYPES = setOf("auto", "confirmed", "manual")
-        private val VALID_SOURCE_TYPES = setOf("screenshot", "link")
+        private val VALID_SOURCE_TYPES = setOf("screenshot", "link", "text")
     }
 
     /**
@@ -83,7 +83,7 @@ class PlaceRepository(
                 "matchType은 'auto', 'confirmed', 'manual' 중 하나여야 합니다. (입력값: ${place.matchType})"
             }
             require(place.sourceType in VALID_SOURCE_TYPES) {
-                "sourceType은 'screenshot', 'link' 중 하나여야 합니다. (입력값: ${place.sourceType})"
+                "sourceType은 'screenshot', 'link', 'text' 중 하나여야 합니다. (입력값: ${place.sourceType})"
             }
         }
 

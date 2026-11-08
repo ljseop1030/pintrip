@@ -19,6 +19,38 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 0. 사용자 프로필 컬렉션 규칙 (users/{uid})
+    // -------------------------------------------------------------
+    match /users/{uid} {
+      // 읽기: 로그인한 사용자는 프로필 조회 가능
+      allow read: if isSignedIn();
+
+      // 생성 (create): 본인 UID 문서만 허용 + 실제 인증 계정 이메일 일치 + #RRGGBB 규격 + 서버 생성 시각
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.avatarColor is string
+        && request.resource.data.avatarColor.matches('^#[0-9A-Fa-f]{6}$')
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly(['nickname', 'email', 'avatarColor', 'createdAt']);
+
+      // 수정 (update): 본인 UID 문서만 허용 + 실제 인증 계정 이메일 일치 + 기존 createdAt 보존 + 필드 규격 검증
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.avatarColor is string
+        && request.resource.data.avatarColor.matches('^#[0-9A-Fa-f]{6}$')
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.keys().hasOnly(['nickname', 'email', 'avatarColor', 'createdAt']);
+    }
+
+    // -------------------------------------------------------------
     // 1. 방 컬렉션 규칙 (rooms/test_room_1 한정 테스트)
     // -------------------------------------------------------------
     match /rooms/{roomId} {
@@ -70,7 +102,7 @@ service cloud.firestore {
           && request.resource.data.kakaoPlaceUrl is string && request.resource.data.kakaoPlaceUrl.size() > 0
           && request.resource.data.searchKeyword is string && request.resource.data.searchKeyword.size() > 0
           && request.resource.data.matchType in ['auto', 'confirmed', 'manual']
-          && request.resource.data.sourceType in ['screenshot', 'link']
+          && request.resource.data.sourceType in ['screenshot', 'link', 'text']
           && request.resource.data.addedByNickname is string && request.resource.data.addedByNickname.size() > 0
           // 초기값 검사 (빈 좋아요 목록, 정수 0인 좋아요 수, 서버 생성 시각)
           && request.resource.data.likedBy == []
