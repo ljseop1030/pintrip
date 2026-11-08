@@ -72,7 +72,7 @@ Region center coordinates are **app constants** (preset key → lat/lng), not st
 | searchKeyword | String | ✓ | Gemini / user | Re-fetch query |
 | searchRegion | String? | | Gemini / user | Narrower than room region ("해운대"). If null, use room region. Never filled from a Kakao address |
 | matchType | String | ✓ | App | `auto` / `confirmed` / `manual` |
-| sourceType | String | ✓ | App | `screenshot` / `link` |
+| sourceType | String | ✓ | App | `screenshot` / `link` / `text` |
 | sourceUrl | String? | | User | Original URL for links |
 | addedBy | String | ✓ | App | uid |
 | addedByNickname | String | ✓ | App | "Added by Minji" |
@@ -150,7 +150,7 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
 
 ## 8. Gemini extraction
 
-- One call per screenshot (max 5). A link = one call with the page text.
+- One call per screenshot (max 5). A link = one call with the page text. Shared text without a URL = one call with the text itself.
 - Firebase AI Logic structured output: `responseMimeType = "application/json"` + `responseSchema`. No regex parsing.
 - `temperature = 0`. Language: Korean (Kakao search).
 
