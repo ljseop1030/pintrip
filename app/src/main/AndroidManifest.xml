@@ -51,6 +51,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".auth.SignUpActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".room.TestRoomActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
