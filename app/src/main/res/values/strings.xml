@@ -55,6 +55,42 @@
     <string name="error_login_failed_default">로그인 실패</string>
     <string name="btn_open_test_login">개발용 테스트 로그인 화면 열기</string>
 
+    <!-- S02 Sign Up -->
+    <string name="title_join_membership">join membership</string>
+    <string name="signup_headline">Shall we create\na travel map together?</string>
+    <string name="signup_subtext">Sign up easily with your email</string>
+    <string name="nickname_hint">Nickname</string>
+    <string name="confirm_password_hint">Confirm Password</string>
+    <string name="sample_nickname_hint">Minji</string>
+    <string name="sample_confirm_password_hint">Re-enter password</string>
+    <string name="terms_agreement">I agree to the Terms of Service (required)</string>
+    <string name="btn_signup">Sign Up</string>
+    <string name="signup_link_prefix">Don\'t have an account?</string>
+    <string name="signup_link_action">join membership</string>
+
+    <string name="error_empty_nickname">닉네임을 입력해 주세요.</string>
+    <string name="error_invalid_email">올바른 이메일 형식이 아닙니다.</string>
+    <string name="error_password_too_short">비밀번호는 8자 이상이어야 합니다.</string>
+    <string name="error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
+    <string name="error_terms_required">약관에 동의해 주세요.</string>
+    <string name="status_creating_account">Auth 계정 및 프로필 생성 중&#8230;</string>
+    <string name="status_signup_success">회원가입이 완료되었습니다.</string>
+    <string name="status_existing_account_logged_in">이미 등록된 계정입니다. 기존 프로필로 로그인되었습니다.</string>
+    <string name="status_signup_and_profile_success">회원가입 및 프로필 생성이 완료되었습니다.</string>
+    <string name="status_profile_restored">누락되었던 프로필 생성이 완료되었습니다.</string>
+    <string name="status_auth_success_profile_failed">인증 계정은 생성/인증되었으나 프로필 생성에 실패했습니다. 아래 버튼을 눌러 프로필 저장을 재시도해 주세요.</string>
+    <string name="notice_new_user_title">가입 완료 안내</string>
+    <string name="notice_new_user_message">계정 및 프로필 작성이 완료되었습니다.\n\n여행방 생성 및 초대 참여 기능은 다음 버전에서 제공될 예정입니다.</string>
+    <string name="error_email_already_in_use">이미 등록된 이메일입니다. 비밀번호를 확인하시거나 로그인해 주세요.</string>
+    <string name="error_profile_load_failed">프로필 정보를 불러오지 못했습니다.</string>
+    <string name="error_profile_save_failed">프로필 저장에 실패했습니다. 다시 시도해 주세요.</string>
+    <string name="btn_retry_profile">프로필 저장 재시도</string>
+
+    <!-- Profile Dialog for Existing Accounts without Profile -->
+    <string name="profile_dialog_title">프로필 닉네임 설정</string>
+    <string name="profile_dialog_message">계정에 저장된 프로필이 없습니다. 사용할 닉네임을 입력해 주세요.</string>
+    <string name="btn_save_profile">프로필 저장</string>
+
     <!-- S03 Room List -->
     <string name="my_travel_room_title">My Travel Room</string>
     <string name="greeting_format">Hello, %1$s</string>
@@ -66,6 +102,7 @@
     <string name="error_room_load_failed">test_room_1 조회를 실패했습니다.\n원인: %1$s</string>
     <string name="error_room_not_found">test_room_1 문서를 찾을 수 없습니다.</string>
     <string name="error_invalid_room_name">방 이름 정보가 올바르지 않습니다.</string>
+    <string name="notice_no_participating_rooms">참여 중인 여행방이 없습니다.\n새 사용자용 방 생성 기능은 다음 업데이트에서 제공됩니다.</string>
 
     <!-- Test Room Detail (TestRoomActivity) -->
     <string name="test_room_title">개발용 테스트 방 (test_room_1)</string>
