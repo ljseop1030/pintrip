@@ -35,6 +35,11 @@ data class NavigateToExtractArgs(
     val shareInput: ShareInput,
 )
 
+data class NavigateToSelectPlacesArgs(
+    val roomId: String,
+    val matchResults: List<MatchResult>,
+)
+
 sealed interface ShareNoticeEvent {
     data class ToastNotice(
         val messageResId: Int,
@@ -59,6 +64,9 @@ class ShareReceiveViewModel(
 
     private val _navigateToExtract = MutableLiveData<Event<NavigateToExtractArgs>>()
     val navigateToExtract: LiveData<Event<NavigateToExtractArgs>> = _navigateToExtract
+
+    private val _navigateToSelectPlaces = MutableLiveData<Event<NavigateToSelectPlacesArgs>>()
+    val navigateToSelectPlaces: LiveData<Event<NavigateToSelectPlacesArgs>> = _navigateToSelectPlaces
 
     private val _matchResults = MutableLiveData<List<MatchResult>>()
     val matchResults: LiveData<List<MatchResult>> = _matchResults
@@ -88,7 +96,7 @@ class ShareReceiveViewModel(
 
         _stepsState.value = _stepsState.value?.copy(
             step2Status = StepStatus.IN_PROGRESS,
-            step3Status = StepStatus.IN_PROGRESS,
+            step3Status = StepStatus.PENDING,
         )
 
         Log.d(TAG, "onCheckPlacesClicked: Connecting to next step with roomId=$selectedRoomId, input=$input")
@@ -176,8 +184,15 @@ class ShareReceiveViewModel(
 
         if (shareInput !is ShareInput.Screenshots) {
             Log.w(TAG, "Unsupported shareInput type for extraction: $shareInput")
+            isProceeded = false
             updateStep2Status(StepStatus.ERROR)
             updateStep3Status(StepStatus.ERROR)
+            _noticeEvent.value = Event(
+                ShareNoticeEvent.ToastNotice(
+                    messageResId = R.string.share_receive_error_could_not_find_places,
+                ),
+            )
+            // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
             return
         }
 
@@ -185,8 +200,9 @@ class ShareReceiveViewModel(
 
         viewModelScope.launch {
             try {
+                // Step 2 시작: 텍스트 추출 진행 중, Step 3 대기
                 updateStep2Status(StepStatus.IN_PROGRESS)
-                updateStep3Status(StepStatus.IN_PROGRESS)
+                updateStep3Status(StepStatus.PENDING)
 
                 // 1. 방 정보(지역명) 조회
                 val roomSnapshot = db.collection("rooms")
@@ -194,39 +210,121 @@ class ShareReceiveViewModel(
                     .get()
                     .await()
 
-                val roomRegion = roomSnapshot.getString("region").orEmpty()
+                val roomRegion = roomSnapshot.getString("region")?.trim().orEmpty()
                 Log.d(TAG, "Fetched room region for roomId=$roomId: '$roomRegion'")
 
-                // 2. 공유된 스크린샷마다 Gemini 추출 수행
+                if (roomRegion.isBlank()) {
+                    Log.w(TAG, "Room region is blank for roomId=$roomId")
+                    isProceeded = false
+                    updateStep2Status(StepStatus.ERROR)
+                    updateStep3Status(StepStatus.ERROR)
+                    _noticeEvent.value = Event(
+                        ShareNoticeEvent.ToastNotice(
+                            messageResId = R.string.share_receive_error_could_not_find_places,
+                        ),
+                    )
+                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                    return@launch
+                }
+
+                // 2. 공유된 스크린샷마다 Gemini 추출 수행 (docs/data-contract.md §8 규격: 실패 시 1회 재시도)
                 val geminiExtractor = geminiExtractorFactory(appContext)
                 val extractionResponses = mutableListOf<GeminiExtractionResponse>()
 
                 for (uri in shareInput.uris) {
-                    Log.d(TAG, "Extracting places from screenshot URI: $uri")
-                    val response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
-                    extractionResponses.add(response)
+                    var response: GeminiExtractionResponse? = null
+                    var attempt = 0
+                    while (attempt < 2 && response == null) {
+                        try {
+                            attempt++
+                            Log.d(TAG, "Extracting places from screenshot URI (attempt $attempt): $uri")
+                            response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Gemini extraction attempt $attempt failed for URI $uri: ${e.message}", e)
+                            if (attempt >= 2) {
+                                throw e
+                            }
+                        }
+                    }
+                    if (response != null) {
+                        extractionResponses.add(response)
+                    }
                 }
 
+                // Step 2 완료: 텍스트 추출 완료
                 updateStep2Status(StepStatus.COMPLETED)
                 Log.d(TAG, "Gemini extraction completed. Responses count: ${extractionResponses.size}")
+
+                val totalPlacesExtracted = extractionResponses.sumOf { it.places.size }
+                if (totalPlacesExtracted == 0) {
+                    // Gemini가 추출한 장소가 0개인 경우 (docs/data-contract.md §8)
+                    isProceeded = false
+                    updateStep3Status(StepStatus.ERROR)
+                    _noticeEvent.value = Event(
+                        ShareNoticeEvent.ToastNotice(
+                            messageResId = R.string.share_receive_error_could_not_find_places,
+                        ),
+                    )
+                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                    return@launch
+                }
+
+                // Step 3 시작: 장소 매칭 진행 중
+                updateStep3Status(StepStatus.IN_PROGRESS)
 
                 // 3. 추출된 결과를 PlaceMatcher에 전달하여 카카오 장소 매칭 수행
                 val placeMatcher = placeMatcherFactory()
                 val matchResults = placeMatcher.matchPlaces(extractionResponses, roomRegion)
 
+                // NOT_FOUND를 제외하고 카카오 매칭이 완료된 유효 장소 개수 계산
+                val validMatchedCount = matchResults.count { it.status != MatchResult.STATUS_NOT_FOUND }
+
+                if (validMatchedCount == 0) {
+                    // 카카오 매칭 유효 결과가 0개인 경우 (docs/data-contract.md §8)
+                    isProceeded = false
+                    updateStep3Status(StepStatus.ERROR)
+                    _noticeEvent.value = Event(
+                        ShareNoticeEvent.ToastNotice(
+                            messageResId = R.string.share_receive_error_could_not_find_places,
+                        ),
+                    )
+                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                    return@launch
+                }
+
                 _matchResults.value = matchResults
-                updateStep3Status(StepStatus.COMPLETED, matchedCount = matchResults.size)
-                Log.d(TAG, "Place matching completed. Matched places count: ${matchResults.size}, results: $matchResults")
+                updateStep3Status(StepStatus.COMPLETED, matchedCount = validMatchedCount)
+                Log.d(TAG, "Place matching completed. Valid matched count: $validMatchedCount, total results: ${matchResults.size}")
+
+                // 5개 초과 안내 처리 (docs/data-contract.md §8)
+                val mergedResponse = mergeGeminiExtractionResponses(extractionResponses)
+                if (mergedResponse.hasMore) {
+                    _noticeEvent.value = Event(
+                        ShareNoticeEvent.ToastNotice(
+                            messageResId = R.string.share_receive_notice_up_to_5_places,
+                        ),
+                    )
+                }
+
+                // 다음 화면(장소 선택)으로 전달할 결과 이벤트 발행
+                _navigateToSelectPlaces.value = Event(
+                    NavigateToSelectPlacesArgs(
+                        roomId = roomId,
+                        matchResults = matchResults,
+                    ),
+                )
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error during extract step: ${e.message}", e)
+                Log.e(TAG, "Error during extract step after retry: ${e.message}", e)
+                isProceeded = false
                 updateStep2Status(StepStatus.ERROR)
                 updateStep3Status(StepStatus.ERROR)
                 _noticeEvent.value = Event(
                     ShareNoticeEvent.ToastNotice(
-                        messageResId = R.string.share_receive_error_extraction_failed,
+                        messageResId = R.string.share_receive_error_could_not_find_places,
                     ),
                 )
+                // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
             }
         }
     }

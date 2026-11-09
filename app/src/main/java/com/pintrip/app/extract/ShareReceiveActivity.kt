@@ -77,6 +77,13 @@ class ShareReceiveActivity : AppCompatActivity() {
                 startExtractStep(args.roomId, args.shareInput)
             }
         }
+
+        viewModel.navigateToSelectPlaces.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { args ->
+                Log.d(TAG, "Navigating to SelectPlaces with roomId=${args.roomId}, matchResultsCount=${args.matchResults.size}")
+                // TODO: Navigate to SelectPlacesActivity with args.roomId and args.matchResults
+            }
+        }
     }
 
     private fun startExtractStep(roomId: String, shareInput: ShareInput) {
@@ -154,14 +161,15 @@ class ShareReceiveActivity : AppCompatActivity() {
         }
 
         if (isValidInput) {
-            if (stepsState.step2Status == StepStatus.IN_PROGRESS) {
-                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
-                binding.btnCheckPlaces.isEnabled = false
+            val isWorking = stepsState.step2Status == StepStatus.IN_PROGRESS ||
+                    stepsState.step3Status == StepStatus.IN_PROGRESS
+            binding.tvHeaderTitle.text = if (isWorking) {
+                getString(R.string.share_receive_title_in_progress)
             } else {
-                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_initial)
+                getString(R.string.share_receive_title_initial)
             }
+            binding.btnCheckPlaces.isEnabled = !isWorking
         }
-
         bindStepItem(
             status = stepsState.step1Status,
             ivStatus = binding.ivStep1Status,
