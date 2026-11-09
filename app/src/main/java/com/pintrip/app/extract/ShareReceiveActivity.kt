@@ -80,9 +80,8 @@ class ShareReceiveActivity : AppCompatActivity() {
     }
 
     private fun startExtractStep(roomId: String, shareInput: ShareInput) {
-        // Connection point to next step (추출 -> 매칭 -> 장소 선택)
-        // Next step implementation will receive roomId and shareInput from here
         Log.d(TAG, "Connection point triggered: roomId=$roomId, shareInput=$shareInput")
+        viewModel.startExtractStep(applicationContext, roomId, shareInput)
     }
 
     private fun handleNoticeEvent(event: ShareNoticeEvent) {

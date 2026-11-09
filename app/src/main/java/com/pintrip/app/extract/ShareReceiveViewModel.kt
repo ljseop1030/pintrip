@@ -1,13 +1,20 @@
 package com.pintrip.app.extract
 
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
 import com.pintrip.app.R
 import com.pintrip.app.data.TestConfig
+import com.pintrip.app.data.model.GeminiExtractionResponse
+import com.pintrip.app.data.remote.GeminiExtractor
 import com.pintrip.app.ui.common.Event
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 enum class StepStatus {
     COMPLETED,
@@ -35,7 +42,11 @@ sealed interface ShareNoticeEvent {
     ) : ShareNoticeEvent
 }
 
-class ShareReceiveViewModel : ViewModel() {
+class ShareReceiveViewModel(
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val geminiExtractorFactory: (Context) -> GeminiExtractor = { GeminiExtractor(it) },
+    private val placeMatcherFactory: () -> PlaceMatcher = { PlaceMatcher() },
+) : ViewModel() {
 
     private val _shareInput = MutableLiveData<ShareInput>()
     val shareInput: LiveData<ShareInput> = _shareInput
@@ -48,6 +59,9 @@ class ShareReceiveViewModel : ViewModel() {
 
     private val _navigateToExtract = MutableLiveData<Event<NavigateToExtractArgs>>()
     val navigateToExtract: LiveData<Event<NavigateToExtractArgs>> = _navigateToExtract
+
+    private val _matchResults = MutableLiveData<List<MatchResult>>()
+    val matchResults: LiveData<List<MatchResult>> = _matchResults
 
     val selectedRoomId: String = TestConfig.TEST_ROOM_ID
 
@@ -155,6 +169,66 @@ class ShareReceiveViewModel : ViewModel() {
             step3Status = status,
             matchedCount = matchedCount,
         )
+    }
+
+    fun startExtractStep(context: Context, roomId: String, shareInput: ShareInput) {
+        Log.d(TAG, "startExtractStep called: roomId=$roomId, shareInput=$shareInput")
+
+        if (shareInput !is ShareInput.Screenshots) {
+            Log.w(TAG, "Unsupported shareInput type for extraction: $shareInput")
+            updateStep2Status(StepStatus.ERROR)
+            updateStep3Status(StepStatus.ERROR)
+            return
+        }
+
+        val appContext = context.applicationContext
+
+        viewModelScope.launch {
+            try {
+                updateStep2Status(StepStatus.IN_PROGRESS)
+                updateStep3Status(StepStatus.IN_PROGRESS)
+
+                // 1. 방 정보(지역명) 조회
+                val roomSnapshot = db.collection("rooms")
+                    .document(roomId)
+                    .get()
+                    .await()
+
+                val roomRegion = roomSnapshot.getString("region").orEmpty()
+                Log.d(TAG, "Fetched room region for roomId=$roomId: '$roomRegion'")
+
+                // 2. 공유된 스크린샷마다 Gemini 추출 수행
+                val geminiExtractor = geminiExtractorFactory(appContext)
+                val extractionResponses = mutableListOf<GeminiExtractionResponse>()
+
+                for (uri in shareInput.uris) {
+                    Log.d(TAG, "Extracting places from screenshot URI: $uri")
+                    val response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
+                    extractionResponses.add(response)
+                }
+
+                updateStep2Status(StepStatus.COMPLETED)
+                Log.d(TAG, "Gemini extraction completed. Responses count: ${extractionResponses.size}")
+
+                // 3. 추출된 결과를 PlaceMatcher에 전달하여 카카오 장소 매칭 수행
+                val placeMatcher = placeMatcherFactory()
+                val matchResults = placeMatcher.matchPlaces(extractionResponses, roomRegion)
+
+                _matchResults.value = matchResults
+                updateStep3Status(StepStatus.COMPLETED, matchedCount = matchResults.size)
+                Log.d(TAG, "Place matching completed. Matched places count: ${matchResults.size}, results: $matchResults")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during extract step: ${e.message}", e)
+                updateStep2Status(StepStatus.ERROR)
+                updateStep3Status(StepStatus.ERROR)
+                _noticeEvent.value = Event(
+                    ShareNoticeEvent.ToastNotice(
+                        messageResId = R.string.share_receive_error_extraction_failed,
+                    ),
+                )
+            }
+        }
     }
 
     private fun logShareInput(input: ShareInput) {
