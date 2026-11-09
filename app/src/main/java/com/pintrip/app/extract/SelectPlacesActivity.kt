@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +25,7 @@ import com.pintrip.app.databinding.ActivitySelectPlacesBinding
  * 3. NOT_FOUND 항목은 체크박스가 비활성화(disabled) 처리됩니다.
  * 4. regionMismatch 항목은 경고 배지와 함께 기본 해제(unchecked) 상태로 시작하며, 진입 시 Alert Dialog 팝업으로 안내합니다.
  * 5. CHECK 상태 항목은 첫 번째 후보가 자동 선택됩니다 (S08 개발 전 임시 처리).
+ * 6. 선택된 장소는 [Place] 객체로 변환하여 Firestore에 저장 후 토스트를 띄우고 화면을 닫습니다.
  */
 class SelectPlacesActivity : AppCompatActivity() {
 
@@ -83,7 +85,7 @@ class SelectPlacesActivity : AppCompatActivity() {
         binding.btnAddPlaces.setOnClickListener {
             val selectedCount = viewModel.getConfirmableCheckedCount()
             Log.d(TAG, "Add places clicked with $selectedCount places selected")
-            // TODO: Connect place confirm / Firestore saving logic
+            viewModel.saveSelectedPlaces()
         }
     }
 
@@ -110,9 +112,48 @@ class SelectPlacesActivity : AppCompatActivity() {
             }
         }
 
+        viewModel.isSaving.observe(this) { isSaving ->
+            val confirmableCheckedCount = viewModel.getConfirmableCheckedCount()
+            binding.btnAddPlaces.isEnabled = !isSaving && (confirmableCheckedCount > 0)
+        }
+
+        viewModel.saveResultEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { result ->
+                val message = if (result.skippedCount > 0) {
+                    getString(R.string.select_places_save_success_with_skip_format, result.addedCount, result.skippedCount)
+                } else {
+                    getString(R.string.select_places_save_success_format, result.addedCount)
+                }
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                Log.d(TAG, "Saved places: added=${result.addedCount}, skipped=${result.skippedCount}")
+
+                // TODO: Navigate to Room Home (Place List) screen after saving places
+                finish()
+            }
+        }
+
         viewModel.regionMismatchNotice.observe(this) { event ->
             event.getContentIfNotHandled()?.let { notice ->
                 showRegionMismatchDialog(notice.mismatchCount, notice.roomRegion)
+            }
+        }
+
+        viewModel.noticeEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { notice ->
+                handleNoticeEvent(notice)
+            }
+        }
+    }
+
+    private fun handleNoticeEvent(event: ShareNoticeEvent) {
+        when (event) {
+            is ShareNoticeEvent.ToastNotice -> {
+                val message = if (event.formatArgs.isNotEmpty()) {
+                    getString(event.messageResId, *event.formatArgs.toTypedArray())
+                } else {
+                    getString(event.messageResId)
+                }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -127,9 +168,10 @@ class SelectPlacesActivity : AppCompatActivity() {
     }
 
     private fun updateBottomBar() {
+        val isSaving = viewModel.isSaving.value ?: false
         val confirmableCheckedCount = viewModel.getConfirmableCheckedCount()
         binding.btnAddPlaces.text = getString(R.string.select_places_btn_add_places_format, confirmableCheckedCount)
-        binding.btnAddPlaces.isEnabled = (confirmableCheckedCount > 0)
+        binding.btnAddPlaces.isEnabled = !isSaving && (confirmableCheckedCount > 0)
     }
 
     companion object {

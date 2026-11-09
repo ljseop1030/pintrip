@@ -53,6 +53,9 @@
     <string name="select_places_btn_add_places_format">%1$d개 장소 추가하기</string>
     <string name="select_places_region_mismatch_title">지역 불일치 안내</string>
     <string name="select_places_region_mismatch_notice">%1$d개 장소가 방 지역(%2$s) 밖입니다.</string>
+    <string name="select_places_save_success_format">%1$d개 장소가 추가되었습니다.</string>
+    <string name="select_places_save_success_with_skip_format">%1$d개 장소가 추가되었습니다 (%2$d개 중복 제외).</string>
+    <string name="select_places_save_error">장소 저장 중 오류가 발생했습니다.</string>
     <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>
