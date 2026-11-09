@@ -296,6 +296,14 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.COMPLETED, matchedCount = validMatchedCount)
                 Log.d(TAG, "Place matching completed. Valid matched count: $validMatchedCount, total results: ${matchResults.size}")
 
+                matchResults.forEach { result ->
+                    Log.d(TAG, "[${result.status}] '${result.extracted.name}' (raw: ${result.extracted.rawText}) mismatch=${result.regionMismatch}")
+                    result.candidates.forEach { c ->
+                        val mark = if (c.kakaoPlaceId == result.selectedPlaceId) "*" else " "
+                        Log.d(TAG, "   $mark ${c.name} | ${c.address} | ${c.category} | id=${c.kakaoPlaceId}")
+                    }
+                }
+
                 // 5개 초과 안내 처리 (docs/data-contract.md §8)
                 val mergedResponse = mergeGeminiExtractionResponses(extractionResponses)
                 if (mergedResponse.hasMore) {
