@@ -15,7 +15,7 @@ class GeminiExtractorTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val extractor = GeminiExtractor(context)
         assertNotNull(extractor)
-        assertEquals("gemini-3.6-flash", GeminiExtractor.MODEL_NAME)
+        assertEquals("gemini-3.5-flash-lite", GeminiExtractor.MODEL_NAME)
         assertEquals(1080, GeminiExtractor.MAX_IMAGE_WIDTH)
     }
 }

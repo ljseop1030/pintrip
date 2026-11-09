@@ -5,7 +5,6 @@
     <string name="share_receive_header">PinTrip 공유</string>
     <string name="share_receive_title_initial">공유 내용 확인</string>
     <string name="share_receive_title_in_progress">장소 찾는 중…</string>
-    <string name="share_receive_title_completed">장소 찾기 완료</string>
     <string name="share_receive_title_error">공유 내용을 확인할 수 없습니다</string>
 
     <string name="share_receive_step1_image_completed">이미지 받기 완료</string>
@@ -34,7 +33,30 @@
 
     <string name="share_receive_error_empty">공유된 내용을 찾을 수 없거나 지원하지 않는 형식입니다.</string>
     <string name="share_receive_error_no_url">공유된 텍스트에 웹 링크(URL)가 포함되어 있지 않습니다.</string>
+    <string name="share_receive_error_could_not_find_places">장소를 찾을 수 없습니다.</string>
     <string name="share_receive_notice_exceed_max_screenshots">공유된 %1$d장의 스크린샷 중 최대 %2$d장만 처리됩니다.</string>
+    <string name="share_receive_notice_up_to_5_places">최대 5개의 장소만 처리됩니다.</string>
+
+    <!-- S07 Select Places -->
+    <string name="select_places_title">장소 선택</string>
+    <string name="select_places_count_format">%1$d개 장소</string>
+    <string name="select_places_headline_format">스크린샷에서 %1$d개 장소 발견</string>
+    <string name="select_places_subtitle">추가할 장소를 확인해 주세요</string>
+    <string name="select_places_badge_matched">매칭 완료</string>
+    <string name="select_places_badge_check">후보 선택</string>
+    <string name="select_places_badge_exception">예외</string>
+    <string name="select_places_item_check_subtitle">%1$d개 후보 · 터치하여 선택</string>
+    <string name="select_places_item_not_found_subtitle">장소를 찾을 수 없음</string>
+    <string name="select_places_item_region_mismatch_subtitle">방 지역 밖의 장소</string>
+    <string name="select_places_sns_notice">SNS 링크에서 장소를 찾을 수 없다면 스크린샷 공유가 더 정확해요</string>
+    <string name="select_places_add_to_room_format">%1$s에 추가</string>
+    <string name="select_places_btn_add_places_format">%1$d개 장소 추가하기</string>
+    <string name="select_places_region_mismatch_title">지역 불일치 안내</string>
+    <string name="select_places_region_mismatch_notice">%1$d개 장소가 방 지역(%2$s) 밖입니다.</string>
+    <string name="select_places_save_success_format">%1$d개 장소가 추가되었습니다.</string>
+    <string name="select_places_save_success_with_skip_format">%1$d개 장소가 추가되었습니다 (%2$d개 중복 제외).</string>
+    <string name="select_places_save_error">장소 저장 중 오류가 발생했습니다.</string>
+    <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>
 

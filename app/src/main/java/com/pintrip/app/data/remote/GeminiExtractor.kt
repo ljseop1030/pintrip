@@ -105,7 +105,7 @@ class GeminiExtractor(
     }
 
     companion object {
-        const val MODEL_NAME = "gemini-3.6-flash"
+        const val MODEL_NAME = "gemini-3.5-flash-lite"
         const val MAX_IMAGE_WIDTH = 1080
     }
 }

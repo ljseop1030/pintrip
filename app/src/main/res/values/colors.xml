@@ -29,4 +29,10 @@
     <color name="badge_blue_bg">#EBF0FF</color>
     <color name="badge_blue_text">#3A4A90</color>
     <color name="icon_bg_light">#F0F3FA</color>
+    <color name="badge_check_bg">#FFF7ED</color>
+    <color name="badge_check_text">#D97706</color>
+    <color name="badge_exception_bg">#FFF1F0</color>
+    <color name="badge_exception_text">#F09C6B</color>
+    <color name="item_check_border">#FDBA74</color>
+    <color name="item_check_bg">#FFFBEB</color>
 </resources>

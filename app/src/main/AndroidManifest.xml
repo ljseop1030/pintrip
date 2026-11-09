@@ -46,6 +46,11 @@
         </activity>
 
         <activity
+            android:name=".extract.SelectPlacesActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".auth.TestLoginActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

@@ -77,12 +77,20 @@ class ShareReceiveActivity : AppCompatActivity() {
                 startExtractStep(args.roomId, args.shareInput)
             }
         }
+
+        viewModel.navigateToSelectPlaces.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { args ->
+                Log.d(TAG, "Navigating to SelectPlacesActivity with roomId=${args.roomId}, matchResultsCount=${args.matchResults.size}")
+                val intent = SelectPlacesActivity.newIntent(this, args.roomId, args.matchResults)
+                startActivity(intent)
+                finish()
+            }
+        }
     }
 
     private fun startExtractStep(roomId: String, shareInput: ShareInput) {
-        // Connection point to next step (추출 -> 매칭 -> 장소 선택)
-        // Next step implementation will receive roomId and shareInput from here
         Log.d(TAG, "Connection point triggered: roomId=$roomId, shareInput=$shareInput")
+        viewModel.startExtractStep(applicationContext, roomId, shareInput)
     }
 
     private fun handleNoticeEvent(event: ShareNoticeEvent) {
@@ -155,14 +163,15 @@ class ShareReceiveActivity : AppCompatActivity() {
         }
 
         if (isValidInput) {
-            if (stepsState.step2Status == StepStatus.IN_PROGRESS) {
-                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_in_progress)
-                binding.btnCheckPlaces.isEnabled = false
+            val isWorking = stepsState.step2Status == StepStatus.IN_PROGRESS ||
+                    stepsState.step3Status == StepStatus.IN_PROGRESS
+            binding.tvHeaderTitle.text = if (isWorking) {
+                getString(R.string.share_receive_title_in_progress)
             } else {
-                binding.tvHeaderTitle.text = getString(R.string.share_receive_title_initial)
+                getString(R.string.share_receive_title_initial)
             }
+            binding.btnCheckPlaces.isEnabled = !isWorking
         }
-
         bindStepItem(
             status = stepsState.step1Status,
             ivStatus = binding.ivStep1Status,
