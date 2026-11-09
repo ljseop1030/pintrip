@@ -21,7 +21,7 @@ import java.net.URLEncoder
  * @property apiKey 카카오 REST API 키 (기본값: [BuildConfig.KAKAO_REST_API_KEY])
  * @property baseUrl 카카오 API Base URL (기본값: "https://dapi.kakao.com")
  */
-class KakaoLocalApiClient(
+open class KakaoLocalApiClient(
     private val apiKey: String = BuildConfig.KAKAO_REST_API_KEY,
     private val baseUrl: String = DEFAULT_BASE_URL,
 ) {
@@ -46,7 +46,7 @@ class KakaoLocalApiClient(
      * @throws IllegalArgumentException query가 빈 문자열이거나, API 키가 비어있는 경우
      * @throws IOException 네트워크 통신 실패 또는 HTTP 비정상 코드(Non-2xx) 수신 시
      */
-    suspend fun searchKeyword(
+    open suspend fun searchKeyword(
         query: String,
         categoryGroupCode: String? = null,
         page: Int? = null,
