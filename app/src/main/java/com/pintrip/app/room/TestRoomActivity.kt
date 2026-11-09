@@ -15,6 +15,7 @@ import com.pintrip.app.auth.TestLoginActivity
 import com.pintrip.app.data.model.Place
 import com.pintrip.app.data.repository.PlaceRepository
 import com.pintrip.app.databinding.ActivityTestRoomBinding
+import com.pintrip.app.place.PlaceListActivity
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -64,6 +65,11 @@ class TestRoomActivity : AppCompatActivity() {
 
         binding.btnGetPlaces.setOnClickListener {
             performGetPlaces()
+        }
+
+        binding.btnViewPlaceList.setOnClickListener {
+            val intent = PlaceListActivity.newIntent(this, TEST_ROOM_ID)
+            startActivity(intent)
         }
 
         binding.btnLogout.setOnClickListener {
