@@ -13,6 +13,10 @@ import com.pintrip.app.data.TestConfig
 import com.pintrip.app.data.model.GeminiExtractionResponse
 import com.pintrip.app.data.remote.GeminiExtractor
 import com.pintrip.app.ui.common.Event
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -227,28 +231,28 @@ class ShareReceiveViewModel(
                     return@launch
                 }
 
-                // 2. 공유된 스크린샷마다 Gemini 추출 수행 (docs/data-contract.md §8 규격: 실패 시 1회 재시도)
+                // 2. 공유된 스크린샷마다 Gemini 추출 수행 (병렬 async/awaitAll, 스크린샷별 1회 재시도, 순서 유지)
                 val geminiExtractor = geminiExtractorFactory(appContext)
-                val extractionResponses = mutableListOf<GeminiExtractionResponse>()
-
-                for (uri in shareInput.uris) {
-                    var response: GeminiExtractionResponse? = null
-                    var attempt = 0
-                    while (attempt < 2 && response == null) {
-                        try {
-                            attempt++
-                            Log.d(TAG, "Extracting places from screenshot URI (attempt $attempt): $uri")
-                            response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Gemini extraction attempt $attempt failed for URI $uri: ${e.message}", e)
-                            if (attempt >= 2) {
-                                throw e
+                val extractionResponses = coroutineScope {
+                    shareInput.uris.map { uri ->
+                        async(Dispatchers.IO) {
+                            var response: GeminiExtractionResponse? = null
+                            var attempt = 0
+                            while (attempt < 2 && response == null) {
+                                try {
+                                    attempt++
+                                    Log.d(TAG, "Extracting places from screenshot URI (attempt $attempt): $uri")
+                                    response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Gemini extraction attempt $attempt failed for URI $uri: ${e.message}", e)
+                                    if (attempt >= 2) {
+                                        throw e
+                                    }
+                                }
                             }
+                            response ?: throw IllegalStateException("Gemini response is null for URI: $uri")
                         }
-                    }
-                    if (response != null) {
-                        extractionResponses.add(response)
-                    }
+                    }.awaitAll()
                 }
 
                 // Step 2 완료: 텍스트 추출 완료
