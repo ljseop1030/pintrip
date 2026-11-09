@@ -80,8 +80,10 @@ class ShareReceiveActivity : AppCompatActivity() {
 
         viewModel.navigateToSelectPlaces.observe(this) { event ->
             event.getContentIfNotHandled()?.let { args ->
-                Log.d(TAG, "Navigating to SelectPlaces with roomId=${args.roomId}, matchResultsCount=${args.matchResults.size}")
-                // TODO: Navigate to SelectPlacesActivity with args.roomId and args.matchResults
+                Log.d(TAG, "Navigating to SelectPlacesActivity with roomId=${args.roomId}, matchResultsCount=${args.matchResults.size}")
+                val intent = SelectPlacesActivity.newIntent(this, args.roomId, args.matchResults)
+                startActivity(intent)
+                finish()
             }
         }
     }

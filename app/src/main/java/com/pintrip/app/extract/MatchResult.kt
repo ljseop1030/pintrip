@@ -3,6 +3,7 @@ package com.pintrip.app.extract
 import androidx.annotation.Keep
 import com.pintrip.app.data.model.GeminiPlace
 import com.pintrip.app.data.model.KakaoPlaceDocument
+import java.io.Serializable
 
 /**
  * 장소 매칭 결과 후보 정보 데이터 모델 (메모리 전용, Firestore 저장 안 함).
@@ -27,7 +28,7 @@ data class MatchCandidate(
     val lng: Double? = null,
     val category: String? = null,
     val phone: String? = null,
-) {
+) : Serializable {
     companion object {
         /**
          * [KakaoPlaceDocument] 응답 객체에서 [MatchCandidate] 객체를 생성합니다.
@@ -68,7 +69,7 @@ data class MatchResult(
     val selectedPlaceId: String? = null,
     val regionMismatch: Boolean = false,
     val checked: Boolean = true,
-) {
+) : Serializable {
     /**
      * 현재 [selectedPlaceId]에 해당하는 [MatchCandidate] 객체를 반환합니다.
      */

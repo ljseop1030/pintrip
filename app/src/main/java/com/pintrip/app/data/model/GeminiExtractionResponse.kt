@@ -3,6 +3,7 @@ package com.pintrip.app.data.model
 import androidx.annotation.Keep
 import com.google.firebase.ai.type.Schema
 import org.json.JSONObject
+import java.io.Serializable
 
 /**
  * Gemini 장소 추출 결과 중 개별 장소 정보 데이터 모델.
@@ -21,7 +22,7 @@ data class GeminiPlace(
     val categoryHint: String? = null,
     val rawText: String = "",
     val outsideRoomRegion: Boolean = false,
-)
+) : Serializable
 
 /**
  * Gemini 장소 추출 결과 응답 루트 데이터 모델.

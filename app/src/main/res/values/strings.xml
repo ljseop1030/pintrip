@@ -37,6 +37,24 @@
     <string name="share_receive_notice_exceed_max_screenshots">공유된 %1$d장의 스크린샷 중 최대 %2$d장만 처리됩니다.</string>
     <string name="share_receive_notice_up_to_5_places">최대 5개의 장소만 처리됩니다.</string>
 
+    <!-- S07 Select Places -->
+    <string name="select_places_title">장소 선택</string>
+    <string name="select_places_count_format">%1$d개 장소</string>
+    <string name="select_places_headline_format">스크린샷에서 %1$d개 장소 발견</string>
+    <string name="select_places_subtitle">추가할 장소를 확인해 주세요</string>
+    <string name="select_places_badge_matched">매칭 완료</string>
+    <string name="select_places_badge_check">후보 선택</string>
+    <string name="select_places_badge_exception">예외</string>
+    <string name="select_places_item_check_subtitle">%1$d개 후보 · 터치하여 선택</string>
+    <string name="select_places_item_not_found_subtitle">장소를 찾을 수 없음</string>
+    <string name="select_places_item_region_mismatch_subtitle">방 지역 밖의 장소</string>
+    <string name="select_places_sns_notice">SNS 링크에서 장소를 찾을 수 없다면 스크린샷 공유가 더 정확해요</string>
+    <string name="select_places_add_to_room_format">%1$s에 추가</string>
+    <string name="select_places_btn_add_places_format">%1$d개 장소 추가하기</string>
+    <string name="select_places_region_mismatch_title">지역 불일치 안내</string>
+    <string name="select_places_region_mismatch_notice">%1$d개 장소가 방 지역(%2$s) 밖입니다.</string>
+    <string name="common_confirm">확인</string>
+
     <string name="app_subtitle">Fill your travel map together with a single share</string>
 
     <!-- S01 Login -->
