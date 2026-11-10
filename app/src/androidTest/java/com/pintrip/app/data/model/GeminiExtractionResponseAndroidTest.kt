@@ -32,15 +32,13 @@ class GeminiExtractionResponseAndroidTest {
                   "outsideRoomRegion": true
                 }
               ],
-              "regionHint": "부산",
-              "hasMore": false
+              "regionHint": "부산"
             }
         """.trimIndent()
 
         val result = parseGeminiExtractionResponse(json)
 
         assertEquals("부산", result.regionHint)
-        assertFalse(result.hasMore)
         assertEquals(2, result.places.size)
 
         val place1 = result.places[0]
@@ -71,15 +69,13 @@ class GeminiExtractionResponseAndroidTest {
                   "outsideRoomRegion": false
                 }
               ],
-              "regionHint": null,
-              "hasMore": true
+              "regionHint": null
             }
         """.trimIndent()
 
         val result = parseGeminiExtractionResponse(json)
 
         assertNull(result.regionHint)
-        assertTrue(result.hasMore)
         assertEquals(1, result.places.size)
 
         val place = result.places[0]
@@ -96,8 +92,7 @@ class GeminiExtractionResponseAndroidTest {
             ```json
             {
               "places": [],
-              "regionHint": null,
-              "hasMore": false
+              "regionHint": null
             }
             ```
         """.trimIndent()
@@ -105,7 +100,6 @@ class GeminiExtractionResponseAndroidTest {
         val result = parseGeminiExtractionResponse(json)
 
         assertNull(result.regionHint)
-        assertFalse(result.hasMore)
         assertTrue(result.places.isEmpty())
     }
 

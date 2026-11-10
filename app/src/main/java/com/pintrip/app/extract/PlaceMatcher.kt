@@ -11,7 +11,7 @@ import com.pintrip.app.data.remote.buildKakaoSearchQuery
  * 카카오 Local API 검색 및 결과 판정을 거쳐 [MatchResult] 리스트를 반환하는 매칭 클래스.
  *
  * docs/data-contract.md §8 및 §9 규격을 엄격히 준수합니다:
- * 1. 여러 스크린샷 추출 결과는 [mergeGeminiExtractionResponses]로 먼저 병합 (중복 제거 및 상위 5개 제한).
+ * 1. 여러 스크린샷 추출 결과는 [mergeGeminiExtractionResponses]로 먼저 병합 (중복 제거).
  * 2. [buildKakaoSearchQuery]로 카카오 키워드 검색어 및 카테고리 그룹 코드 생성.
  * 3. 카카오 검색 결과가 0개이고 카테고리 그룹 코드가 지정되어 있었던 경우, 카테고리 없이 1회 재검색 (§8 규칙).
  * 4. 예외 발생 시 [Log.w]에 기록 후 [MatchResult.STATUS_NOT_FOUND]로 처리.
@@ -37,7 +37,7 @@ class PlaceMatcher(
     ): List<MatchResult> {
         if (extractionResponses.isEmpty()) return emptyList()
 
-        // 1. 여러 스크린샷 결과를 하나로 병합 (중복 제거 & 5개 상한)
+        // 1. 여러 스크린샷 결과를 하나로 병합 (중복 제거)
         val mergedResponse = mergeGeminiExtractionResponses(extractionResponses)
         if (mergedResponse.places.isEmpty()) return emptyList()
 

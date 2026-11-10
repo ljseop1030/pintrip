@@ -308,15 +308,6 @@ class ShareReceiveViewModel(
                     }
                 }
 
-                // 5개 초과 안내 처리 (docs/data-contract.md §8)
-                val mergedResponse = mergeGeminiExtractionResponses(extractionResponses)
-                if (mergedResponse.hasMore) {
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_notice_up_to_5_places,
-                        ),
-                    )
-                }
 
                 // 다음 화면(장소 선택)으로 전달할 결과 이벤트 발행
                 _navigateToSelectPlaces.value = Event(
