@@ -6,12 +6,12 @@ Single source of truth for Firestore schema, in-memory models, and the Gemini/Ka
 
 ## 1. Rules
 
-1. **Never store Kakao Local API response data** (place name, address, coordinates, category, phone) anywhere: Firestore, Room, SharedPreferences, or files. Re-fetch when a screen opens and keep it in ViewModel memory only.
+1. **Never store Kakao Local API response data** (place name, address, coordinates, category, phone) anywhere: Firestore, Room, SharedPreferences, or files. Re-fetch when a screen opens and keep it in memory only (ViewModel for screens, the Service for background work).
 2. The only Kakao data we store: **place ID and place URL**.
 3. Re-fetch = keyword search with the stored `searchKeyword` (+ region), then pick the result whose `id == kakaoPlaceId`. Kakao has no lookup-by-ID API.
 4. `searchKeyword` is the name Gemini extracted or the query the user typed. Never overwrite it with Kakao's `place_name`.
 5. Regions we may store: the room region, a region the user typed, a region Gemini extracted. Never store a region cut out of a Kakao address.
-6. No screenshot storage during WIP.
+6. No screenshot storage.
 7. Store only places the user confirmed. Candidates, excluded items, and NOT_FOUND items are never stored.
 
 ---
@@ -58,7 +58,7 @@ There is no `likes` collection. Likes live in each place's `likedBy` array.
 | updatedAt | Timestamp | ✓ | Room list sort |
 
 `Member = { nickname: String, avatarColor: String, lastSeenAt: Timestamp? }`
-`lastSeenAt` is for the "NEW n" badge (low priority). Update it on entering room home.
+`lastSeenAt` is used for the "NEW n" badge and friend notifications. Update it on entering room home.
 
 ### rooms/{roomId}/places/{kakaoPlaceId}  (doc ID = Kakao place ID, prevents duplicates per room)
 
@@ -108,6 +108,13 @@ Repository merges `Place` (Firestore) + live Kakao search result.
 **notFound:** show `searchKeyword` as the name, list only (no map pin), only "Open in KakaoMap" enabled.
 
 Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not Firestore queries.
+
+### Map camera (memory only)
+
+- 1+ `found` places: fit bounds to all pins.
+- 0 `found` places (empty room or all `notFound`): on entering room home, run a Kakao keyword search with the room `region` and move the camera to the first result.
+- Search fails or returns nothing: show the whole of Korea.
+- Do not add a region as a place to `places`.
 
 ---
 
@@ -164,21 +171,19 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
       "outsideRoomRegion": false
     }
   ],
-  "regionHint": "부산",
-  "hasMore": false
+  "regionHint": "부산"
 }
 ```
 
 | Field | Type | Req | Notes |
 |---|---|---|---|
-| places | Array | ✓ | Max 5. Empty if none |
+| places | Array | ✓ | Empty if none |
 | places[].name | String | ✓ | Kakao search query. Keep branch names ("이재모피자 본점"). Strip numbering, emoji, quotes |
 | places[].region | String? | | Region written near the place in the image. null if absent. No guessing |
 | places[].categoryHint | String? | | `dining` / `cafe` / `sights` / `stay` / `etc`. Helper only |
 | places[].rawText | String | ✓ | Original text in the image. Shown as "Recognized text" |
 | places[].outsideRoomRegion | Boolean | ✓ | true only with clear evidence the place is outside the room region |
 | regionHint | String? | | Region context of the whole image |
-| hasMore | Boolean | ✓ | true if more than 5 places were cut → show "Up to 5 places" notice |
 
 ### Prompt rules
 
@@ -195,7 +200,6 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
 | JSON parse fail / call fail | Retry once → "Couldn't find places" popup + manual search button |
 | `places` empty | Same popup |
 | Same `name` across screenshots | Merge (ignore spaces/case), match once |
-| More than 5 after merge | Match the first 5, show notice |
 | Room/extracted region mismatch | See §9 Region mismatch |
 
 ### Search strategy
@@ -271,3 +275,6 @@ Re-fetch after saving: search with the same query rule as §8 using `searchKeywo
 
 - `status`: how to show it on screen now. Memory only.
 - `matchType`: how a saved place was confirmed. Stored in Firestore.
+
+### Note
+- If your feature needs new data (collections, fields, models, Gemini/Kakao formats, writes, queries, or rules), add it here before coding.
