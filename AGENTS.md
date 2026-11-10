@@ -1,7 +1,7 @@
 # Agent Tools & Rules
 
 ## Rules
-- Build UI with XML layouts + ViewBinding + AppCompat + Material 3. Do not use Compose or findViewById.
+- Build UI with XML layouts + ViewBinding + AppCompat + Material 3. Do not use Compose.
 - For UI work, follow only the Figma link in DESIGN.md (call the Figma MCP at most once per prompt, ask if you need more).
 - Follow docs/data-contract.md for all Firestore, Gemini, and Kakao data. For Kakao places, store only the place ID and URL.
 - No hardcoding: strings in strings.xml, colors in colors.xml, API keys from BuildConfig only.
