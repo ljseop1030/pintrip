@@ -109,6 +109,13 @@ Repository merges `Place` (Firestore) + live Kakao search result.
 
 Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not Firestore queries.
 
+### Map camera (memory only)
+
+- 1+ `found` places: fit bounds to all pins.
+- 0 `found` places (empty room or all `notFound`): on entering room home, run a Kakao keyword search with the room `region` and move the camera to the first result.
+- Search fails or returns nothing: show the whole of Korea.
+- Do not add a region as a place to `places`.
+
 ---
 
 ## 5. Write operations
