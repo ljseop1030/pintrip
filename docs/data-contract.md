@@ -6,7 +6,7 @@ Single source of truth for Firestore schema, in-memory models, and the Gemini/Ka
 
 ## 1. Rules
 
-1. **Never store Kakao Local API response data** (place name, address, coordinates, category, phone) anywhere: Firestore, Room, SharedPreferences, or files. Re-fetch when a screen opens and keep it in ViewModel memory only.
+1. **Never store Kakao Local API response data** (place name, address, coordinates, category, phone) anywhere: Firestore, Room, SharedPreferences, or files. Re-fetch when a screen opens and keep it in memory only (ViewModel for screens, the Service for background work).
 2. The only Kakao data we store: **place ID and place URL**.
 3. Re-fetch = keyword search with the stored `searchKeyword` (+ region), then pick the result whose `id == kakaoPlaceId`. Kakao has no lookup-by-ID API.
 4. `searchKeyword` is the name Gemini extracted or the query the user typed. Never overwrite it with Kakao's `place_name`.
