@@ -109,7 +109,7 @@ class ShareReceiveActivity : AppCompatActivity() {
     private fun bindShareInput(input: ShareInput) {
         val isValidInput = when (input) {
             is ShareInput.Screenshots -> true
-            is ShareInput.LinkText -> input.url != null
+            is ShareInput.LinkText -> input.text.isNotBlank()
             ShareInput.Empty -> false
         }
 
@@ -138,7 +138,7 @@ class ShareReceiveActivity : AppCompatActivity() {
                 binding.ivItemIcon.setImageResource(R.drawable.ic_link)
                 binding.tvItemTitle.text = getString(R.string.share_receive_link_text_label)
                 binding.tvItemSubtitle.text = getString(R.string.share_receive_source_text)
-                if (input.url != null) {
+                if (input.text.isNotBlank()) {
                     binding.tvStep1Text.text = getString(R.string.share_receive_step1_text_completed)
                 } else {
                     binding.tvStep1Text.text = getString(R.string.share_receive_step1_empty)
@@ -158,7 +158,7 @@ class ShareReceiveActivity : AppCompatActivity() {
         val input = viewModel.shareInput.value
         val isValidInput = when (input) {
             is ShareInput.Screenshots -> true
-            is ShareInput.LinkText -> input.url != null
+            is ShareInput.LinkText -> input.text.isNotBlank()
             else -> false
         }
 
