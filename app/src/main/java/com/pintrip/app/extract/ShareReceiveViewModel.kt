@@ -225,7 +225,7 @@ class ShareReceiveViewModel(
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
+                            messageResId = getNoPlacesErrorResId(shareInput),
                         ),
                     )
                     // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -310,7 +310,7 @@ class ShareReceiveViewModel(
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
+                            messageResId = getNoPlacesErrorResId(shareInput),
                         ),
                     )
                     // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -350,7 +350,7 @@ class ShareReceiveViewModel(
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
+                            messageResId = getNoPlacesErrorResId(shareInput),
                         ),
                     )
                     // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -385,11 +385,19 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.ERROR)
                 _noticeEvent.value = Event(
                     ShareNoticeEvent.ToastNotice(
-                        messageResId = R.string.share_receive_error_could_not_find_places,
+                        messageResId = getNoPlacesErrorResId(shareInput),
                     ),
                 )
                 // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
             }
+        }
+    }
+
+    private fun getNoPlacesErrorResId(shareInput: ShareInput): Int {
+        return if (shareInput is ShareInput.LinkText) {
+            R.string.share_receive_error_could_not_find_places_link
+        } else {
+            R.string.share_receive_error_could_not_find_places
         }
     }
 
