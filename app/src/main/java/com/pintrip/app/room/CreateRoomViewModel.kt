@@ -1,11 +1,13 @@
 package com.pintrip.app.room
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.ui.common.Event
@@ -31,8 +33,8 @@ class CreateRoomViewModel(
     private val _createSuccessEvent = MutableLiveData<Event<Room>>()
     val createSuccessEvent: LiveData<Event<Room>> = _createSuccessEvent
 
-    private val _errorMessageEvent = MutableLiveData<Event<String>>()
-    val errorMessageEvent: LiveData<Event<String>> = _errorMessageEvent
+    private val _errorMessageEvent = MutableLiveData<Event<Int>>()
+    val errorMessageEvent: LiveData<Event<Int>> = _errorMessageEvent
 
     fun setIcon(icon: String) {
         if (icon in RoomRepository.VALID_ICONS) {
@@ -57,19 +59,19 @@ class CreateRoomViewModel(
         val trimmedRegion = region.trim()
 
         if (trimmedName.isEmpty()) {
-            _errorMessageEvent.value = Event("방 이름을 입력해 주세요.")
+            _errorMessageEvent.value = Event(R.string.error_empty_room_name)
             return
         }
 
         if (trimmedRegion.isEmpty()) {
-            _errorMessageEvent.value = Event("여행 지역을 입력해 주세요.")
+            _errorMessageEvent.value = Event(R.string.error_empty_region)
             return
         }
 
         val start = _selectedStartDate.value
         val end = _selectedEndDate.value
         if (start != null && end != null && end.compareTo(start) < 0) {
-            _errorMessageEvent.value = Event("종료일은 시작일보다 빠를 수 없습니다.")
+            _errorMessageEvent.value = Event(R.string.error_invalid_date_range)
             return
         }
 
@@ -89,16 +91,15 @@ class CreateRoomViewModel(
                 throw e
             } catch (e: FirebaseFirestoreException) {
                 _isLoading.value = false
-                val errorMsg = when (e.code) {
-                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> "방 생성 권한이 없습니다."
-                    FirebaseFirestoreException.Code.UNAVAILABLE -> "네트워크 연결 상태를 확인해 주세요."
-                    else -> e.localizedMessage ?: "방 생성에 실패했습니다."
+                @StringRes val errorResId = when (e.code) {
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_create_room_permission_denied
+                    FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
+                    else -> R.string.error_create_room_default
                 }
-                _errorMessageEvent.value = Event(errorMsg)
-            } catch (e: Exception) {
+                _errorMessageEvent.value = Event(errorResId)
+            } catch (_: Exception) {
                 _isLoading.value = false
-                val errorMsg = e.localizedMessage ?: "방 생성에 실패했습니다."
-                _errorMessageEvent.value = Event(errorMsg)
+                _errorMessageEvent.value = Event(R.string.error_create_room_default)
             }
         }
     }

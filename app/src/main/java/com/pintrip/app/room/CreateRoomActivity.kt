@@ -158,8 +158,8 @@ class CreateRoomActivity : AppCompatActivity() {
         }
 
         viewModel.errorMessageEvent.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { message ->
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            event.getContentIfNotHandled()?.let { resId ->
+                Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
             }
         }
 

@@ -158,6 +158,11 @@
     <string name="error_empty_region">여행 지역을 입력해 주세요.</string>
     <string name="error_invalid_date_range">종료일은 시작일보다 빠를 수 없습니다.</string>
     <string name="error_create_room_failed">방 생성에 실패했습니다: %1$s</string>
+    <string name="error_create_room_default">방 생성에 실패했습니다. 다시 시도해 주세요.</string>
+    <string name="error_create_room_permission_denied">방 생성 권한이 없습니다.</string>
+    <string name="error_room_permission_denied">방 접근 권한이 없습니다.</string>
+    <string name="error_room_list_default">방 목록을 불러오지 못했습니다.</string>
+    <string name="error_network_unavailable">네트워크 연결 상태를 확인해 주세요.</string>
     <string name="status_room_created">여행방이 생성되었습니다.</string>
     <string name="date_range_format">%1$s – %2$s</string>
 

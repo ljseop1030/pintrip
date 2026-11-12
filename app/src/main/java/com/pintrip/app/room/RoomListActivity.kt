@@ -136,7 +136,7 @@ class RoomListActivity : AppCompatActivity() {
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = true
-                    binding.tvErrorMessage.text = state.message ?: getString(R.string.room_list_load_error, "오류가 발생했습니다.")
+                    binding.tvErrorMessage.text = getString(state.messageResId)
                 }
             }
         }
@@ -164,8 +164,8 @@ class RoomListActivity : AppCompatActivity() {
         }
 
         viewModel.toastEvent.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { message ->
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            event.getContentIfNotHandled()?.let { resId ->
+                Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
             }
         }
     }

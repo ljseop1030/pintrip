@@ -1,5 +1,6 @@
 package com.pintrip.app.room
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Source
+import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.data.repository.UserRepository
@@ -19,7 +21,7 @@ sealed class RoomListUiState {
     object Loading : RoomListUiState()
     object Empty : RoomListUiState()
     data class Success(val rooms: List<Room>) : RoomListUiState()
-    data class Error(val message: String?) : RoomListUiState()
+    data class Error(@get:StringRes val messageResId: Int) : RoomListUiState()
 }
 
 class RoomListViewModel(
@@ -46,8 +48,8 @@ class RoomListViewModel(
     private val _navigateToPlaceList = MutableLiveData<Event<String>>()
     val navigateToPlaceList: LiveData<Event<String>> = _navigateToPlaceList
 
-    private val _toastEvent = MutableLiveData<Event<String>>()
-    val toastEvent: LiveData<Event<String>> = _toastEvent
+    private val _toastEvent = MutableLiveData<Event<Int>>()
+    val toastEvent: LiveData<Event<Int>> = _toastEvent
 
     private var isDataLoaded = false
     private var isNavigating = false
@@ -63,7 +65,7 @@ class RoomListViewModel(
 
         val currentUser = auth.currentUser
         if (currentUser == null) {
-            _uiState.value = RoomListUiState.Error("로그인이 필요합니다.")
+            _uiState.value = RoomListUiState.Error(R.string.error_not_logged_in)
             return
         }
 
@@ -71,7 +73,7 @@ class RoomListViewModel(
 
         loadJob = viewModelScope.launch {
             try {
-                // 1. 프로필 정보 로드 (실패 시 명시적 예외 처리)
+                // 1. 프로필 정보 로드
                 val profile = userRepository.getUserProfile(currentUser.uid, source = Source.DEFAULT)
                 if (profile != null && profile.nickname.isNotBlank()) {
                     _nickname.value = profile.nickname
@@ -93,15 +95,14 @@ class RoomListViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: FirebaseFirestoreException) {
-                val errorMsg = when (e.code) {
-                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> "방 접근 권한이 없습니다."
-                    FirebaseFirestoreException.Code.UNAVAILABLE -> "네트워크 연결 상태를 확인해 주세요."
-                    else -> e.localizedMessage ?: "방 목록을 불러오지 못했습니다."
+                @StringRes val errorResId = when (e.code) {
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_room_permission_denied
+                    FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
+                    else -> R.string.error_room_list_default
                 }
-                _uiState.value = RoomListUiState.Error(errorMsg)
-            } catch (e: Exception) {
-                val errorMsg = e.localizedMessage ?: "방 목록을 불러오지 못했습니다."
-                _uiState.value = RoomListUiState.Error(errorMsg)
+                _uiState.value = RoomListUiState.Error(errorResId)
+            } catch (_: Exception) {
+                _uiState.value = RoomListUiState.Error(R.string.error_room_list_default)
             }
         }
     }
@@ -113,7 +114,7 @@ class RoomListViewModel(
     }
 
     fun onJoinCodeClick() {
-        _toastEvent.value = Event("초대 코드로 참여하기 기능은 다음 업데이트에서 제공됩니다.")
+        _toastEvent.value = Event(R.string.notice_join_code_feature_later)
     }
 
     fun onRoomCardClick(room: Room) {
@@ -123,7 +124,7 @@ class RoomListViewModel(
             isNavigating = true
             _navigateToPlaceList.value = Event(room.id)
         } else {
-            _toastEvent.value = Event("방 ID를 찾을 수 없습니다.")
+            _toastEvent.value = Event(R.string.place_list_error_no_room_id)
         }
     }
 
