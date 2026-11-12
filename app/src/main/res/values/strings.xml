@@ -106,6 +106,8 @@
     <string name="error_email_already_in_use">이미 등록된 이메일입니다. 비밀번호를 확인하시거나 로그인해 주세요.</string>
     <string name="error_profile_load_failed">프로필 정보를 불러오지 못했습니다.</string>
     <string name="error_profile_save_failed">프로필 저장에 실패했습니다. 다시 시도해 주세요.</string>
+    <string name="error_profile_corrupted_title">프로필 정보 오류</string>
+    <string name="error_profile_corrupted_message">저장된 프로필 닉네임 정보가 올바르지 않습니다. 다시 로그인해 주세요.</string>
     <string name="btn_retry_profile">프로필 저장 재시도</string>
 
     <!-- Profile Dialog for Existing Accounts without Profile -->

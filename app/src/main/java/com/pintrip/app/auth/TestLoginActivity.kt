@@ -19,6 +19,7 @@ import com.pintrip.app.databinding.ActivityTestLoginBinding
 import com.pintrip.app.room.RoomListActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 /**
  * 정식 로그인 화면 (Figma S01).
@@ -85,21 +86,23 @@ class TestLoginActivity : AppCompatActivity() {
         binding.tvStatus.text = getString(R.string.status_logging_in)
         binding.btnLogin.isEnabled = false
 
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    val user = auth.currentUser
-                    if (user != null) {
-                        checkProfileAndNavigate(user)
-                    } else {
-                        binding.btnLogin.isEnabled = true
-                    }
+        lifecycleScope.launch {
+            try {
+                val authResult = auth.signInWithEmailAndPassword(email, password).await()
+                val user = authResult.user
+                if (user != null) {
+                    checkProfileAndNavigate(user)
                 } else {
                     binding.btnLogin.isEnabled = true
-                    val errorMsg = task.exception?.localizedMessage ?: getString(R.string.error_login_failed_default)
-                    binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                binding.btnLogin.isEnabled = true
+                val errorMsg = e.localizedMessage ?: getString(R.string.error_login_failed_default)
+                binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
             }
+        }
     }
 
     private fun checkProfileAndNavigate(user: FirebaseUser) {
@@ -107,8 +110,12 @@ class TestLoginActivity : AppCompatActivity() {
             try {
                 binding.btnLogin.isEnabled = false
                 val profile = userRepository.getUserProfile(user.uid, source = Source.SERVER)
-                if (profile != null && profile.nickname.isNotBlank()) {
-                    navigateToRoomList()
+                if (profile != null) {
+                    if (profile.nickname.isNotBlank()) {
+                        navigateToRoomList()
+                    } else {
+                        showCorruptedProfileDialog()
+                    }
                 } else {
                     promptProfileNickname(user)
                 }
@@ -134,6 +141,19 @@ class TestLoginActivity : AppCompatActivity() {
                     .show()
             }
         }
+    }
+
+    private fun showCorruptedProfileDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.error_profile_corrupted_title))
+            .setMessage(getString(R.string.error_profile_corrupted_message))
+            .setCancelable(false)
+            .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
+                auth.signOut()
+                binding.tvStatus.text = getString(R.string.status_logged_out)
+                binding.btnLogin.isEnabled = true
+            }
+            .show()
     }
 
     private fun promptProfileNickname(user: FirebaseUser) {

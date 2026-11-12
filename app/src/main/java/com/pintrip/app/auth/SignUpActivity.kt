@@ -168,8 +168,13 @@ class SignUpActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                val statusTextRes = if (existingProfile != null && existingProfile.nickname.isNotBlank()) {
-                    R.string.status_existing_account_logged_in
+                val statusTextRes = if (existingProfile != null) {
+                    if (existingProfile.nickname.isNotBlank()) {
+                        R.string.status_existing_account_logged_in
+                    } else {
+                        showCorruptedProfileDialog()
+                        return@launch
+                    }
                 } else {
                     try {
                         userRepository.createUserProfile(
@@ -218,6 +223,19 @@ class SignUpActivity : AppCompatActivity() {
                 binding.btnSignUp.isEnabled = true
             }
         }
+    }
+
+    private fun showCorruptedProfileDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.error_profile_corrupted_title))
+            .setMessage(getString(R.string.error_profile_corrupted_message))
+            .setCancelable(false)
+            .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
+                auth.signOut()
+                binding.tvStatus.text = getString(R.string.status_logged_out)
+                binding.btnSignUp.isEnabled = true
+            }
+            .show()
     }
 
     private fun showSignUpCompleteDialog() {
