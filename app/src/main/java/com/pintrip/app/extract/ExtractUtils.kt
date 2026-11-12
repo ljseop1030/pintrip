@@ -3,8 +3,6 @@ package com.pintrip.app.extract
 import com.pintrip.app.data.model.GeminiExtractionResponse
 import com.pintrip.app.data.model.GeminiPlace
 
-const val MAX_MERGED_PLACES = 5
-
 /**
  * 장소명의 공백을 제거하고 소문자로 변환하여 정규화된 비교용 문자열을 반환합니다.
  */
@@ -13,22 +11,16 @@ fun normalizePlaceName(name: String): String {
 }
 
 /**
- * 여러 스크린샷/추출 결과([responses])의 장소 리스트를 이름(공백, 대소문자 무시) 기준으로 중복 제거하고,
- * 최대 5개로 자른 통합 [GeminiExtractionResponse]를 생성합니다. (docs/data-contract.md §8 규격 준수)
+ * 여러 스크린샷/추출 결과([responses])의 장소 리스트를 이름(공백, 대소문자 무시) 기준으로 중복 제거한
+ * 통합 [GeminiExtractionResponse]를 생성합니다. (docs/data-contract.md §8 규격 준수)
  *
  * - 중복 제거 기준: [normalizePlaceName] 기반 (최초 인스턴스 유지)
- * - 5개 초과 시: 상위 5개만 유지하고 hasMore = true 설정
- * - 임의의 응답에 hasMore = true가 있거나 병합 후 5개 초과 시: final hasMore = true
  */
 fun mergeGeminiExtractionResponses(responses: List<GeminiExtractionResponse>): GeminiExtractionResponse {
     val seenNames = mutableSetOf<String>()
     val mergedPlaces = mutableListOf<GeminiPlace>()
-    var anyInputHasMore = false
 
     for (response in responses) {
-        if (response.hasMore) {
-            anyInputHasMore = true
-        }
         for (place in response.places) {
             val key = normalizePlaceName(place.name)
             if (key.isNotBlank() && seenNames.add(key)) {
@@ -37,16 +29,11 @@ fun mergeGeminiExtractionResponses(responses: List<GeminiExtractionResponse>): G
         }
     }
 
-    val isExceeded = mergedPlaces.size > MAX_MERGED_PLACES
-    val finalHasMore = anyInputHasMore || isExceeded
-    val limitedPlaces = mergedPlaces.take(MAX_MERGED_PLACES)
-
     val firstRegionHint = responses.firstNotNullOfOrNull { it.regionHint?.ifBlank { null } }
 
     return GeminiExtractionResponse(
-        places = limitedPlaces,
+        places = mergedPlaces,
         regionHint = firstRegionHint,
-        hasMore = finalHasMore,
     )
 }
 

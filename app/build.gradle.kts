@@ -56,6 +56,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
 
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.scalars)
+
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
@@ -64,6 +68,8 @@ dependencies {
     implementation(libs.coroutines.play.services)
 
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }

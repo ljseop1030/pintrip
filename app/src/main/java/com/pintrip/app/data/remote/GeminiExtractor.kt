@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
  *
  * docs/data-contract.md §8 규격을 준수합니다:
  * - 백엔드: Gemini Developer API (GenerativeBackend.googleAI())
- * - 모델: gemini-3.6-flash
+ * - 모델: gemini-3.5-flash-lite
  * - temperature: 0
  * - responseMimeType: "application/json"
  * - responseSchema: GEMINI_EXTRACTION_RESPONSE_SCHEMA
@@ -100,7 +100,6 @@ class GeminiExtractor(
             7. 'outsideRoomRegion': true ONLY with clear evidence the place is outside the room region. Otherwise false.
             8. 'regionHint': the region the whole image is about, if clear. Otherwise null.
             9. Deduplicate repeated places.
-            10. Extract up to 5 places. If there are more, keep the first 5 and set 'hasMore' to true. Otherwise false.
         """.trimIndent()
     }
 

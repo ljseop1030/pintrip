@@ -5,18 +5,21 @@ import com.pintrip.app.data.model.GeminiPlace
 import com.pintrip.app.data.model.KakaoKeywordSearchResponse
 import com.pintrip.app.data.model.KakaoPlaceDocument
 import com.pintrip.app.data.remote.KakaoLocalApiClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 class PlaceMatcherTest {
 
     private class FakeKakaoLocalApiClient : KakaoLocalApiClient() {
-        val searchCalls = mutableListOf<Pair<String, String?>>()
-        val responses = mutableMapOf<Pair<String, String?>, KakaoKeywordSearchResponse>()
+        val searchCalls: MutableList<Pair<String, String?>> = Collections.synchronizedList(mutableListOf())
+        val responses = ConcurrentHashMap<Pair<String, String?>, KakaoKeywordSearchResponse>()
 
         override suspend fun searchKeyword(
             query: String,
@@ -31,6 +34,22 @@ class PlaceMatcherTest {
         ): KakaoKeywordSearchResponse {
             searchCalls.add(Pair(query, categoryGroupCode))
             return responses[Pair(query, categoryGroupCode)] ?: KakaoKeywordSearchResponse()
+        }
+    }
+
+    private class CancellingKakaoLocalApiClient : KakaoLocalApiClient() {
+        override suspend fun searchKeyword(
+            query: String,
+            categoryGroupCode: String?,
+            page: Int?,
+            size: Int?,
+            x: String?,
+            y: String?,
+            radius: Int?,
+            rect: String?,
+            sort: String?,
+        ): KakaoKeywordSearchResponse {
+            throw CancellationException("Cancelled in test")
         }
     }
 
@@ -244,5 +263,43 @@ class PlaceMatcherTest {
         // CHECK 상태라 주소 판정을 수행하지 않으며, Gemini의 outsideRoomRegion = false 가 그대로 유지됨
         assertFalse(match.regionMismatch)
         assertTrue(match.checked)
+    }
+
+    @Test
+    fun testMatchPlaces_parallelExecutionPreservesOrder() = runBlocking {
+        val fakeClient = FakeKakaoLocalApiClient()
+        val places = (1..10).map { idx ->
+            GeminiPlace(name = "장소 $idx", rawText = "장소 $idx")
+        }
+
+        places.forEachIndexed { idx, p ->
+            val queryKey = Pair("부산 ${p.name}", null)
+            fakeClient.responses[queryKey] = KakaoKeywordSearchResponse(
+                documents = listOf(
+                    KakaoPlaceDocument(id = "id_${idx + 1}", placeName = p.name),
+                ),
+            )
+        }
+
+        val matcher = PlaceMatcher(fakeClient, concurrencyLimit = 3)
+        val results = matcher.matchPlaces(GeminiExtractionResponse(places = places), "부산")
+
+        assertEquals(10, results.size)
+        results.forEachIndexed { idx, result ->
+            assertEquals("장소 ${idx + 1}", result.extracted.name)
+            assertEquals("img0_p$idx", result.localId)
+            assertEquals("id_${idx + 1}", result.selectedPlaceId)
+        }
+    }
+
+    @Test(expected = CancellationException::class)
+    fun testMatchPlaces_cancellationExceptionPropagated() {
+        runBlocking {
+            val matcher = PlaceMatcher(CancellingKakaoLocalApiClient())
+            val extraction = GeminiExtractionResponse(
+                places = listOf(GeminiPlace(name = "테스트")),
+            )
+            matcher.matchPlaces(extraction, "부산")
+        }
     }
 }

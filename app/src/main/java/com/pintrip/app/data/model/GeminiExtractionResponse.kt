@@ -28,15 +28,13 @@ data class GeminiPlace(
  * Gemini 장소 추출 결과 응답 루트 데이터 모델.
  *
  * docs/data-contract.md §8 규격을 준수합니다:
- * - places: 추출된 장소 목록 (최대 5개)
+ * - places: 추출된 장소 목록
  * - regionHint: 이미지/텍스트 전체 지역 힌트
- * - hasMore: 5개 초과 추출로 잘렸는지 여부 (true 시 "최대 5개 장소까지 추출되었습니다" 안내)
  */
 @Keep
 data class GeminiExtractionResponse(
     val places: List<GeminiPlace> = emptyList(),
     val regionHint: String? = null,
-    val hasMore: Boolean = false,
 )
 
 /**
@@ -71,14 +69,11 @@ val GEMINI_EXTRACTION_RESPONSE_SCHEMA: Schema = Schema.obj(
                 optionalProperties = listOf("region", "categoryHint"),
                 description = "Extracted place item.",
             ),
-            description = "List of extracted places (max 5).",
+            description = "List of extracted places.",
         ),
         "regionHint" to Schema.string(
             description = "Region context of the whole image or text. null if absent.",
             nullable = true,
-        ),
-        "hasMore" to Schema.boolean(
-            description = "true if more than 5 places were extracted and cut off.",
         ),
     ),
     optionalProperties = listOf("regionHint"),
@@ -109,8 +104,6 @@ fun parseGeminiExtractionResponse(jsonString: String): GeminiExtractionResponse 
         jsonObject.optString("regionHint", "").ifBlank { null }
     }
 
-    val hasMore = jsonObject.optBoolean("hasMore", false)
-
     val placesArray = jsonObject.optJSONArray("places")
     val placesList = mutableListOf<GeminiPlace>()
 
@@ -140,7 +133,6 @@ fun parseGeminiExtractionResponse(jsonString: String): GeminiExtractionResponse 
     return GeminiExtractionResponse(
         places = placesList,
         regionHint = regionHint,
-        hasMore = hasMore,
     )
 }
 

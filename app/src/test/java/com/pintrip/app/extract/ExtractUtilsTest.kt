@@ -24,7 +24,6 @@ class ExtractUtilsTest {
                 GeminiPlace(name = "이재모 피자", rawText = "2. 이재모 피자"),
             ),
             regionHint = "부산",
-            hasMore = false,
         )
         val res2 = GeminiExtractionResponse(
             places = listOf(
@@ -32,13 +31,11 @@ class ExtractUtilsTest {
                 GeminiPlace(name = "해운대암소갈비", rawText = "해운대암소갈비"),
             ),
             regionHint = "부산 해운대",
-            hasMore = false,
         )
 
         val merged = mergeGeminiExtractionResponses(listOf(res1, res2))
 
         assertEquals("부산", merged.regionHint)
-        assertFalse(merged.hasMore)
         assertEquals(3, merged.places.size)
         assertEquals("모모스 커피", merged.places[0].name)
         assertEquals("이재모 피자", merged.places[1].name)
@@ -46,18 +43,17 @@ class ExtractUtilsTest {
     }
 
     @Test
-    fun testMergeGeminiExtractionResponses_limitsToFiveAndSetsHasMore() {
+    fun testMergeGeminiExtractionResponses_mergesAllPlacesWithoutCapping() {
         val places = (1..7).map { idx ->
             GeminiPlace(name = "장소 $idx", rawText = "장소 $idx")
         }
-        val res = GeminiExtractionResponse(places = places, hasMore = false)
+        val res = GeminiExtractionResponse(places = places)
 
         val merged = mergeGeminiExtractionResponses(listOf(res))
 
-        assertEquals(5, merged.places.size)
-        assertTrue(merged.hasMore)
+        assertEquals(7, merged.places.size)
         assertEquals("장소 1", merged.places[0].name)
-        assertEquals("장소 5", merged.places[4].name)
+        assertEquals("장소 7", merged.places[6].name)
     }
 
     @Test
