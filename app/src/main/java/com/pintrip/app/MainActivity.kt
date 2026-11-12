@@ -2,6 +2,7 @@ package com.pintrip.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -10,6 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Source
 import com.pintrip.app.auth.TestLoginActivity
 import com.pintrip.app.data.repository.UserRepository
@@ -27,6 +29,10 @@ import kotlinx.coroutines.launch
  * - 로그인되어 있으나 프로필 문서 누락 시: [TestLoginActivity]로 이동하여 닉네임 복구 진행
  */
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "MainActivity"
+    }
 
     private lateinit var binding: ActivityMainBinding
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
@@ -70,11 +76,23 @@ class MainActivity : AppCompatActivity() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "Failed to verify user profile on app entry", e)
+                }
                 binding.btnTestLogin.isEnabled = true
-                val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_load_failed)
+
+                val messageResId = if (e is FirebaseFirestoreException &&
+                    (e.code == FirebaseFirestoreException.Code.UNAVAILABLE ||
+                     e.code == FirebaseFirestoreException.Code.DEADLINE_EXCEEDED)
+                ) {
+                    R.string.error_network_unavailable
+                } else {
+                    R.string.error_profile_load_default
+                }
+
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle(getString(R.string.error_profile_load_failed))
-                    .setMessage(errorMsg)
+                    .setMessage(getString(messageResId))
                     .setCancelable(false)
                     .setPositiveButton(getString(R.string.btn_retry)) { _, _ ->
                         verifyProfileAndNavigate(user)
