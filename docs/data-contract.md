@@ -146,9 +146,9 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
 ## 7. Security rules (draft)
 
 - `users/{uid}`: signed-in users read; owner writes.
-- `rooms/{roomId}`: members (`memberIds`) read/write. Allow the update that adds your own uid to `memberIds` when joining.
-- `rooms/{roomId}/places/{placeId}`: parent room members read/create/update. Delete only if `resource.data.addedBy == request.auth.uid`.
-- `inviteCodes/{code}`: signed-in users `get` only. No `list`.
+- `rooms/{roomId}`: members (`memberIds`) read/write. Phase 1 permits atomic room creation (with `inviteCodes/{code}`) and member-only reads. Non-member self-join updates will be added in Phase 2.
+- `rooms/{roomId}/places/{placeId}`: parent room members read/create. Delete/update blocked in current phase.
+- `inviteCodes/{code}`: signed-in users `get` (single document) only. `list`/`update`/`delete` blocked.
 
 ---
 

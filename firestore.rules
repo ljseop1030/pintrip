@@ -51,23 +51,86 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
-    // 1. 방 컬렉션 규칙 (rooms/test_room_1 한정 테스트)
+    // 1. 초대 코드 컬렉션 규칙 (inviteCodes/{code})
+    // -------------------------------------------------------------
+    match /inviteCodes/{code} {
+      // 읽기 (get): 로그인한 사용자는 초대 코드 존재 여부 단건 조회 가능 (코드 충돌 검사용)
+      allow get: if isSignedIn();
+
+      // 목록 조회, 수정, 삭제 차단
+      allow list, update, delete: if false;
+
+      // 생성 (create): 로그인 유저 + 신규 생성 + 방 생성과 원자적 연결 검증
+      allow create: if isSignedIn()
+        // 생성 전 부재 검증: inviteCodes/{code} 및 대상 rooms/{roomId} 문서 모두 미존재
+        && !exists(/databases/$(database)/documents/inviteCodes/$(code))
+        && !exists(/databases/$(database)/documents/rooms/$(request.resource.data.roomId))
+        // 필드 규격 검증
+        && request.resource.data.keys().hasOnly(['roomId', 'createdAt'])
+        && request.resource.data.roomId is string
+        && request.resource.data.roomId.size() > 0
+        && request.resource.data.createdAt == request.time
+        // 동일 원자적 요청에서 생성되는 rooms 문서와의 상호 연결 및 생성자 소유 검증 (getAfter)
+        && getAfter(/databases/$(database)/documents/rooms/$(request.resource.data.roomId)).data.inviteCode == code
+        && getAfter(/databases/$(database)/documents/rooms/$(request.resource.data.roomId)).data.ownerId == request.auth.uid;
+    }
+
+    // -------------------------------------------------------------
+    // 2. 방 컬렉션 규칙 (rooms/{roomId})
     // -------------------------------------------------------------
     match /rooms/{roomId} {
 
-      function isTestRoom() {
-        return roomId == 'test_room_1';
-      }
+      // 방 읽기 (get, list): 방 멤버만 허용 (getMyRooms 쿼리 지원)
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
 
-      // 방 읽기 (get, list): 방 멤버만 허용
-      allow read: if isTestRoom() && isSignedIn() && request.auth.uid in resource.data.memberIds;
+      // 방 생성 (create): 원자적 신규 생성 + 소유자/멤버/프로필/필드 타입 검증
+      allow create: if isSignedIn()
+        // 생성 전 부재 검증: rooms/{roomId} 및 inviteCodes/{inviteCode} 문서 모두 미존재
+        && !exists(/databases/$(database)/documents/rooms/$(roomId))
+        && !exists(/databases/$(database)/documents/inviteCodes/$(request.resource.data.inviteCode))
+        // 필수 및 허용 필드 제한
+        && request.resource.data.keys().hasOnly([
+          'name', 'region', 'startDate', 'endDate', 'icon',
+          'inviteCode', 'ownerId', 'memberIds', 'members',
+          'placeCount', 'createdAt', 'updatedAt'
+        ])
+        // 방 기본 정보 검증
+        && request.resource.data.name is string && request.resource.data.name.size() > 0
+        && request.resource.data.region is string && request.resource.data.region.size() > 0
+        && request.resource.data.icon in ['sea', 'food', 'nature', 'city', 'healing']
+        && request.resource.data.inviteCode is string
+        && request.resource.data.inviteCode.matches('^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$')
+        // 날짜 검증 (null 허용, 설정 시 timestamp 및 endDate >= startDate)
+        && (request.resource.data.startDate == null || request.resource.data.startDate is timestamp)
+        && (request.resource.data.endDate == null || (
+             request.resource.data.endDate is timestamp &&
+             (request.resource.data.startDate == null || request.resource.data.endDate >= request.resource.data.startDate)
+           ))
+        // 소유자 및 멤버 검증 (생성자 1명만 허용)
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]
+        && request.resource.data.members.keys() == [request.auth.uid]
+        // members 내 생성자 상세 정보 및 users 프로필 일치 검증 (lastSeenAt은 null만 허용)
+        && request.resource.data.members[request.auth.uid].keys().hasOnly(['nickname', 'avatarColor', 'lastSeenAt'])
+        && request.resource.data.members[request.auth.uid].nickname is string
+        && request.resource.data.members[request.auth.uid].nickname.size() > 0
+        && request.resource.data.members[request.auth.uid].nickname == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nickname
+        && request.resource.data.members[request.auth.uid].avatarColor is string
+        && request.resource.data.members[request.auth.uid].avatarColor.matches('^#[0-9A-Fa-f]{6}$')
+        && request.resource.data.members[request.auth.uid].avatarColor == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.avatarColor
+        && request.resource.data.members[request.auth.uid].lastSeenAt == null
+        // 초기 placeCount 0 및 생성/수정 시각 검증
+        && request.resource.data.placeCount is int && request.resource.data.placeCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        // 동일 원자적 요청에서 생성되는 inviteCodes 문서와의 상호 연결 검증 (getAfter)
+        && getAfter(/databases/$(database)/documents/inviteCodes/$(request.resource.data.inviteCode)).data.roomId == roomId;
 
-      // 방 생성 및 삭제 차단
-      allow create, delete: if false;
+      // 방 삭제 차단
+      allow delete: if false;
 
-      // 방 수정 (update): placeCount만 수정 허용 + 정수 및 기존보다 증가 검사 (updatedAt 제외)
-      allow update: if isTestRoom()
-        && isSignedIn()
+      // 방 수정 (update): placeCount만 수정 허용 + 정수 및 기존보다 증가 검사 (updatedAt 갱신은 후속 분리)
+      allow update: if isSignedIn()
         && request.auth.uid in resource.data.memberIds
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.memberIds == resource.data.memberIds
@@ -77,22 +140,22 @@ service cloud.firestore {
         && request.resource.data.icon == resource.data.icon
         && request.resource.data.inviteCode == resource.data.inviteCode
         && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == resource.data.updatedAt
         && resource.data.placeCount is int
         && request.resource.data.placeCount is int
         && request.resource.data.placeCount > resource.data.placeCount
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['placeCount']);
 
       // -----------------------------------------------------------
-      // 2. 장소 서브컬렉션 규칙 (rooms/test_room_1/places/{placeId})
+      // 3. 장소 서브컬렉션 규칙 (rooms/{roomId}/places/{placeId})
       // -----------------------------------------------------------
       match /places/{placeId} {
 
         // 읽기 (get, list): 방 멤버만 허용 (트랜잭션 시 미존재 문서 get 검사 포함)
-        allow read: if isTestRoom() && isRoomMember(roomId);
+        allow read: if isRoomMember(roomId);
 
         // 장소 생성 (create)
-        allow create: if isTestRoom()
-          && isRoomMember(roomId)
+        allow create: if isRoomMember(roomId)
           // 문서 ID와 kakaoPlaceId 일치 검사
           && placeId == request.resource.data.kakaoPlaceId
           // 작성자 uid 일치 검사
@@ -121,7 +184,7 @@ service cloud.firestore {
           // 트랜잭션 동시 실행 검증: 같은 트랜잭션 요청에서 부모 방의 placeCount도 함께 증가했는지 getAfter로 확인
           && getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount > get(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount;
 
-        // 장소 수정/삭제: 이번 테스트 범위 차단
+        // 장소 수정/삭제 차단
         allow update, delete: if false;
       }
     }
