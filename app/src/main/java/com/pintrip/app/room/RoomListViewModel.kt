@@ -49,6 +49,7 @@ class RoomListViewModel(
     val toastEvent: LiveData<Event<String>> = _toastEvent
 
     private var isDataLoaded = false
+    private var isNavigating = false
     private var loadJob: Job? = null
 
     fun loadRooms(forceRefresh: Boolean = false) {
@@ -98,6 +99,8 @@ class RoomListViewModel(
     }
 
     fun onCreateRoomClick() {
+        if (isNavigating) return
+        isNavigating = true
         _navigateToCreateRoom.value = Event(Unit)
     }
 
@@ -106,11 +109,18 @@ class RoomListViewModel(
     }
 
     fun onRoomCardClick(room: Room) {
+        if (isNavigating) return
+
         if (room.id.isNotBlank()) {
+            isNavigating = true
             _navigateToPlaceList.value = Event(room.id)
         } else {
             _toastEvent.value = Event("방 ID를 찾을 수 없습니다.")
         }
+    }
+
+    fun resetNavigation() {
+        isNavigating = false
     }
 
     fun logout() {

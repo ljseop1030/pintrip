@@ -55,6 +55,11 @@ class RoomListActivity : AppCompatActivity() {
         viewModel.loadRooms()
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.resetNavigation()
+    }
+
     private fun setupRecyclerView() {
         roomAdapter = RoomAdapter { room ->
             viewModel.onRoomCardClick(room)
@@ -138,15 +143,23 @@ class RoomListActivity : AppCompatActivity() {
 
         viewModel.navigateToCreateRoom.observe(this) { event ->
             event.getContentIfNotHandled()?.let {
-                val intent = Intent(this, CreateRoomActivity::class.java)
-                createRoomLauncher.launch(intent)
+                try {
+                    val intent = Intent(this, CreateRoomActivity::class.java)
+                    createRoomLauncher.launch(intent)
+                } catch (_: Exception) {
+                    viewModel.resetNavigation()
+                }
             }
         }
 
         viewModel.navigateToPlaceList.observe(this) { event ->
             event.getContentIfNotHandled()?.let { roomId ->
-                val intent = PlaceListActivity.newIntent(this, roomId)
-                startActivity(intent)
+                try {
+                    val intent = PlaceListActivity.newIntent(this, roomId)
+                    startActivity(intent)
+                } catch (_: Exception) {
+                    viewModel.resetNavigation()
+                }
             }
         }
 
