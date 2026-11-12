@@ -31,6 +31,24 @@ android {
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"${secrets.getProperty("KAKAO_NATIVE_APP_KEY", "")}\"")
     }
 
+    flavorDimensions += "mode"
+    productFlavors {
+        create("full") {
+            dimension = "mode"
+        }
+        create("demo") {
+            dimension = "mode"
+            applicationIdSuffix = ".demo"
+        }
+    }
+
+    // Skip Google Services task for demo variant since DemoEmulatorInitProvider initializes Firebase programmatically
+    tasks.configureEach {
+        if (name.contains("GoogleServices", ignoreCase = true) && name.contains("Demo", ignoreCase = true)) {
+            enabled = false
+        }
+    }
+
     buildFeatures {
         buildConfig = true
         viewBinding = true
