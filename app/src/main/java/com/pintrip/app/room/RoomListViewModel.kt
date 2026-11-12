@@ -1,5 +1,6 @@
 package com.pintrip.app.room
 
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -8,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Source
+import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.RoomRepository
@@ -29,6 +31,10 @@ class RoomListViewModel(
     private val userRepository: UserRepository = UserRepository(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "RoomListViewModel"
+    }
 
     private val _uiState = MutableLiveData<RoomListUiState>()
     val uiState: LiveData<RoomListUiState> = _uiState
@@ -95,13 +101,19 @@ class RoomListViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: FirebaseFirestoreException) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "Failed to load rooms due to Firestore exception", e)
+                }
                 @StringRes val errorResId = when (e.code) {
                     FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_room_permission_denied
                     FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
                     else -> R.string.error_room_list_default
                 }
                 _uiState.value = RoomListUiState.Error(errorResId)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "Failed to load rooms due to unexpected exception", e)
+                }
                 _uiState.value = RoomListUiState.Error(R.string.error_room_list_default)
             }
         }

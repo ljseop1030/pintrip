@@ -1,5 +1,6 @@
 package com.pintrip.app.room
 
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -7,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.RoomRepository
@@ -17,6 +19,10 @@ import kotlinx.coroutines.launch
 class CreateRoomViewModel(
     private val roomRepository: RoomRepository = RoomRepository(),
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "CreateRoomViewModel"
+    }
 
     private val _selectedStartDate = MutableLiveData<Timestamp?>()
     val selectedStartDate: LiveData<Timestamp?> = _selectedStartDate
@@ -90,6 +96,9 @@ class CreateRoomViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: FirebaseFirestoreException) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "Failed to create room due to Firestore exception", e)
+                }
                 _isLoading.value = false
                 @StringRes val errorResId = when (e.code) {
                     FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_create_room_permission_denied
@@ -97,7 +106,10 @@ class CreateRoomViewModel(
                     else -> R.string.error_create_room_default
                 }
                 _errorMessageEvent.value = Event(errorResId)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "Failed to create room due to unexpected exception", e)
+                }
                 _isLoading.value = false
                 _errorMessageEvent.value = Event(R.string.error_create_room_default)
             }
