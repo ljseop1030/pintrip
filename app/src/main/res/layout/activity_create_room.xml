@@ -106,7 +106,7 @@
                     android:textSize="15sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Region Field (Dropdown / AutoCompleteTextView) -->
+            <!-- Region Field (TextInputEditText) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -118,7 +118,7 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilRegion"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -128,12 +128,13 @@
                 app:boxCornerRadiusTopStart="12dp"
                 app:boxStrokeColor="@color/pintrip_blue">
 
-                <AutoCompleteTextView
-                    android:id="@+id/actvRegion"
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRegion"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/hint_region"
                     android:inputType="text"
+                    android:singleLine="true"
                     android:textColor="@color/text_dark"
                     android:textSize="15sp" />
             </com.google.android.material.textfield.TextInputLayout>

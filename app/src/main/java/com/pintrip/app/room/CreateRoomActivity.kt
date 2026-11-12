@@ -2,7 +2,6 @@ package com.pintrip.app.room
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -47,17 +46,10 @@ class CreateRoomActivity : AppCompatActivity() {
             insets
         }
 
-        setupRegionDropdown()
         setupListeners()
         setupBackPressHandler()
         restoreDatePickerListenerIfNeeded()
         observeViewModel()
-    }
-
-    private fun setupRegionDropdown() {
-        val presetRegions = resources.getStringArray(R.array.preset_regions)
-        val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, presetRegions)
-        binding.actvRegion.setAdapter(adapter)
     }
 
     private fun setupListeners() {
@@ -86,7 +78,7 @@ class CreateRoomActivity : AppCompatActivity() {
 
         binding.btnCreate.setOnClickListener {
             val name = binding.etRoomName.text?.toString().orEmpty()
-            val region = binding.actvRegion.text?.toString().orEmpty()
+            val region = binding.etRegion.text?.toString().orEmpty()
             viewModel.createRoom(name, region)
         }
     }
