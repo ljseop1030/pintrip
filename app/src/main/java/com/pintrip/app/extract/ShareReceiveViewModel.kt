@@ -14,6 +14,7 @@ import com.pintrip.app.data.model.GeminiExtractionResponse
 import com.pintrip.app.data.remote.GeminiExtractor
 import com.pintrip.app.data.remote.WebPageFetcher
 import com.pintrip.app.ui.common.Event
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -225,7 +226,7 @@ class ShareReceiveViewModel(
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = getNoPlacesErrorResId(shareInput),
+                            messageResId = R.string.share_receive_error_could_not_find_places,
                         ),
                     )
                     // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -248,6 +249,8 @@ class ShareReceiveViewModel(
                                             attempt++
                                             Log.d(TAG, "Extracting places from screenshot URI (attempt $attempt): $uri")
                                             response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
+                                        } catch (e: CancellationException) {
+                                            throw e
                                         } catch (e: Exception) {
                                             Log.w(TAG, "Gemini extraction attempt $attempt failed for URI $uri: ${e.message}", e)
                                             if (attempt >= 2) {
@@ -266,6 +269,8 @@ class ShareReceiveViewModel(
                             try {
                                 Log.d(TAG, "Fetching web page content for URL: ${shareInput.url}")
                                 webPageFetcher.fetchPageText(shareInput.url)
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Exception) {
                                 Log.w(TAG, "Failed to fetch page text from URL ${shareInput.url}, fallback to raw text: ${e.message}")
                                 shareInput.text
@@ -286,6 +291,8 @@ class ShareReceiveViewModel(
                                 attempt++
                                 Log.d(TAG, "Extracting places from link/text (attempt $attempt)")
                                 response = geminiExtractor.extractFromText(targetText, roomRegion)
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Exception) {
                                 Log.w(TAG, "Gemini text extraction attempt $attempt failed: ${e.message}", e)
                                 if (attempt >= 2) {
@@ -378,6 +385,8 @@ class ShareReceiveViewModel(
                     ),
                 )
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error during extract step after retry: ${e.message}", e)
                 isProceeded = false
@@ -385,7 +394,7 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.ERROR)
                 _noticeEvent.value = Event(
                     ShareNoticeEvent.ToastNotice(
-                        messageResId = getNoPlacesErrorResId(shareInput),
+                        messageResId = R.string.share_receive_error_could_not_find_places,
                     ),
                 )
                 // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -394,7 +403,7 @@ class ShareReceiveViewModel(
     }
 
     private fun getNoPlacesErrorResId(shareInput: ShareInput): Int {
-        return if (shareInput is ShareInput.LinkText) {
+        return if (shareInput is ShareInput.LinkText && shareInput.url != null) {
             R.string.share_receive_error_could_not_find_places_link
         } else {
             R.string.share_receive_error_could_not_find_places
