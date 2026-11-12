@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.ui.common.Event
@@ -86,6 +87,14 @@ class CreateRoomViewModel(
                 _createSuccessEvent.value = Event(createdRoom)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: FirebaseFirestoreException) {
+                _isLoading.value = false
+                val errorMsg = when (e.code) {
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> "방 생성 권한이 없습니다."
+                    FirebaseFirestoreException.Code.UNAVAILABLE -> "네트워크 연결 상태를 확인해 주세요."
+                    else -> e.localizedMessage ?: "방 생성에 실패했습니다."
+                }
+                _errorMessageEvent.value = Event(errorMsg)
             } catch (e: Exception) {
                 _isLoading.value = false
                 val errorMsg = e.localizedMessage ?: "방 생성에 실패했습니다."

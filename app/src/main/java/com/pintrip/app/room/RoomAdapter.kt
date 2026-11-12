@@ -40,7 +40,9 @@ class RoomAdapter(
         private val onRoomClick: (Room) -> Unit,
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        private val dateFormat = SimpleDateFormat("MM.dd", Locale.getDefault())
+        private val dateFormat = SimpleDateFormat("MM.dd", Locale.getDefault()).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
 
         fun bind(room: Room) {
             val context = binding.root.context

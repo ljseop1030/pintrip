@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Source
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.RoomRepository
@@ -91,6 +92,13 @@ class RoomListViewModel(
                 }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: FirebaseFirestoreException) {
+                val errorMsg = when (e.code) {
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> "방 접근 권한이 없습니다."
+                    FirebaseFirestoreException.Code.UNAVAILABLE -> "네트워크 연결 상태를 확인해 주세요."
+                    else -> e.localizedMessage ?: "방 목록을 불러오지 못했습니다."
+                }
+                _uiState.value = RoomListUiState.Error(errorMsg)
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: "방 목록을 불러오지 못했습니다."
                 _uiState.value = RoomListUiState.Error(errorMsg)

@@ -31,7 +31,9 @@ class CreateRoomActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCreateRoomBinding
     private val viewModel: CreateRoomViewModel by viewModels()
-    private val dateFormat = SimpleDateFormat("MM.dd (E)", Locale.KOREA)
+    private val dateFormat = SimpleDateFormat("MM.dd (E)", Locale.KOREA).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

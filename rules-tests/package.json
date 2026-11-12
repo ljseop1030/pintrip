@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha test/**/*.spec.js --timeout 15000",
-    "test:emulator": "npx firebase-tools emulators:exec --only firestore --config ../firebase.json --project demo-pintrip \"npm test\"",
-    "start:integration": "npx firebase-tools emulators:start --only auth,firestore --config ../firebase.json --project demo-pintrip"
+    "test:emulator": "npx firebase-tools emulators:exec --only firestore --config ../firebase.json --project demo-pintrip \"npm test\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.4",
