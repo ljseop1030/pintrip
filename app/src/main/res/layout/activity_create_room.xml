@@ -206,35 +206,35 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="sea" />
+                    android:text="@string/icon_sea" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipFood"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="food" />
+                    android:text="@string/icon_food" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipNature"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="nature" />
+                    android:text="@string/icon_nature" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipCity"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="city" />
+                    android:text="@string/icon_city" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipHealing"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="healing" />
+                    android:text="@string/icon_healing" />
             </com.google.android.material.chip.ChipGroup>
 
             <!-- Notice Box (Figma S04 Blue Info Card) -->

@@ -133,6 +133,11 @@
     <string name="label_travel_region">여행 지역</string>
     <string name="label_travel_period">여행 기간 (선택)</string>
     <string name="label_main_icon">대표 아이콘</string>
+    <string name="icon_sea">바다</string>
+    <string name="icon_food">맛집</string>
+    <string name="icon_nature">자연</string>
+    <string name="icon_city">도시</string>
+    <string name="icon_healing">휴식</string>
     <string name="notice_invite_code_auto">방을 만들면 초대 코드가 바로 발급됩니다.</string>
     <string name="btn_create_room_action">방 만들기</string>
     <string name="btn_creating_room_in_progress">생성 중…</string>

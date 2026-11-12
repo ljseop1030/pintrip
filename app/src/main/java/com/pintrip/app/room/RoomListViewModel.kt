@@ -11,6 +11,7 @@ import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.ui.common.Event
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed class RoomListUiState {
@@ -48,11 +49,15 @@ class RoomListViewModel(
     val toastEvent: LiveData<Event<String>> = _toastEvent
 
     private var isDataLoaded = false
-    private var isLoadingRooms = false
+    private var loadJob: Job? = null
 
     fun loadRooms(forceRefresh: Boolean = false) {
-        if (isLoadingRooms && !forceRefresh) return
-        if (isDataLoaded && !forceRefresh) return
+        if (loadJob?.isActive == true) {
+            if (!forceRefresh) return
+            loadJob?.cancel()
+        } else if (isDataLoaded && !forceRefresh) {
+            return
+        }
 
         val currentUser = auth.currentUser
         if (currentUser == null) {
@@ -60,10 +65,9 @@ class RoomListViewModel(
             return
         }
 
-        isLoadingRooms = true
         _uiState.value = RoomListUiState.Loading
 
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             try {
                 // 1. 프로필 정보 로드 (실패 시 예외 처리)
                 val profile = userRepository.getUserProfile(currentUser.uid, source = Source.DEFAULT)
@@ -89,8 +93,6 @@ class RoomListViewModel(
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: "방 목록을 불러오지 못했습니다."
                 _uiState.value = RoomListUiState.Error(errorMsg)
-            } finally {
-                isLoadingRooms = false
             }
         }
     }

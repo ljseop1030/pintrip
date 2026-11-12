@@ -108,16 +108,17 @@ class CreateRoomActivity : AppCompatActivity() {
     }
 
     private fun showDateRangePicker() {
-        val startMs = viewModel.selectedStartDate.value?.toDate()?.time
-            ?: MaterialDatePicker.todayInUtcMilliseconds()
-        val endMs = viewModel.selectedEndDate.value?.toDate()?.time
-            ?: startMs
+        val startVal = viewModel.selectedStartDate.value
+        val endVal = viewModel.selectedEndDate.value
 
-        val datePicker = MaterialDatePicker.Builder.dateRangePicker()
+        val builder = MaterialDatePicker.Builder.dateRangePicker()
             .setTitleText(R.string.label_travel_period)
-            .setSelection(Pair(startMs, endMs))
-            .build()
 
+        if (startVal != null && endVal != null) {
+            builder.setSelection(Pair(startVal.toDate().time, endVal.toDate().time))
+        }
+
+        val datePicker = builder.build()
         attachDatePickerListener(datePicker)
         datePicker.show(supportFragmentManager, DATE_PICKER_TAG)
     }
