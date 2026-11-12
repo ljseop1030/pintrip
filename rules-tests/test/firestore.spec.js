@@ -431,7 +431,7 @@ describe("Firestore Security Rules Tests", () => {
       await assertFails(db.collection("inviteCodes").doc("K7P2QX").delete());
     });
 
-    it("rejects modifying parent room protected fields on update", async () => {
+    it("rejects modifying parent room protected fields on update even when placeCount is incremented", async () => {
       const uid = "user_a";
       const now = new Date();
       await seedRoom("room_1", {
@@ -449,9 +449,20 @@ describe("Firestore Security Rules Tests", () => {
 
       const db = getDb({ uid });
 
-      // Attempting to modify room name or ownerId on update
-      await assertFails(db.collection("rooms").doc("room_1").update({ name: "수정제목" }));
-      await assertFails(db.collection("rooms").doc("room_1").update({ ownerId: "new_owner" }));
+      // Attempting to increment placeCount AND modify protected fields (name, ownerId, or region)
+      await assertFails(
+        db.collection("rooms").doc("room_1").update({
+          placeCount: 1,
+          name: "수정제목",
+        })
+      );
+
+      await assertFails(
+        db.collection("rooms").doc("room_1").update({
+          placeCount: 1,
+          ownerId: "new_owner",
+        })
+      );
     });
   });
 
@@ -510,6 +521,14 @@ describe("Firestore Security Rules Tests", () => {
       batch1.update(db.collection("rooms").doc("room_general_1"), { placeCount: 1 });
       await assertSucceeds(batch1.commit());
 
+      // Assert place read (single doc & collection query)
+      const placeSnap = await db.collection("rooms").doc("room_general_1").collection("places").doc("p123").get();
+      assert.strictEqual(placeSnap.exists, true);
+      assert.strictEqual(placeSnap.data().searchKeyword, "모모스커피");
+
+      const placesListSnap = await db.collection("rooms").doc("room_general_1").collection("places").get();
+      assert.strictEqual(placesListSnap.docs.length, 1);
+
       // Create place in test_room_1
       const batch2 = db.batch();
       batch2.set(db.collection("rooms").doc("test_room_1").collection("places").doc("p124"), {
@@ -526,9 +545,14 @@ describe("Firestore Security Rules Tests", () => {
       });
       batch2.update(db.collection("rooms").doc("test_room_1"), { placeCount: 1 });
       await assertSucceeds(batch2.commit());
+
+      // Assert test_room_1 place read
+      const testRoomPlaceSnap = await db.collection("rooms").doc("test_room_1").collection("places").doc("p124").get();
+      assert.strictEqual(testRoomPlaceSnap.exists, true);
+      assert.strictEqual(testRoomPlaceSnap.data().searchKeyword, "이재모피자");
     });
 
-    it("rejects non-member from creating place in a room", async () => {
+    it("rejects non-member from reading places or creating place in a room", async () => {
       const now = new Date();
       await seedRoom("room_1", {
         name: "부산 여행",
@@ -544,8 +568,13 @@ describe("Firestore Security Rules Tests", () => {
       });
 
       const db = getDb({ uid: "non_member" });
-      const batch = db.batch();
 
+      // Reject non-member reading places
+      await assertFails(db.collection("rooms").doc("room_1").collection("places").doc("p123").get());
+      await assertFails(db.collection("rooms").doc("room_1").collection("places").get());
+
+      // Reject non-member creating place
+      const batch = db.batch();
       batch.set(db.collection("rooms").doc("room_1").collection("places").doc("p123"), {
         kakaoPlaceId: "p123",
         kakaoPlaceUrl: "https://place.map.kakao.com/p123",
@@ -558,9 +587,7 @@ describe("Firestore Security Rules Tests", () => {
         likeCount: 0,
         createdAt: serverTimestamp(),
       });
-
       batch.update(db.collection("rooms").doc("room_1"), { placeCount: 1 });
-
       await assertFails(batch.commit());
     });
 
