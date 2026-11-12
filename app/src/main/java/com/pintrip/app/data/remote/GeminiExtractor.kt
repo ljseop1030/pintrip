@@ -152,8 +152,8 @@ class GeminiExtractor(
             2. EXCLUDE any places that appear in advertisements, sponsorships, promotional links, sidebars, or recommended/related posts sections (e.g., "관련글", "추천글", "광고", "협찬", "이 블로그의 다른 글").
             3. Extract only real shop/attraction names actually written in the text. Never invent places.
             4. Do not extract addresses, menu items, hashtags, person names, or bare region names as places.
-            5. 'name': the Korean name used for Kakao Map search. If the text shows an English or romanized name, write the Korean name. Keep branch names (e.g., "이재모피자 본점"). Strip numbering, emojis, and quotes.
-            6. 'rawText': the snippet of original text where the place name and its location were mentioned together.
+            5. 'name': the Korean name used for Kakao Map search. If the text shows an English or romanized name, write the Korean name. If you are not sure of the exact Korean name, transliterate the original name as pronounced. Never replace it with a different place's name. Keep branch names (e.g., "이재모피자 본점"). Strip numbering, emojis, and quotes.
+            6. 'rawText': the short original sentence where the place is mentioned (at most about 100 characters).
             7. 'region': a region or district written near the place or read from its location/address (e.g. "부산 금정구"). Otherwise null. Never fill it with the room region.
             8. 'categoryHint': one of ["dining", "cafe", "sights", "stay", "etc"], or null.
             9. 'outsideRoomRegion': true ONLY with clear evidence the place is outside the room region. Otherwise false.
@@ -168,6 +168,6 @@ class GeminiExtractor(
     companion object {
         const val MODEL_NAME = "gemini-3.5-flash-lite"
         const val MAX_IMAGE_WIDTH = 1080
-        const val MAX_TEXT_LENGTH = 8000
+        const val MAX_TEXT_LENGTH = 20000
     }
 }

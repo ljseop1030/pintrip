@@ -162,20 +162,13 @@ class WebPageFetcher {
         // HTML 내 스크립트, 스타일, 헤더, 푸터, 네비게이션, 광고/프레임 등 불필요 요소 제거
         doc.select("script, style, head, header, footer, nav, noscript, svg, iframe, .ad, .advertisement").remove()
 
-        val bodyText = doc.body().text().replace("\\s+".toRegex(), " ").trim()
-        return if (bodyText.length > MAX_BODY_TEXT_LENGTH) {
-            bodyText.take(MAX_BODY_TEXT_LENGTH)
-        } else {
-            bodyText
-        }
+        return doc.body().text().replace("\\s+".toRegex(), " ").trim()
     }
-
     companion object {
         private const val TAG = "WebPageFetcher"
         private const val MAX_REDIRECTS = 10
         private const val CONNECT_TIMEOUT_MS = 10000
         private const val READ_TIMEOUT_MS = 10000
         private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-        const val MAX_BODY_TEXT_LENGTH = 8000
     }
 }
