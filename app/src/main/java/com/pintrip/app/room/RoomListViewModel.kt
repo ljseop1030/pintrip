@@ -69,14 +69,14 @@ class RoomListViewModel(
 
         loadJob = viewModelScope.launch {
             try {
-                // 1. 프로필 정보 로드 (실패 시 예외 처리)
+                // 1. 프로필 정보 로드 (실패 시 명시적 예외 처리)
                 val profile = userRepository.getUserProfile(currentUser.uid, source = Source.DEFAULT)
                 if (profile != null && profile.nickname.isNotBlank()) {
                     _nickname.value = profile.nickname
                     _avatarColor.value = profile.avatarColor
                     _avatarText.value = profile.nickname.take(1).uppercase()
                 } else {
-                    throw IllegalStateException("프로필 정보를 찾을 수 없습니다.")
+                    throw IllegalStateException("사용자 프로필 정보를 불러올 수 없습니다.")
                 }
 
                 // 2. 내 방 목록 로드

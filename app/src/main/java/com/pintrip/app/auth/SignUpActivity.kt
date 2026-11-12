@@ -61,7 +61,6 @@ class SignUpActivity : AppCompatActivity() {
         val password = binding.etPassword.text?.toString().orEmpty()
         val confirmPassword = binding.etConfirmPassword.text?.toString().orEmpty()
 
-        // 1. 유효성 검증
         if (nickname.isEmpty()) {
             binding.tilNickname.error = getString(R.string.error_empty_nickname)
             return
@@ -103,25 +102,25 @@ class SignUpActivity : AppCompatActivity() {
                 var uid: String? = null
                 var isExistingAuthAccount = false
 
-                // (a) Auth 계정 생성 시도
                 try {
                     val authResult = auth.createUserWithEmailAndPassword(email, password).await()
                     uid = authResult.user?.uid
                 } catch (_: FirebaseAuthUserCollisionException) {
-                    // 이메일 이미 존재: 입력한 이메일/비밀번호로 인증 시도
                     try {
                         val loginResult = auth.signInWithEmailAndPassword(email, password).await()
                         uid = loginResult.user?.uid
                         isExistingAuthAccount = true
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Exception) {
                         binding.tvStatus.text = getString(R.string.error_email_already_in_use)
+                        binding.btnSignUp.isEnabled = true
                         return@launch
                     }
                 }
 
                 checkNotNull(uid) { "사용자 UID를 가져오지 못했습니다." }
 
-                // (b) 인증 성공 후 프로필 처리 단계 실행
                 performProfileStep(uid, nickname, email, isExistingAuthAccount)
 
             } catch (e: CancellationException) {
@@ -129,7 +128,6 @@ class SignUpActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: getString(R.string.error_login_failed_default)
                 binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
-            } finally {
                 binding.btnSignUp.isEnabled = true
             }
         }
@@ -146,7 +144,6 @@ class SignUpActivity : AppCompatActivity() {
                 binding.btnSignUp.isEnabled = false
                 binding.tvStatus.text = getString(R.string.status_creating_account)
 
-                // 1. 프로필 존재 확인 (Source.SERVER)
                 val existingProfile = try {
                     userRepository.getUserProfile(uid, source = Source.SERVER)
                 } catch (e: CancellationException) {
@@ -165,12 +162,13 @@ class SignUpActivity : AppCompatActivity() {
                         .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
                             auth.signOut()
                             binding.tvStatus.text = getString(R.string.status_logged_out)
+                            binding.btnSignUp.isEnabled = true
                         }
                         .show()
                     return@launch
                 }
 
-                val statusTextRes = if (existingProfile != null) {
+                val statusTextRes = if (existingProfile != null && existingProfile.nickname.isNotBlank()) {
                     R.string.status_existing_account_logged_in
                 } else {
                     try {
@@ -200,6 +198,7 @@ class SignUpActivity : AppCompatActivity() {
                             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
                                 auth.signOut()
                                 binding.tvStatus.text = getString(R.string.status_logged_out)
+                                binding.btnSignUp.isEnabled = true
                             }
                             .show()
                         return@launch
@@ -216,7 +215,6 @@ class SignUpActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_save_failed)
                 binding.tvStatus.text = getString(R.string.status_auth_success_profile_failed)
-            } finally {
                 binding.btnSignUp.isEnabled = true
             }
         }

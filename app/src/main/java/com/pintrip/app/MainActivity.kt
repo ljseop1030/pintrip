@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
         if (currentUser == null) {
             navigateToLogin()
         } else {
+            binding.btnTestLogin.isEnabled = false
             verifyProfileAndNavigate(currentUser)
         }
     }
@@ -59,8 +60,9 @@ class MainActivity : AppCompatActivity() {
     private fun verifyProfileAndNavigate(user: FirebaseUser) {
         lifecycleScope.launch {
             try {
+                binding.btnTestLogin.isEnabled = false
                 val profile = userRepository.getUserProfile(user.uid, source = Source.SERVER)
-                if (profile != null) {
+                if (profile != null && profile.nickname.isNotBlank()) {
                     navigateToRoomList()
                 } else {
                     navigateToLogin()
@@ -68,6 +70,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                binding.btnTestLogin.isEnabled = true
                 val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_load_failed)
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle(getString(R.string.error_profile_load_failed))

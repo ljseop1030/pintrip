@@ -108,6 +108,9 @@ class CreateRoomActivity : AppCompatActivity() {
     }
 
     private fun showDateRangePicker() {
+        val existingPicker = supportFragmentManager.findFragmentByTag(DATE_PICKER_TAG)
+        if (existingPicker != null) return
+
         val startVal = viewModel.selectedStartDate.value
         val endVal = viewModel.selectedEndDate.value
 

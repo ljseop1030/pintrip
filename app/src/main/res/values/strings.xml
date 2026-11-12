@@ -114,11 +114,11 @@
     <string name="btn_save_profile">프로필 저장</string>
 
     <!-- S03 Room List -->
-    <string name="my_travel_room_title">My Travel Room</string>
-    <string name="greeting_format">Hello, %1$s</string>
-    <string name="greeting_default">Hello, User</string>
-    <string name="location_count_format">Location %1$d</string>
-    <string name="date_to_be_determined">Date to be determined</string>
+    <string name="my_travel_room_title">내 여행방</string>
+    <string name="greeting_format">안녕하세요, %1$s님</string>
+    <string name="greeting_default">안녕하세요, 사용자님</string>
+    <string name="location_count_format">장소 %1$d개</string>
+    <string name="date_to_be_determined">일정 미정</string>
     <string name="btn_retry">다시 시도</string>
     <string name="status_room_loading">test_room_1 불러오는 중&#8230;</string>
     <string name="error_room_load_failed">test_room_1 조회를 실패했습니다.\n원인: %1$s</string>

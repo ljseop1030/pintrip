@@ -50,7 +50,7 @@ class RoomAdapter(
                 room.placeCount,
             )
 
-            // 일자 정보 바인딩 (null일 경우 숨김)
+            // 일자 정보 바인딩 (null일 경우 일정 미정 표시)
             if (room.startDate != null && room.endDate != null) {
                 val dateStr = "${dateFormat.format(room.startDate.toDate())} – ${dateFormat.format(room.endDate.toDate())}"
                 binding.tvRoomDate.text = dateStr
@@ -60,13 +60,13 @@ class RoomAdapter(
                 binding.tvRoomDate.visibility = View.VISIBLE
             }
 
-            // 아이콘 종류에 따른 시각적 연결
+            // 아이콘 종류별 리소스 매핑
             val iconRes = when (room.icon) {
                 "sea" -> R.drawable.ic_room_map_route
                 "food" -> R.drawable.ic_pintrip_pin
-                "nature" -> R.drawable.ic_check_circle
-                "city" -> R.drawable.ic_link
-                "healing" -> R.drawable.ic_image
+                "nature" -> R.drawable.ic_image
+                "city" -> R.drawable.ic_pintrip_pin
+                "healing" -> R.drawable.ic_check_circle
                 else -> R.drawable.ic_room_map_route
             }
             binding.ivRoomIcon.setImageResource(iconRes)
@@ -75,11 +75,16 @@ class RoomAdapter(
             val firstMember = room.members.values.firstOrNull()
             if (firstMember != null && firstMember.nickname.isNotBlank()) {
                 binding.tvMemberAvatar.text = firstMember.nickname.take(1).uppercase()
-                val colorHex = firstMember.avatarColor.ifBlank { "#3A4A90" }
-                try {
-                    val parsedColor = Color.parseColor(colorHex)
-                    binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
-                } catch (_: Exception) {
+                val colorHex = firstMember.avatarColor
+                if (colorHex.isNotBlank()) {
+                    try {
+                        val parsedColor = Color.parseColor(colorHex)
+                        binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
+                    } catch (_: Exception) {
+                        val defaultBlue = ContextCompat.getColor(context, R.color.pintrip_blue)
+                        binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(defaultBlue)
+                    }
+                } else {
                     val defaultBlue = ContextCompat.getColor(context, R.color.pintrip_blue)
                     binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(defaultBlue)
                 }

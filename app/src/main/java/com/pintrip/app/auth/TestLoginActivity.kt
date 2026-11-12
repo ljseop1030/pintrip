@@ -53,13 +53,14 @@ class TestLoginActivity : AppCompatActivity() {
             startActivity(Intent(this, SignUpActivity::class.java))
         }
 
-        // UI 세팅 후 이미 로그인된 경우 서버에서 프로필 확인 진행
         val currentUser = auth.currentUser
         if (currentUser != null) {
             binding.tvStatus.text = getString(R.string.status_logging_in)
+            binding.btnLogin.isEnabled = false
             checkProfileAndNavigate(currentUser)
         } else {
             binding.tvStatus.text = getString(R.string.status_logged_out)
+            binding.btnLogin.isEnabled = true
         }
     }
 
@@ -86,13 +87,15 @@ class TestLoginActivity : AppCompatActivity() {
 
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
-                binding.btnLogin.isEnabled = true
                 if (task.isSuccessful) {
                     val user = auth.currentUser
                     if (user != null) {
                         checkProfileAndNavigate(user)
+                    } else {
+                        binding.btnLogin.isEnabled = true
                     }
                 } else {
+                    binding.btnLogin.isEnabled = true
                     val errorMsg = task.exception?.localizedMessage ?: getString(R.string.error_login_failed_default)
                     binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
                 }
@@ -102,18 +105,17 @@ class TestLoginActivity : AppCompatActivity() {
     private fun checkProfileAndNavigate(user: FirebaseUser) {
         lifecycleScope.launch {
             try {
-                // 로그인 시점에는 서버 기준(Source.SERVER)으로 실시간 프로필 존재 여부 확인
+                binding.btnLogin.isEnabled = false
                 val profile = userRepository.getUserProfile(user.uid, source = Source.SERVER)
-                if (profile != null) {
+                if (profile != null && profile.nickname.isNotBlank()) {
                     navigateToRoomList()
                 } else {
-                    // 계정은 있으나 프로필 문서가 진짜로 존재하지 않는 경우: 닉네임 입력 다이얼로그 표시
                     promptProfileNickname(user)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // 프로필 조회 실패 시 에러 안내 및 재시도/로그아웃 제공
+                binding.btnLogin.isEnabled = true
                 val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_load_failed)
                 binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
 
@@ -127,6 +129,7 @@ class TestLoginActivity : AppCompatActivity() {
                     .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
                         auth.signOut()
                         binding.tvStatus.text = getString(R.string.status_logged_out)
+                        binding.btnLogin.isEnabled = true
                     }
                     .show()
             }
@@ -163,6 +166,7 @@ class TestLoginActivity : AppCompatActivity() {
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        binding.btnLogin.isEnabled = true
                         val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_save_failed)
                         binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
 
@@ -176,6 +180,7 @@ class TestLoginActivity : AppCompatActivity() {
                             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
                                 auth.signOut()
                                 binding.tvStatus.text = getString(R.string.status_logged_out)
+                                binding.btnLogin.isEnabled = true
                             }
                             .show()
                     }
@@ -184,6 +189,7 @@ class TestLoginActivity : AppCompatActivity() {
             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
                 auth.signOut()
                 binding.tvStatus.text = getString(R.string.status_logged_out)
+                binding.btnLogin.isEnabled = true
             }
             .show()
     }
