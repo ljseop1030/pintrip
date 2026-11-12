@@ -32,6 +32,9 @@ class RoomListViewModel(
     private val _nickname = MutableLiveData<String>()
     val nickname: LiveData<String> = _nickname
 
+    private val _avatarColor = MutableLiveData<String>()
+    val avatarColor: LiveData<String> = _avatarColor
+
     private val _avatarText = MutableLiveData<String>()
     val avatarText: LiveData<String> = _avatarText
 
@@ -45,8 +48,10 @@ class RoomListViewModel(
     val toastEvent: LiveData<Event<String>> = _toastEvent
 
     private var isDataLoaded = false
+    private var isLoadingRooms = false
 
     fun loadRooms(forceRefresh: Boolean = false) {
+        if (isLoadingRooms && !forceRefresh) return
         if (isDataLoaded && !forceRefresh) return
 
         val currentUser = auth.currentUser
@@ -55,24 +60,19 @@ class RoomListViewModel(
             return
         }
 
+        isLoadingRooms = true
         _uiState.value = RoomListUiState.Loading
 
         viewModelScope.launch {
             try {
-                // 1. 프로필 정보 로드
-                try {
-                    val profile = userRepository.getUserProfile(currentUser.uid, source = Source.DEFAULT)
-                    val name = profile?.nickname
-                    if (!name.isNullOrBlank()) {
-                        _nickname.value = name
-                        _avatarText.value = name.take(1).uppercase()
-                    } else {
-                        _nickname.value = "User"
-                        _avatarText.value = "U"
-                    }
-                } catch (_: Exception) {
-                    _nickname.value = "User"
-                    _avatarText.value = "U"
+                // 1. 프로필 정보 로드 (실패 시 예외 처리)
+                val profile = userRepository.getUserProfile(currentUser.uid, source = Source.DEFAULT)
+                if (profile != null && profile.nickname.isNotBlank()) {
+                    _nickname.value = profile.nickname
+                    _avatarColor.value = profile.avatarColor
+                    _avatarText.value = profile.nickname.take(1).uppercase()
+                } else {
+                    throw IllegalStateException("프로필 정보를 찾을 수 없습니다.")
                 }
 
                 // 2. 내 방 목록 로드
@@ -89,6 +89,8 @@ class RoomListViewModel(
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: "방 목록을 불러오지 못했습니다."
                 _uiState.value = RoomListUiState.Error(errorMsg)
+            } finally {
+                isLoadingRooms = false
             }
         }
     }

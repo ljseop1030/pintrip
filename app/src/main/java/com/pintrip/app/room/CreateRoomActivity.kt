@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -25,11 +26,13 @@ import java.util.Locale
  */
 class CreateRoomActivity : AppCompatActivity() {
 
+    companion object {
+        private const val DATE_PICKER_TAG = "DATE_RANGE_PICKER"
+    }
+
     private lateinit var binding: ActivityCreateRoomBinding
     private val viewModel: CreateRoomViewModel by viewModels()
     private val dateFormat = SimpleDateFormat("MM.dd (E)", Locale.KOREA)
-
-    private val presetRegions = listOf("부산", "서울", "제주", "강릉", "경주", "여수")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,17 +49,20 @@ class CreateRoomActivity : AppCompatActivity() {
 
         setupRegionDropdown()
         setupListeners()
+        setupBackPressHandler()
+        restoreDatePickerListenerIfNeeded()
         observeViewModel()
     }
 
     private fun setupRegionDropdown() {
+        val presetRegions = resources.getStringArray(R.array.preset_regions)
         val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, presetRegions)
         binding.actvRegion.setAdapter(adapter)
     }
 
     private fun setupListeners() {
         binding.ivBack.setOnClickListener {
-            finish()
+            handleBackPress()
         }
 
         binding.layoutDateSelection.setOnClickListener {
@@ -85,17 +91,47 @@ class CreateRoomActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleBackPress()
+            }
+        })
+    }
+
+    private fun handleBackPress() {
+        if (viewModel.isLoading.value == true) {
+            Toast.makeText(this, R.string.notice_creating_room_in_progress, Toast.LENGTH_SHORT).show()
+        } else {
+            finish()
+        }
+    }
+
     private fun showDateRangePicker() {
+        val startMs = viewModel.selectedStartDate.value?.toDate()?.time
+            ?: MaterialDatePicker.todayInUtcMilliseconds()
+        val endMs = viewModel.selectedEndDate.value?.toDate()?.time
+            ?: startMs
+
         val datePicker = MaterialDatePicker.Builder.dateRangePicker()
             .setTitleText(R.string.label_travel_period)
-            .setSelection(
-                Pair(
-                    MaterialDatePicker.todayInUtcMilliseconds(),
-                    MaterialDatePicker.todayInUtcMilliseconds() + (2 * 24 * 60 * 60 * 1000L),
-                ),
-            )
+            .setSelection(Pair(startMs, endMs))
             .build()
 
+        attachDatePickerListener(datePicker)
+        datePicker.show(supportFragmentManager, DATE_PICKER_TAG)
+    }
+
+    private fun restoreDatePickerListenerIfNeeded() {
+        @Suppress("UNCHECKED_CAST")
+        val existingPicker = supportFragmentManager.findFragmentByTag(DATE_PICKER_TAG)
+            as? MaterialDatePicker<Pair<Long, Long>>
+        if (existingPicker != null) {
+            attachDatePickerListener(existingPicker)
+        }
+    }
+
+    private fun attachDatePickerListener(datePicker: MaterialDatePicker<Pair<Long, Long>>) {
         datePicker.addOnPositiveButtonClickListener { selection ->
             if (selection?.first != null && selection.second != null) {
                 val startDate = Timestamp(Date(selection.first))
@@ -103,8 +139,6 @@ class CreateRoomActivity : AppCompatActivity() {
                 viewModel.setDates(startDate, endDate)
             }
         }
-
-        datePicker.show(supportFragmentManager, "DATE_RANGE_PICKER")
     }
 
     private fun observeViewModel() {
@@ -118,7 +152,11 @@ class CreateRoomActivity : AppCompatActivity() {
 
         viewModel.isLoading.observe(this) { isLoading ->
             binding.btnCreate.isEnabled = !isLoading
-            binding.btnCreate.text = if (isLoading) "생성 중…" else getString(R.string.btn_create_room_action)
+            binding.btnCreate.text = if (isLoading) {
+                getString(R.string.btn_creating_room_in_progress)
+            } else {
+                getString(R.string.btn_create_room_action)
+            }
         }
 
         viewModel.errorMessageEvent.observe(this) { event ->
@@ -129,7 +167,7 @@ class CreateRoomActivity : AppCompatActivity() {
 
         viewModel.createSuccessEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { room ->
-                Toast.makeText(this, "여행방이 생성되었습니다.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.status_room_created, Toast.LENGTH_SHORT).show()
                 val resultIntent = Intent().apply {
                     putExtra(PlaceListActivity.EXTRA_ROOM_ID, room.id)
                 }

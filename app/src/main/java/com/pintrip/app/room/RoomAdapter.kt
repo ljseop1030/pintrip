@@ -1,8 +1,11 @@
 package com.pintrip.app.room
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -40,8 +43,9 @@ class RoomAdapter(
         private val dateFormat = SimpleDateFormat("MM.dd", Locale.getDefault())
 
         fun bind(room: Room) {
+            val context = binding.root.context
             binding.tvRoomName.text = room.name
-            binding.tvLocationBadge.text = binding.root.context.getString(
+            binding.tvLocationBadge.text = context.getString(
                 R.string.location_count_format,
                 room.placeCount,
             )
@@ -52,13 +56,37 @@ class RoomAdapter(
                 binding.tvRoomDate.text = dateStr
                 binding.tvRoomDate.visibility = View.VISIBLE
             } else {
-                binding.tvRoomDate.visibility = View.GONE
+                binding.tvRoomDate.text = context.getString(R.string.date_to_be_determined)
+                binding.tvRoomDate.visibility = View.VISIBLE
             }
 
-            // 아바타 텍스트 바인딩 (owner/member 닉네임 첫 글자)
+            // 아이콘 종류에 따른 시각적 연결
+            val iconRes = when (room.icon) {
+                "sea" -> R.drawable.ic_room_map_route
+                "food" -> R.drawable.ic_pintrip_pin
+                "nature" -> R.drawable.ic_check_circle
+                "city" -> R.drawable.ic_link
+                "healing" -> R.drawable.ic_image
+                else -> R.drawable.ic_room_map_route
+            }
+            binding.ivRoomIcon.setImageResource(iconRes)
+
+            // 실제 멤버 프로필 닉네임 첫 글자 및 아바타 색상 반영
             val firstMember = room.members.values.firstOrNull()
-            val avatarText = firstMember?.nickname?.take(1)?.uppercase() ?: "M"
-            binding.tvMemberAvatar.text = avatarText
+            if (firstMember != null && firstMember.nickname.isNotBlank()) {
+                binding.tvMemberAvatar.text = firstMember.nickname.take(1).uppercase()
+                val colorHex = firstMember.avatarColor.ifBlank { "#3A4A90" }
+                try {
+                    val parsedColor = Color.parseColor(colorHex)
+                    binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
+                } catch (_: Exception) {
+                    val defaultBlue = ContextCompat.getColor(context, R.color.pintrip_blue)
+                    binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(defaultBlue)
+                }
+                binding.tvMemberAvatar.visibility = View.VISIBLE
+            } else {
+                binding.tvMemberAvatar.visibility = View.GONE
+            }
 
             binding.cardRoomItem.setOnClickListener {
                 onRoomClick(room)

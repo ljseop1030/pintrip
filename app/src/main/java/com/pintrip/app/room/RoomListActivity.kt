@@ -1,6 +1,8 @@
 package com.pintrip.app.room
 
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -89,6 +91,18 @@ class RoomListActivity : AppCompatActivity() {
 
         viewModel.avatarText.observe(this) { avatar ->
             binding.tvHeaderAvatar.text = avatar
+        }
+
+        viewModel.avatarColor.observe(this) { colorHex ->
+            if (!colorHex.isNullOrBlank()) {
+                try {
+                    val parsedColor = Color.parseColor(colorHex)
+                    binding.tvHeaderAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
+                    binding.tvHeaderAvatar.setTextColor(Color.WHITE)
+                } catch (_: Exception) {
+                    // Keep layout background if parsing fails
+                }
+            }
         }
 
         viewModel.uiState.observe(this) { state ->
