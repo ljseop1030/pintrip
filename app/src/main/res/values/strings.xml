@@ -66,7 +66,7 @@
     <string name="sample_email_hint">travel@email.com</string>
     <string name="sample_password_hint">••••••••</string>
     <string name="btn_login">Login</string>
-    <string name="btn_logout">Logout</string>
+    <string name="btn_logout">로그아웃</string>
     <string name="status_logged_out">상태: 미로그인</string>
     <string name="status_logged_in">상태: 로그인 성공\nUID: %1$s</string>
     <string name="status_login_failed">상태: 로그인 실패\n원인: %1$s</string>
