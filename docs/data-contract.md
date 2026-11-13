@@ -86,6 +86,19 @@ There is no `likes` collection. Likes live in each place's `likedBy` array.
 
 Separate collection so non-members never need read access to `rooms`, and duplicate checks are a single doc-exists check.
 
+#### Format & Normalization Policy
+- Invite Code Character Set: `23456789ABCDEFGHJKLMNPQRSTUVWXYZ` (6 chars, uppercase letters + numbers, 0/O/1/I excluded).
+- Client Normalization: Strip leading/trailing whitespace, convert to uppercase (`code.trim().uppercase()`).
+- Validation: Regex `^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$`.
+
+### inviteCodes/{code}/joinProofs/{uid}  (doc ID = joining user Auth uid)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| joinedAt | Timestamp | ✓ | `request.time` (serverTimestamp) |
+
+**Note:** This subcollection exists solely as an atomic proof of invite code possession during non-member room joining in Firestore Security Rules (`existsAfter` + `joinedAt == request.time`). It is not a duplicated member list or a separate feature. Client read/update/delete/list are blocked.
+
 ---
 
 ## 4. In-memory model: PlaceDetail (never stored)
@@ -124,8 +137,8 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
 |---|---|
 | Sign up | Create Auth user → set `users/{uid}` |
 | Create room | Batch: set `rooms/{newId}` + set `inviteCodes/{code}`. Regenerate code if it exists |
-| Join room | Get `inviteCodes/{code}` → update `rooms/{roomId}`: `memberIds` arrayUnion(uid), set `members.{uid}` |
-| Add places | Transaction per selected room: **read all** `places/{kakaoPlaceId}` first, then set only missing ones + `placeCount` increment(1). Skip existing IDs |
+| Join room | Pre-check `getMyRooms(Source.SERVER)` for existing membership (returns existing room without modifying fields if present). Otherwise, get `inviteCodes/{code}` → Batch: set `inviteCodes/{code}/joinProofs/{uid}` ({ joinedAt: serverTimestamp }) + update `rooms/{roomId}` (`memberIds` arrayUnion(uid), `members.{uid}` set with user profile, `updatedAt` = serverTimestamp). On write exception, re-verify server membership via `getMyRooms(Source.SERVER)`. |
+| Add places | Transaction per selected room: **read all** `places/{kakaoPlaceId}` first, then set only missing ones. If `addedCount > 0`, update `placeCount` increment(addedCount) + `updatedAt` = serverTimestamp. If `addedCount == 0` (all duplicate), update neither. |
 | Like toggle | Transaction: get place → if uid not in `likedBy`: arrayUnion + `likeCount` +1, else arrayRemove + `likeCount` -1 |
 | Delete place | **Only if `addedBy == my uid`** (hide menu otherwise). Batch: delete place + `placeCount` -1. Likes go with it; the place can be re-added |
 | Enter room home | `members.{uid}.lastSeenAt` = serverTimestamp (low priority) |
@@ -143,12 +156,22 @@ Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not F
 
 ---
 
-## 7. Security rules (draft)
+## 7. Security rules
 
 - `users/{uid}`: signed-in users read; owner writes.
-- `rooms/{roomId}`: members (`memberIds`) read/write. Phase 1 permits atomic room creation (with `inviteCodes/{code}`) and member-only reads. Non-member self-join updates will be added in Phase 2.
-- `rooms/{roomId}/places/{placeId}`: parent room members read/create. Delete/update blocked in current phase.
+- `rooms/{roomId}`:
+  - Read: members (`memberIds`) read/query. Non-member read is blocked.
+  - Create: signed-in user + atomic connection with `inviteCodes/{code}` + valid owner profile.
+  - Non-member join update: permitted ONLY if atomic batch creates `inviteCodes/{code}/joinProofs/{uid}` (`joinedAt == request.time`) AND adds strictly user's own `uid` & `users/{uid}` profile, `updatedAt == request.time`, all protected fields (`name`, `region`, `dates`, `icon`, `ownerId`, `inviteCode`, `placeCount`, `createdAt`, existing `members`) preserved.
+  - Existing member place count update (Transition rule for team app compatibility):
+    - Mode A (Legacy build): `placeCount` increment ONLY, `updatedAt` unchanged.
+    - Mode B (New build): `placeCount` increment AND `updatedAt == request.time`.
+    - Both modes require existing room member and prohibit modifying any other room fields.
+    - Known transition limitation: Old app place additions succeed but don't update `updatedAt`, so sorting order on `updatedAt` won't update until team rebuilds/updates the app.
+    - Application order: 1. Deploy backward-compatible rules -> 2. Build & install new app -> 3. Verify. Keep count-only rule until team updates.
+- `rooms/{roomId}/places/{placeId}`: parent room members read/create (with parent `placeCount` increment check). Delete/update blocked in current phase.
 - `inviteCodes/{code}`: signed-in users `get` (single document) only. `list`/`update`/`delete` blocked.
+- `inviteCodes/{code}/joinProofs/{uid}`: signed-in users `create` only if `uid == request.auth.uid`, `joinedAt == request.time`, and target room is atomically updated with user in `memberIds` (`getAfter`). Read/update/delete/list blocked.
 
 ---
 

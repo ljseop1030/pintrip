@@ -28,6 +28,7 @@ import java.security.SecureRandom
 class RoomRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val userRepository: UserRepository = UserRepository(db, auth),
 ) {
 
     companion object {
@@ -217,6 +218,108 @@ class RoomRepository(
             }
         } else {
             null
+        }
+    }
+
+    /**
+     * 초대 코드를 입력하여 여행방에 가입하거나, 이미 참여 중인 경우 해당 방 정보를 반환합니다.
+     *
+     * docs/data-contract.md 및 AGENTS.md 규격을 준수합니다:
+     * 1. 입력된 코드의 앞뒤 공백을 제거하고 대문자로 정규화합니다 (`code.trim().uppercase()`).
+     * 2. 가입 전 비멤버 상태에서 `rooms/{roomId}` 문서를 직접 읽지 않습니다.
+     * 3. 이미 참여 중인지 여부는 `getMyRooms(Source.SERVER)` 조회를 통해 확인하며, 기존 참여 방이면 정보 변경 없이 해당 방을 바로 반환합니다.
+     * 4. `inviteCodes/{code}` 단건 조회를 통해 `roomId`를 얻고, `inviteCodes/{code}/joinProofs/{uid}` 증빙 문서 생성과 `rooms/{roomId}` 멤버 추가 및 `updatedAt` 서버 시각 갱신을 단일 WriteBatch로 원자적 실행합니다.
+     * 5. 예외 발생 시 서버 멤버십을 재확인하여 동시 요청으로 이미 가입이 성공한 경우 방 정보를 정상 반환합니다.
+     *
+     * @param code 6자리 초대 코드
+     * @return 가입 완료되거나 기존 참여 중인 [Room] 객체
+     * @throws IllegalArgumentException 초대 코드가 유효하지 않거나, 코드가 존재하지 않는 경우
+     * @throws IllegalStateException 로그인되어 있지 않거나, 프로필이 없거나, 권한이 거부된 경우
+     */
+    suspend fun joinRoomWithCode(code: String): Room {
+        val normalizedCode = code.trim().uppercase()
+        require(normalizedCode.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) {
+            "유효하지 않은 초대 코드 형식입니다. 6자리 영문 대문자 및 숫자를 입력해 주세요."
+        }
+
+        val currentUser = auth.currentUser
+        checkNotNull(currentUser) { "로그인된 사용자 정보가 없습니다. (Auth currentUser is null)" }
+        val currentUid = currentUser.uid
+
+        // 1. 이미 멤버인 방인지 본인 허용 경로(getMyRooms)로 사전 확인
+        val existingRooms = getMyRooms(Source.SERVER)
+        val existingRoom = existingRooms.find { it.inviteCode == normalizedCode }
+        if (existingRoom != null) {
+            return existingRoom
+        }
+
+        // 2. 초대 코드 단건 조회 (비멤버도 get 허용)
+        val inviteSnapshot = db.collection("inviteCodes").document(normalizedCode).get(Source.SERVER).await()
+        if (!inviteSnapshot.exists()) {
+            throw IllegalArgumentException("존재하지 않는 초대 코드입니다.")
+        }
+
+        val roomId = inviteSnapshot.getString("roomId")
+        check(!roomId.isNullOrBlank()) { "초대 코드에 매핑된 방 정보가 올바르지 않습니다." }
+
+        // 3. 사용자 프로필 조회
+        val userProfile = userRepository.getUserProfile(currentUid, Source.DEFAULT)
+        checkNotNull(userProfile) { "사용자 프로필 문서를 찾을 수 없습니다: $currentUid" }
+        check(userProfile.nickname.isNotBlank()) { "프로필 닉네임이 비어 있습니다." }
+        check(userProfile.avatarColor.isNotBlank()) { "프로필 아바타 색상이 비어 있습니다." }
+
+        val member = Member(
+            nickname = userProfile.nickname,
+            avatarColor = userProfile.avatarColor,
+            lastSeenAt = null,
+        )
+
+        // 4. 원자적 가입 처리: inviteCodes/{code}/joinProofs/{uid} 생성 + rooms/{roomId} 멤버 추가 및 updatedAt 갱신
+        val batch = db.batch()
+        val proofRef = db.collection("inviteCodes")
+            .document(normalizedCode)
+            .collection("joinProofs")
+            .document(currentUid)
+        val roomRef = db.collection("rooms").document(roomId)
+
+        batch.set(proofRef, mapOf("joinedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()))
+        batch.update(
+            roomRef,
+            "memberIds", com.google.firebase.firestore.FieldValue.arrayUnion(currentUid),
+            "members.$currentUid", member,
+            "updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp(),
+        )
+
+        try {
+            batch.commit().await()
+            val joinedRoom = getRoom(roomId, Source.SERVER)
+            checkNotNull(joinedRoom) { "방 가입 완료 후 방 정보를 불러오지 못했습니다: $roomId" }
+            return joinedRoom
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) {
+                throw e
+            }
+            // 동시 요청 또는 네트워크 재시도로 이미 서버에서 가입 처리되었는지 안전하게 재확인
+            val recheckedRoom = try {
+                val recheckedRooms = getMyRooms(Source.SERVER)
+                recheckedRooms.find { it.id == roomId }
+            } catch (recheckError: Exception) {
+                if (recheckError is kotlinx.coroutines.CancellationException) {
+                    throw recheckError
+                }
+                null
+            }
+
+            if (recheckedRoom != null) {
+                return recheckedRoom
+            }
+
+            if (e is com.google.firebase.firestore.FirebaseFirestoreException &&
+                e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED
+            ) {
+                throw IllegalStateException("방 가입 권한이 없거나 요청이 거부되었습니다.", e)
+            }
+            throw e
         }
     }
 }

@@ -3,7 +3,7 @@ const {
   assertSucceeds,
   assertFails,
 } = require("@firebase/rules-unit-testing");
-const { serverTimestamp } = require("firebase/firestore");
+const { serverTimestamp, deleteField } = require("firebase/firestore");
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
@@ -626,6 +626,774 @@ describe("Firestore Security Rules Tests", () => {
       batch.update(db.collection("rooms").doc("room_1"), { placeCount: 1 });
 
       await assertFails(batch.commit());
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // 4. Room Join & Bidirectional Proof Verification
+  // -------------------------------------------------------------------
+  describe("Room Join & Bidirectional Proof Verification", () => {
+    it("allows non-member to join room with atomic batch proof creation and verifies members/memberIds/updatedAt", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_join_1";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "제주 여행",
+        region: "제주",
+        startDate: null,
+        endDate: null,
+        icon: "healing",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: {
+          owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null },
+        },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid, token: { email: "chulsoo@test.com" } });
+      const batch = db.batch();
+
+      const proofRef = db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid);
+      const roomRef = db.collection("rooms").doc(roomId);
+
+      batch.set(proofRef, { joinedAt: serverTimestamp() });
+      batch.update(roomRef, {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+
+      await assertSucceeds(batch.commit());
+
+      // Read back room document using member's context to assert field values
+      const roomSnap = await db.collection("rooms").doc(roomId).get();
+      assert.strictEqual(roomSnap.exists, true);
+      assert.strictEqual(roomSnap.data().memberIds.length, 2);
+      assert.deepStrictEqual(roomSnap.data().memberIds, [ownerUid, joinUid]);
+      assert.strictEqual(roomSnap.data().members.owner_a.nickname, "방장");
+      assert.strictEqual(roomSnap.data().members.owner_a.avatarColor, "#FF5722");
+      assert.strictEqual(roomSnap.data().members.user_b.nickname, "철수");
+      assert.strictEqual(roomSnap.data().members.user_b.avatarColor, "#00BCD4");
+      assert.strictEqual(roomSnap.data().members.user_b.lastSeenAt, null);
+      assert.ok(roomSnap.data().updatedAt != null);
+    });
+
+    it("allows multiple users to join room and asserts all members are preserved", async () => {
+      const ownerUid = "owner_a";
+      const joinUidB = "user_b";
+      const joinUidC = "user_c";
+      const code = "K7P2QX";
+      const roomId = "room_multi_join";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUidB, "철수", "chulsoo@test.com", "#00BCD4");
+      await seedUserProfile(joinUidC, "영희", "younghee@test.com", "#E91E63");
+
+      await seedRoom(roomId, {
+        name: "강릉 여행",
+        region: "강릉",
+        startDate: null,
+        endDate: null,
+        icon: "sea",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: {
+          owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null },
+        },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      // User B joins
+      const dbB = getDb({ uid: joinUidB });
+      const batchB = dbB.batch();
+      batchB.set(dbB.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUidB), { joinedAt: serverTimestamp() });
+      batchB.update(dbB.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUidB],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertSucceeds(batchB.commit());
+
+      // User C joins
+      const dbC = getDb({ uid: joinUidC });
+      const batchC = dbC.batch();
+      batchC.set(dbC.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUidC), { joinedAt: serverTimestamp() });
+      batchC.update(dbC.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUidB, joinUidC],
+        "members.user_c": { nickname: "영희", avatarColor: "#E91E63", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertSucceeds(batchC.commit());
+
+      // Assert that all 3 members (owner, B, C) are present and intact
+      const dbOwner = getDb({ uid: ownerUid });
+      const roomSnap = await dbOwner.collection("rooms").doc(roomId).get();
+      assert.strictEqual(roomSnap.exists, true);
+      assert.deepStrictEqual(roomSnap.data().memberIds, [ownerUid, joinUidB, joinUidC]);
+      assert.strictEqual(roomSnap.data().members.owner_a.nickname, "방장");
+      assert.strictEqual(roomSnap.data().members.user_b.nickname, "철수");
+      assert.strictEqual(roomSnap.data().members.user_c.nickname, "영희");
+    });
+
+    it("rejects non-member join without atomic proof creation (knowing roomId only)", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_attacker";
+      const code = "K7P2QX";
+      const roomId = "room_secure";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "해커", "hacker@test.com", "#000000");
+
+      await seedRoom(roomId, {
+        name: "비밀 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+
+      // Attack: Attempt to update room directly without setting joinProofs doc
+      await assertFails(
+        db.collection("rooms").doc(roomId).update({
+          memberIds: [ownerUid, joinUid],
+          "members.user_attacker": { nickname: "해커", avatarColor: "#000000", lastSeenAt: null },
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("rejects standalone proof creation without room membership addition", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_proof_only";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+      const proofRef = db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid);
+
+      // Attempt to create proof doc standalone without room update
+      await assertFails(
+        proofRef.set({ joinedAt: serverTimestamp() })
+      );
+    });
+
+    it("rejects reusing proof for a different code or room or uid", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const codeTarget = "K7P2QX";
+      const codeOther = "OTHERX";
+      const roomId = "room_target";
+      const roomIdOther = "room_other";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: codeTarget,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedRoom(roomIdOther, {
+        name: "다른 여행",
+        region: "부산",
+        startDate: null,
+        endDate: null,
+        icon: "sea",
+        inviteCode: codeOther,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(codeTarget, { roomId: roomId, createdAt: now });
+      await seedInviteCode(codeOther, { roomId: roomIdOther, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+      const batch = db.batch();
+
+      // Mismatched proof code (OTHERX instead of K7P2QX)
+      batch.set(db.collection("inviteCodes").doc(codeOther).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+
+      await assertFails(batch.commit());
+    });
+
+    it("rejects client reading, updating, deleting, or listing EXISTING joinProofs", async () => {
+      const code = "K7P2QX";
+      const uid = "user_a";
+
+      // Seed actual proof document via disabled rules context
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection("inviteCodes").doc(code).collection("joinProofs").doc(uid).set({
+          joinedAt: new Date(),
+        });
+      });
+
+      const db = getDb({ uid: uid });
+      const proofRef = db.collection("inviteCodes").doc(code).collection("joinProofs").doc(uid);
+
+      await assertFails(proofRef.get());
+      await assertFails(db.collection("inviteCodes").doc(code).collection("joinProofs").get());
+      await assertFails(proofRef.update({ joinedAt: new Date() }));
+      await assertFails(proofRef.delete());
+    });
+
+    it("rejects existing room member or creator from creating joinProofs document", async () => {
+      const ownerUid = "owner_a";
+      const code = "K7P2QX";
+      const roomId = "room_existing_proof_attempt";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: ownerUid });
+      const proofRef = db.collection("inviteCodes").doc(code).collection("joinProofs").doc(ownerUid);
+
+      // Existing member attempting to create proof doc standalone or during update
+      await assertFails(proofRef.set({ joinedAt: serverTimestamp() }));
+    });
+
+    it("rejects join using a pre-seeded past proof document without creating a fresh atomic proof", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_past_proof";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      // Seed past proof doc
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid).set({
+          joinedAt: new Date(Date.now() - 10000),
+        });
+      });
+
+      const db = getDb({ uid: joinUid });
+
+      // Attempt to join using past proof without setting fresh proof in same batch
+      await assertFails(
+        db.collection("rooms").doc(roomId).update({
+          memberIds: [ownerUid, joinUid],
+          "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("rejects join if existing member's nickname, avatarColor, or lastSeenAt is altered", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_alter_existing";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+
+      // Attack: Attempt to alter existing member's nickname
+      const batch1 = db.batch();
+      batch1.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch1.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.owner_a": { nickname: "위조방장", avatarColor: "#FF5722", lastSeenAt: null },
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertFails(batch1.commit());
+
+      // Attack: Attempt to alter existing member's avatarColor
+      const batch2 = db.batch();
+      batch2.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch2.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.owner_a": { nickname: "방장", avatarColor: "#000000", lastSeenAt: null },
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertFails(batch2.commit());
+
+      // Attack: Attempt to alter existing member's lastSeenAt
+      const batch3 = db.batch();
+      batch3.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch3.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.owner_a": { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: serverTimestamp() },
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertFails(batch3.commit());
+    });
+
+    it("rejects join if arbitrary top-level room field is added or existing field omitted", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_hacked_field";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+
+      // Attack: Add hackedField: true during join
+      const batch1 = db.batch();
+      batch1.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch1.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+        hackedField: true,
+      });
+      await assertFails(batch1.commit());
+
+      // Attack: Delete region field during join
+      const batch2 = db.batch();
+      batch2.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch2.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+        region: deleteField(),
+      });
+      await assertFails(batch2.commit());
+    });
+
+    it("rejects join if user profile nickname or avatarColor does not match users collection", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_fake_profile";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "진짜닉네임", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+
+      // Attempt join with forged nickname
+      const batch1 = db.batch();
+      batch1.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch1.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "위조닉네임", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertFails(batch1.commit());
+
+      // Attempt join with forged avatarColor
+      const batch2 = db.batch();
+      batch2.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch2.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "진짜닉네임", avatarColor: "#112233", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertFails(batch2.commit());
+    });
+
+    it("rejects join if protected room fields are altered (ownerId, name, region, icon, placeCount, etc.)", async () => {
+      const ownerUid = "owner_a";
+      const joinUid = "user_b";
+      const code = "K7P2QX";
+      const roomId = "room_protected_fields";
+      const now = new Date();
+
+      await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
+      await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "서울 여행",
+        region: "서울",
+        startDate: null,
+        endDate: null,
+        icon: "city",
+        inviteCode: code,
+        ownerId: ownerUid,
+        memberIds: [ownerUid],
+        members: { owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+
+      const db = getDb({ uid: joinUid });
+
+      // Attempt to hijack ownership during join
+      const batch = db.batch();
+      batch.set(db.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batch.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        ownerId: joinUid, // Forged ownerId
+        updatedAt: serverTimestamp(),
+      });
+
+      await assertFails(batch.commit());
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // 5. Place Addition updatedAt & Team Compatibility Regression Tests
+  // -------------------------------------------------------------------
+  describe("Place Addition updatedAt & Team Compatibility Regression Tests", () => {
+    it("allows existing member to add place with placeCount increment AND server updatedAt (New App) and asserts document values", async () => {
+      const uid = "user_a";
+      const roomId = "room_new_app_places";
+      const now = new Date();
+
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [uid],
+        ownerId: uid,
+        members: { user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+      });
+
+      const db = getDb({ uid });
+      const batch = db.batch();
+
+      batch.set(db.collection("rooms").doc(roomId).collection("places").doc("p200"), {
+        kakaoPlaceId: "p200",
+        kakaoPlaceUrl: "https://place.map.kakao.com/p200",
+        searchKeyword: "모모스커피",
+        matchType: "manual",
+        sourceType: "link",
+        addedBy: uid,
+        addedByNickname: "민지",
+        likedBy: [],
+        likeCount: 0,
+        createdAt: serverTimestamp(),
+      });
+
+      batch.update(db.collection("rooms").doc(roomId), {
+        placeCount: 1,
+        updatedAt: serverTimestamp(),
+      });
+
+      await assertSucceeds(batch.commit());
+
+      // Assert place document created and room placeCount/updatedAt updated
+      const placeSnap = await db.collection("rooms").doc(roomId).collection("places").doc("p200").get();
+      assert.strictEqual(placeSnap.exists, true);
+      assert.strictEqual(placeSnap.data().searchKeyword, "모모스커피");
+
+      const roomSnap = await db.collection("rooms").doc(roomId).get();
+      assert.strictEqual(roomSnap.data().placeCount, 1);
+      assert.ok(roomSnap.data().updatedAt != null);
+    });
+
+    it("allows existing member to add place with placeCount increment ONLY (Legacy App Compatibility) and asserts updatedAt is preserved", async () => {
+      const uid = "user_a";
+      const roomId = "room_legacy_app_places";
+      const now = new Date();
+
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [uid],
+        ownerId: uid,
+        members: { user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+      });
+
+      const db = getDb({ uid });
+      const batch = db.batch();
+
+      batch.set(db.collection("rooms").doc(roomId).collection("places").doc("p201"), {
+        kakaoPlaceId: "p201",
+        kakaoPlaceUrl: "https://place.map.kakao.com/p201",
+        searchKeyword: "이재모피자",
+        matchType: "manual",
+        sourceType: "link",
+        addedBy: uid,
+        addedByNickname: "민지",
+        likedBy: [],
+        likeCount: 0,
+        createdAt: serverTimestamp(),
+      });
+
+      batch.update(db.collection("rooms").doc(roomId), {
+        placeCount: 1,
+      });
+
+      await assertSucceeds(batch.commit());
+
+      // Assert place document created and room placeCount updated while updatedAt is preserved
+      const placeSnap = await db.collection("rooms").doc(roomId).collection("places").doc("p201").get();
+      assert.strictEqual(placeSnap.exists, true);
+
+      const roomSnap = await db.collection("rooms").doc(roomId).get();
+      assert.strictEqual(roomSnap.data().placeCount, 1);
+      assert.strictEqual(roomSnap.data().updatedAt.toDate().getTime(), now.getTime());
+    });
+
+    it("rejects updating updatedAt alone without placeCount increment", async () => {
+      const uid = "user_a";
+      const roomId = "room_updatedat_only";
+      const now = new Date();
+
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [uid],
+        ownerId: uid,
+        members: { user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 5,
+      });
+
+      const db = getDb({ uid });
+
+      await assertFails(
+        db.collection("rooms").doc(roomId).update({
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("rejects updating updatedAt to arbitrary non-server timestamp", async () => {
+      const uid = "user_a";
+      const roomId = "room_fake_time";
+      const now = new Date();
+
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [uid],
+        ownerId: uid,
+        members: { user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+      });
+
+      const db = getDb({ uid });
+      const batch = db.batch();
+
+      batch.set(db.collection("rooms").doc(roomId).collection("places").doc("p202"), {
+        kakaoPlaceId: "p202",
+        kakaoPlaceUrl: "https://place.map.kakao.com/p202",
+        searchKeyword: "해운대암소갈비",
+        matchType: "manual",
+        sourceType: "link",
+        addedBy: uid,
+        addedByNickname: "민지",
+        likedBy: [],
+        likeCount: 0,
+        createdAt: serverTimestamp(),
+      });
+
+      // Attempting to pass a non-server timestamp for updatedAt
+      batch.update(db.collection("rooms").doc(roomId), {
+        placeCount: 1,
+        updatedAt: new Date(),
+      });
+
+      await assertFails(batch.commit());
+    });
+
+    it("rejects non-member from using both new and legacy place addition update modes", async () => {
+      const ownerUid = "owner_a";
+      const nonMemberUid = "non_member";
+      const roomId = "room_non_member_place";
+      const now = new Date();
+
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [ownerUid],
+        ownerId: ownerUid,
+        members: { owner_a: { nickname: "주인", avatarColor: "#000000", lastSeenAt: null } },
+        placeCount: 0,
+      });
+
+      const db = getDb({ uid: nonMemberUid });
+
+      // Legacy mode attempt by non-member
+      await assertFails(
+        db.collection("rooms").doc(roomId).update({ placeCount: 1 })
+      );
+
+      // New mode attempt by non-member
+      await assertFails(
+        db.collection("rooms").doc(roomId).update({ placeCount: 1, updatedAt: serverTimestamp() })
+      );
     });
   });
 });
