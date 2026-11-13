@@ -12,6 +12,7 @@ import com.google.firebase.firestore.Source
 import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
+import com.pintrip.app.data.repository.JoinRoomResult
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.ui.common.Event
@@ -71,6 +72,9 @@ class RoomListViewModel(
 
     private val _joinErrorMessageResId = MutableLiveData<Int?>(null)
     val joinErrorMessageResId: LiveData<Int?> = _joinErrorMessageResId
+
+    private val _joinSuccessResult = MutableLiveData<JoinRoomResult?>(null)
+    val joinSuccessResult: LiveData<JoinRoomResult?> = _joinSuccessResult
 
     private var isDataLoaded = false
     private var isNavigating = false
@@ -135,13 +139,13 @@ class RoomListViewModel(
     }
 
     fun onCreateRoomClick() {
-        if (isNavigating || _isJoining.value == true) return
+        if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
         isNavigating = true
         _navigateToCreateRoom.value = Event(Unit)
     }
 
     fun onJoinCodeClick() {
-        if (isNavigating || _isJoining.value == true) return
+        if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
         _joinErrorMessageResId.value = null
         _isJoinDialogOpen.value = true
     }
@@ -162,7 +166,7 @@ class RoomListViewModel(
     }
 
     fun joinRoomWithCode(rawCode: String) {
-        if (isNavigating || _isJoining.value == true) return
+        if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
 
         val trimmedCode = rawCode.trim().uppercase()
         _joinCodeInput.value = rawCode
@@ -175,15 +179,23 @@ class RoomListViewModel(
 
         viewModelScope.launch {
             try {
-                val room = roomRepository.joinRoomWithCode(trimmedCode)
+                val result = roomRepository.joinRoomWithCode(trimmedCode)
                 _isJoining.value = false
-                _isJoinDialogOpen.value = false
-                _joinCodeInput.value = ""
-                _joinErrorMessageResId.value = null
-                loadRooms(forceRefresh = true)
-                if (room.id.isNotBlank()) {
-                    isNavigating = true
-                    _navigateToPlaceList.value = Event(room.id)
+                when (result) {
+                    is com.pintrip.app.data.repository.JoinRoomResult.Creator -> {
+                        _joinErrorMessageResId.value = R.string.notice_join_own_room
+                    }
+                    is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember -> {
+                        _joinErrorMessageResId.value = R.string.notice_already_joined_room
+                    }
+                    is com.pintrip.app.data.repository.JoinRoomResult.NewJoin,
+                    is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
+                        _isJoinDialogOpen.value = false
+                        _joinCodeInput.value = ""
+                        _joinErrorMessageResId.value = null
+                        loadRooms(forceRefresh = true)
+                        _joinSuccessResult.value = result
+                    }
                 }
             } catch (e: CancellationException) {
                 _isJoining.value = false
@@ -207,7 +219,12 @@ class RoomListViewModel(
                     Log.e(TAG, "Failed to join room due to IllegalStateException", e)
                 }
                 _isJoining.value = false
-                _joinErrorMessageResId.value = R.string.error_room_join_permission_denied
+                @StringRes val resId = when {
+                    auth.currentUser == null -> R.string.error_not_logged_in
+                    e.message?.contains("프로필") == true -> R.string.error_profile_check_required
+                    else -> R.string.error_room_join_permission_denied
+                }
+                _joinErrorMessageResId.value = resId
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "Failed to join room due to unexpected exception", e)
@@ -216,6 +233,20 @@ class RoomListViewModel(
                 _joinErrorMessageResId.value = R.string.error_room_join_default
             }
         }
+    }
+
+    fun onViewPlacesFromJoinSuccess(roomId: String) {
+        _joinSuccessResult.value = null
+        if (roomId.isNotBlank()) {
+            isNavigating = true
+            _navigateToPlaceList.value = Event(roomId)
+        } else {
+            _toastEvent.value = Event(R.string.place_list_error_cannot_open)
+        }
+    }
+
+    fun onDismissJoinSuccess() {
+        _joinSuccessResult.value = null
     }
 
     fun onRoomCardClick(room: Room) {

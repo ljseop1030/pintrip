@@ -23,8 +23,24 @@ import java.security.SecureRandom
  *    프로필 누락/조회 실패 시 임의 기본값으로 덮지 않고 예외를 발생시킵니다.
  * 5. `getMyRooms`는 `memberIds` array-contains 조건 및 `updatedAt` 내림차순 정렬을 사용합니다.
  * 6. `lastSeenAt`은 방 생성 시점에는 null로 두고, 이번 단계에서 읽음 처리를 수행하지 않습니다.
- * 7. `updatedAt`은 생성 시점에만 서버 시각으로 초기화합니다.
+ * 7. `updatedAt`은 생성 시점, 코드로 가입 시점, 장소 신규 추가 시점에 서버 시각으로 갱신되어 내 방 목록의 최신순 정렬에 사용됩니다.
  */
+sealed class JoinRoomResult {
+    abstract val room: Room
+
+    /** 현재 사용자가 해당 방의 생성자(방장)임 */
+    data class Creator(override val room: Room) : JoinRoomResult()
+
+    /** 현재 사용자가 이미 방의 멤버임 (방장 아님) */
+    data class ExistingMember(override val room: Room) : JoinRoomResult()
+
+    /** 신규 가입 성공 (원자적 batch 쓰기 완료) */
+    data class NewJoin(override val room: Room) : JoinRoomResult()
+
+    /** 네트워크/동시 요청 후 서버 멤버십 재확인으로 가입 확인됨 */
+    data class Rechecked(override val room: Room) : JoinRoomResult()
+}
+
 class RoomRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -236,7 +252,7 @@ class RoomRepository(
      * @throws IllegalArgumentException 초대 코드가 유효하지 않거나, 코드가 존재하지 않는 경우
      * @throws IllegalStateException 로그인되어 있지 않거나, 프로필이 없거나, 권한이 거부된 경우
      */
-    suspend fun joinRoomWithCode(code: String): Room {
+    suspend fun joinRoomWithCode(code: String): JoinRoomResult {
         val normalizedCode = code.trim().uppercase()
         require(normalizedCode.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) {
             "유효하지 않은 초대 코드 형식입니다. 6자리 영문 대문자 및 숫자를 입력해 주세요."
@@ -250,7 +266,11 @@ class RoomRepository(
         val existingRooms = getMyRooms(Source.SERVER)
         val existingRoom = existingRooms.find { it.inviteCode == normalizedCode }
         if (existingRoom != null) {
-            return existingRoom
+            return if (existingRoom.ownerId == currentUid) {
+                JoinRoomResult.Creator(existingRoom)
+            } else {
+                JoinRoomResult.ExistingMember(existingRoom)
+            }
         }
 
         // 2. 초대 코드 단건 조회 (비멤버도 get 허용)
@@ -294,7 +314,7 @@ class RoomRepository(
             batch.commit().await()
             val joinedRoom = getRoom(roomId, Source.SERVER)
             checkNotNull(joinedRoom) { "방 가입 완료 후 방 정보를 불러오지 못했습니다: $roomId" }
-            return joinedRoom
+            return JoinRoomResult.NewJoin(joinedRoom)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) {
                 throw e
@@ -311,7 +331,7 @@ class RoomRepository(
             }
 
             if (recheckedRoom != null) {
-                return recheckedRoom
+                return JoinRoomResult.Rechecked(recheckedRoom)
             }
 
             if (e is com.google.firebase.firestore.FirebaseFirestoreException &&

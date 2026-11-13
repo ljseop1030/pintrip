@@ -217,6 +217,14 @@ class RoomListActivity : AppCompatActivity() {
             }
         }
 
+        viewModel.joinSuccessResult.observe(this) { result ->
+            if (result != null) {
+                showJoinSuccessDialog(result)
+            } else {
+                dismissJoinSuccessDialog()
+            }
+        }
+
         viewModel.toastEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { resId ->
                 Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
@@ -226,6 +234,51 @@ class RoomListActivity : AppCompatActivity() {
 
     private var joinCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var joinCodeDialogBinding: com.pintrip.app.databinding.DialogJoinCodeBinding? = null
+    private var joinSuccessDialog: androidx.appcompat.app.AlertDialog? = null
+
+    private fun showJoinSuccessDialog(result: com.pintrip.app.data.repository.JoinRoomResult) {
+        if (joinSuccessDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.DialogJoinSuccessBinding.inflate(layoutInflater)
+        val roomName = result.room.name
+        val titleText = when (result) {
+            is com.pintrip.app.data.repository.JoinRoomResult.NewJoin -> {
+                getString(R.string.notice_join_room_success_format, roomName)
+            }
+            is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
+                getString(R.string.notice_join_room_rechecked_format, roomName)
+            }
+            else -> {
+                getString(R.string.notice_join_room_success_format, roomName)
+            }
+        }
+        dialogBinding.tvTitle.text = titleText
+
+        dialogBinding.btnViewPlaces.setOnClickListener {
+            dismissJoinSuccessDialog()
+            viewModel.onViewPlacesFromJoinSuccess(result.room.id)
+        }
+
+        dialogBinding.btnGoToList.setOnClickListener {
+            dismissJoinSuccessDialog()
+            viewModel.onDismissJoinSuccess()
+        }
+
+        joinSuccessDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .setOnDismissListener {
+                joinSuccessDialog = null
+                viewModel.onDismissJoinSuccess()
+            }
+            .show()
+    }
+
+    private fun dismissJoinSuccessDialog() {
+        val dialog = joinSuccessDialog
+        joinSuccessDialog = null
+        dialog?.dismiss()
+    }
 
     private fun showJoinCodeDialog() {
         if (joinCodeDialog?.isShowing == true) return

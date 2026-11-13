@@ -179,6 +179,16 @@
     <string name="btn_view_invite_code">초대 코드 확인</string>
     <string name="error_load_invite_code_failed">초대 코드 정보를 불러오지 못했습니다.</string>
 
+    <!-- Join Result Notices & Dialogs -->
+    <string name="notice_join_own_room">직접 만든 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
+    <string name="notice_already_joined_room">이미 참여 중인 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
+    <string name="notice_join_room_success_format">‘%1$s’ 방에 참여했습니다.</string>
+    <string name="notice_join_room_rechecked_format">‘%1$s’ 방 참여가 확인되었습니다.</string>
+    <string name="btn_view_places">장소 목록 보기</string>
+    <string name="btn_go_to_list">목록으로</string>
+    <string name="error_profile_check_required">프로필 정보를 확인해 주세요.</string>
+    <string name="place_list_error_cannot_open">장소 목록 화면을 열 수 없습니다.</string>
+
     <string name="error_empty_room_name">방 이름을 입력해 주세요.</string>
     <string name="error_empty_region">여행 지역을 입력해 주세요.</string>
     <string name="error_invalid_date_range">종료일은 시작일보다 빠를 수 없습니다.</string>
