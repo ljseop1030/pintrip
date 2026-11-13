@@ -3,7 +3,7 @@ const {
   assertSucceeds,
   assertFails,
 } = require("@firebase/rules-unit-testing");
-const { serverTimestamp, deleteField } = require("firebase/firestore");
+const { serverTimestamp, deleteField, arrayUnion } = require("firebase/firestore");
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
@@ -638,7 +638,7 @@ describe("Firestore Security Rules Tests", () => {
       const joinUid = "user_b";
       const code = "K7P2QX";
       const roomId = "room_join_1";
-      const now = new Date();
+      const pastTime = new Date(Date.now() - 100000);
 
       await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
       await seedUserProfile(joinUid, "철수", "chulsoo@test.com", "#00BCD4");
@@ -656,11 +656,11 @@ describe("Firestore Security Rules Tests", () => {
           owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null },
         },
         placeCount: 0,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: pastTime,
+        updatedAt: pastTime,
       });
 
-      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+      await seedInviteCode(code, { roomId: roomId, createdAt: pastTime });
 
       const db = getDb({ uid: joinUid, token: { email: "chulsoo@test.com" } });
       const batch = db.batch();
@@ -677,26 +677,35 @@ describe("Firestore Security Rules Tests", () => {
 
       await assertSucceeds(batch.commit());
 
-      // Read back room document using member's context to assert field values
+      // Read back proof document using admin context
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        const proofSnap = await adminDb.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid).get();
+        assert.strictEqual(proofSnap.exists, true);
+        assert.ok(proofSnap.data().joinedAt != null);
+      });
+
+      // Read back room document using member's context to assert field values & timestamp update
       const roomSnap = await db.collection("rooms").doc(roomId).get();
       assert.strictEqual(roomSnap.exists, true);
       assert.strictEqual(roomSnap.data().memberIds.length, 2);
       assert.deepStrictEqual(roomSnap.data().memberIds, [ownerUid, joinUid]);
       assert.strictEqual(roomSnap.data().members.owner_a.nickname, "방장");
       assert.strictEqual(roomSnap.data().members.owner_a.avatarColor, "#FF5722");
+      assert.strictEqual(roomSnap.data().members.owner_a.lastSeenAt, null);
       assert.strictEqual(roomSnap.data().members.user_b.nickname, "철수");
       assert.strictEqual(roomSnap.data().members.user_b.avatarColor, "#00BCD4");
       assert.strictEqual(roomSnap.data().members.user_b.lastSeenAt, null);
-      assert.ok(roomSnap.data().updatedAt != null);
+      assert.ok(roomSnap.data().updatedAt.toDate().getTime() > pastTime.getTime());
     });
 
-    it("allows multiple users to join room and asserts all members are preserved", async () => {
+    it("allows multiple users to join room concurrently and asserts all members are preserved", async () => {
       const ownerUid = "owner_a";
       const joinUidB = "user_b";
       const joinUidC = "user_c";
       const code = "K7P2QX";
-      const roomId = "room_multi_join";
-      const now = new Date();
+      const roomId = "room_concurrent_join";
+      const pastTime = new Date(Date.now() - 100000);
 
       await seedUserProfile(ownerUid, "방장", "owner@test.com", "#FF5722");
       await seedUserProfile(joinUidB, "철수", "chulsoo@test.com", "#00BCD4");
@@ -715,39 +724,44 @@ describe("Firestore Security Rules Tests", () => {
           owner_a: { nickname: "방장", avatarColor: "#FF5722", lastSeenAt: null },
         },
         placeCount: 0,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: pastTime,
+        updatedAt: pastTime,
       });
 
-      await seedInviteCode(code, { roomId: roomId, createdAt: now });
+      await seedInviteCode(code, { roomId: roomId, createdAt: pastTime });
 
-      // User B joins
+      // User B batch
       const dbB = getDb({ uid: joinUidB });
       const batchB = dbB.batch();
       batchB.set(dbB.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUidB), { joinedAt: serverTimestamp() });
       batchB.update(dbB.collection("rooms").doc(roomId), {
-        memberIds: [ownerUid, joinUidB],
+        memberIds: arrayUnion(joinUidB),
         "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
         updatedAt: serverTimestamp(),
       });
-      await assertSucceeds(batchB.commit());
 
-      // User C joins
+      // User C batch
       const dbC = getDb({ uid: joinUidC });
       const batchC = dbC.batch();
       batchC.set(dbC.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUidC), { joinedAt: serverTimestamp() });
       batchC.update(dbC.collection("rooms").doc(roomId), {
-        memberIds: [ownerUid, joinUidB, joinUidC],
+        memberIds: arrayUnion(joinUidC),
         "members.user_c": { nickname: "영희", avatarColor: "#E91E63", lastSeenAt: null },
         updatedAt: serverTimestamp(),
       });
-      await assertSucceeds(batchC.commit());
+
+      // Execute concurrently
+      await assertSucceeds(Promise.all([batchB.commit(), batchC.commit()]));
 
       // Assert that all 3 members (owner, B, C) are present and intact
       const dbOwner = getDb({ uid: ownerUid });
       const roomSnap = await dbOwner.collection("rooms").doc(roomId).get();
       assert.strictEqual(roomSnap.exists, true);
-      assert.deepStrictEqual(roomSnap.data().memberIds, [ownerUid, joinUidB, joinUidC]);
+      const memberList = roomSnap.data().memberIds;
+      assert.strictEqual(memberList.length, 3);
+      assert.ok(memberList.includes(ownerUid));
+      assert.ok(memberList.includes(joinUidB));
+      assert.ok(memberList.includes(joinUidC));
       assert.strictEqual(roomSnap.data().members.owner_a.nickname, "방장");
       assert.strictEqual(roomSnap.data().members.user_b.nickname, "철수");
       assert.strictEqual(roomSnap.data().members.user_c.nickname, "영희");
@@ -1197,15 +1211,15 @@ describe("Firestore Security Rules Tests", () => {
     it("allows existing member to add place with placeCount increment AND server updatedAt (New App) and asserts document values", async () => {
       const uid = "user_a";
       const roomId = "room_new_app_places";
-      const now = new Date();
+      const pastTime = new Date(Date.now() - 100000);
 
       await seedRoom(roomId, {
         name: "부산 여행",
         region: "부산",
         icon: "sea",
         inviteCode: "K7P2QX",
-        createdAt: now,
-        updatedAt: now,
+        createdAt: pastTime,
+        updatedAt: pastTime,
         memberIds: [uid],
         ownerId: uid,
         members: { user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null } },
@@ -1242,7 +1256,7 @@ describe("Firestore Security Rules Tests", () => {
 
       const roomSnap = await db.collection("rooms").doc(roomId).get();
       assert.strictEqual(roomSnap.data().placeCount, 1);
-      assert.ok(roomSnap.data().updatedAt != null);
+      assert.ok(roomSnap.data().updatedAt.toDate().getTime() > pastTime.getTime());
     });
 
     it("allows existing member to add place with placeCount increment ONLY (Legacy App Compatibility) and asserts updatedAt is preserved", async () => {
