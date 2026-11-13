@@ -12,14 +12,19 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class PlaceMatcherTest {
 
     private class FakeKakaoLocalApiClient : KakaoLocalApiClient() {
         val searchCalls: MutableList<Pair<String, String?>> = Collections.synchronizedList(mutableListOf())
         val responses = ConcurrentHashMap<Pair<String, String?>, KakaoKeywordSearchResponse>()
+        val delays = ConcurrentHashMap<String, Long>()
+        val exceptions = ConcurrentHashMap<String, Exception>()
+        var onSearch: (suspend (query: String, categoryGroupCode: String?) -> Unit)? = null
 
         override suspend fun searchKeyword(
             query: String,
@@ -33,6 +38,19 @@ class PlaceMatcherTest {
             sort: String?,
         ): KakaoKeywordSearchResponse {
             searchCalls.add(Pair(query, categoryGroupCode))
+
+            val delayMs = delays[query]
+            if (delayMs != null && delayMs > 0) {
+                kotlinx.coroutines.delay(delayMs)
+            }
+
+            onSearch?.invoke(query, categoryGroupCode)
+
+            val exc = exceptions[query]
+            if (exc != null) {
+                throw exc
+            }
+
             return responses[Pair(query, categoryGroupCode)] ?: KakaoKeywordSearchResponse()
         }
     }
@@ -290,6 +308,138 @@ class PlaceMatcherTest {
             assertEquals("img0_p$idx", result.localId)
             assertEquals("id_${idx + 1}", result.selectedPlaceId)
         }
+    }
+
+    @Test
+    fun testMatchPlaces_invertedCompletionOrder_preservesResultOrderAndLocalId() = runBlocking {
+        val fakeClient = FakeKakaoLocalApiClient()
+
+        val places = listOf(
+            GeminiPlace(name = "느린장소0", rawText = "느린장소0"),
+            GeminiPlace(name = "중간장소1", rawText = "중간장소1"),
+            GeminiPlace(name = "빠른장소2", rawText = "빠른장소2"),
+        )
+
+        // 장소0: 200ms 지연, 장소1: 100ms 지연, 장소2: 10ms 지연 (완료 순서: 장소2 -> 장소1 -> 장소0)
+        fakeClient.delays["부산 느린장소0"] = 200L
+        fakeClient.delays["부산 중간장소1"] = 100L
+        fakeClient.delays["부산 빠른장소2"] = 10L
+
+        places.forEachIndexed { idx, p ->
+            val queryKey = Pair("부산 ${p.name}", null)
+            fakeClient.responses[queryKey] = KakaoKeywordSearchResponse(
+                documents = listOf(
+                    KakaoPlaceDocument(id = "id_$idx", placeName = p.name),
+                ),
+            )
+        }
+
+        val matcher = PlaceMatcher(fakeClient, concurrencyLimit = 5)
+        val results = matcher.matchPlaces(GeminiExtractionResponse(places = places), "부산")
+
+        // 완료 순서가 뒤집혀도 입력 순서 및 localId가 유지되는지 검증
+        assertEquals(3, results.size)
+
+        assertEquals("느린장소0", results[0].extracted.name)
+        assertEquals("img0_p0", results[0].localId)
+        assertEquals("id_0", results[0].selectedPlaceId)
+
+        assertEquals("중간장소1", results[1].extracted.name)
+        assertEquals("img0_p1", results[1].localId)
+        assertEquals("id_1", results[1].selectedPlaceId)
+
+        assertEquals("빠른장소2", results[2].extracted.name)
+        assertEquals("img0_p2", results[2].localId)
+        assertEquals("id_2", results[2].selectedPlaceId)
+    }
+
+    @Test
+    fun testMatchPlaces_activeRequestsDoNotExceedConcurrencyLimitAndRunsInParallel() = runBlocking {
+        val fakeClient = FakeKakaoLocalApiClient()
+        val concurrencyLimit = 3
+        val places = (0..9).map { idx ->
+            GeminiPlace(name = "장소_$idx", rawText = "장소_$idx")
+        }
+
+        places.forEachIndexed { idx, p ->
+            val queryKey = Pair("부산 ${p.name}", null)
+            fakeClient.responses[queryKey] = KakaoKeywordSearchResponse(
+                documents = listOf(
+                    KakaoPlaceDocument(id = "id_$idx", placeName = p.name),
+                ),
+            )
+        }
+
+        val activeRequests = AtomicInteger(0)
+        val maxActiveRequests = AtomicInteger(0)
+
+        fakeClient.onSearch = { _, _ ->
+            val current = activeRequests.incrementAndGet()
+            maxActiveRequests.accumulateAndGet(current) { maxVal, curr -> maxOf(maxVal, curr) }
+            kotlinx.coroutines.delay(50L) // 동시 요청 수를 측정하기 위한 인위적 지연
+            activeRequests.decrementAndGet()
+        }
+
+        val matcher = PlaceMatcher(fakeClient, concurrencyLimit = concurrencyLimit)
+        val results = matcher.matchPlaces(GeminiExtractionResponse(places = places), "부산")
+
+        assertEquals(10, results.size)
+        // 최대 동시 요청 수가 concurrencyLimit(3)을 초과하지 않는지 검증
+        assertTrue(
+            "최대 동시 요청 수(${maxActiveRequests.get()})가 concurrencyLimit($concurrencyLimit) 이하이어야 함",
+            maxActiveRequests.get() <= concurrencyLimit,
+        )
+        // 실제 병렬로 실행되었는지 확인하기 위해 최대 동시 요청 수가 1보다 큰지 검증
+        assertTrue(
+            "실제 병렬 실행 여부 확인: 최대 동시 요청 수(${maxActiveRequests.get()})가 1보다 커야 함",
+            maxActiveRequests.get() > 1,
+        )
+    }
+
+    @Test
+    fun testMatchPlaces_ioExceptionOnSpecificQuery_onlyThatPlaceIsNotFoundAndOthersSucceed() = runBlocking {
+        val fakeClient = FakeKakaoLocalApiClient()
+
+        val places = listOf(
+            GeminiPlace(name = "성공장소0", rawText = "성공장소0"),
+            GeminiPlace(name = "에러장소1", rawText = "에러장소1"),
+            GeminiPlace(name = "성공장소2", rawText = "성공장소2"),
+        )
+
+        // 성공하는 장소 0, 2의 응답 등록
+        fakeClient.responses[Pair("부산 성공장소0", null)] = KakaoKeywordSearchResponse(
+            documents = listOf(KakaoPlaceDocument(id = "id_0", placeName = "성공장소0")),
+        )
+        fakeClient.responses[Pair("부산 성공장소2", null)] = KakaoKeywordSearchResponse(
+            documents = listOf(KakaoPlaceDocument(id = "id_2", placeName = "성공장소2")),
+        )
+
+        // 특정 쿼리("부산 에러장소1")에서만 IOException 발생 설정
+        fakeClient.exceptions["부산 에러장소1"] = IOException("Network connection error for 에러장소1")
+
+        val matcher = PlaceMatcher(fakeClient)
+        val results = matcher.matchPlaces(GeminiExtractionResponse(places = places), "부산")
+
+        assertEquals(3, results.size)
+
+        // 장소 0: 정상 매칭 성공
+        assertEquals("성공장소0", results[0].extracted.name)
+        assertEquals("img0_p0", results[0].localId)
+        assertEquals(MatchResult.STATUS_MATCHED, results[0].status)
+        assertEquals("id_0", results[0].selectedPlaceId)
+
+        // 장소 1: 예외 발생으로 해당 장소만 NOT_FOUND 처리
+        assertEquals("에러장소1", results[1].extracted.name)
+        assertEquals("img0_p1", results[1].localId)
+        assertEquals(MatchResult.STATUS_NOT_FOUND, results[1].status)
+        assertNull(results[1].selectedPlaceId)
+        assertTrue(results[1].candidates.isEmpty())
+
+        // 장소 2: 정상 매칭 성공 (영향 받지 않음)
+        assertEquals("성공장소2", results[2].extracted.name)
+        assertEquals("img0_p2", results[2].localId)
+        assertEquals(MatchResult.STATUS_MATCHED, results[2].status)
+        assertEquals("id_2", results[2].selectedPlaceId)
     }
 
     @Test(expected = CancellationException::class)
