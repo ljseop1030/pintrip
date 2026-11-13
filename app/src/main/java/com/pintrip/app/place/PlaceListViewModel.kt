@@ -5,19 +5,20 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Place
 import com.pintrip.app.data.repository.PlaceRepository
 import com.pintrip.app.data.repository.RoomRepository
-import com.pintrip.app.ui.common.Event
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed class PlaceListUiState {
     object Loading : PlaceListUiState()
     object Empty : PlaceListUiState()
     data class Success(val places: List<Place>) : PlaceListUiState()
-    data class Error(val message: String?) : PlaceListUiState()
+    data class Error(@get:StringRes val messageResId: Int) : PlaceListUiState()
 }
 
 sealed class InviteCodeUiState {
@@ -43,20 +44,23 @@ class PlaceListViewModel(
 
     private var currentRoomId: String? = null
     private var cachedInviteCode: String? = null
-    private var isFetchingCode = false
+    private var loadPlacesJob: Job? = null
+    private var fetchCodeJob: Job? = null
 
     fun loadPlaces(roomId: String, forceRefresh: Boolean = false) {
         if (roomId.isBlank()) return
 
-        // 화면 회전 시 이미 불러온 상태가 있으면 다시 호출하지 않음
-        if (!forceRefresh && currentRoomId == roomId && (_uiState.value != null)) {
+        if (loadPlacesJob?.isActive == true) {
+            if (!forceRefresh) return
+            loadPlacesJob?.cancel()
+        } else if (!forceRefresh && currentRoomId == roomId && (_uiState.value != null && _uiState.value !is PlaceListUiState.Error)) {
             return
         }
 
         currentRoomId = roomId
         _uiState.value = PlaceListUiState.Loading
 
-        viewModelScope.launch {
+        loadPlacesJob = viewModelScope.launch {
             try {
                 val places = repository.getPlaces(roomId)
                 if (places.isEmpty()) {
@@ -65,7 +69,18 @@ class PlaceListViewModel(
                     _uiState.value = PlaceListUiState.Success(places)
                 }
             } catch (e: Exception) {
-                _uiState.value = PlaceListUiState.Error(e.localizedMessage)
+                if (e is CancellationException) throw e
+                @StringRes val errorResId = when (e) {
+                    is FirebaseFirestoreException -> {
+                        when (e.code) {
+                            FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_room_permission_denied
+                            FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
+                            else -> R.string.place_list_error_default
+                        }
+                    }
+                    else -> R.string.place_list_error_default
+                }
+                _uiState.value = PlaceListUiState.Error(errorResId)
             }
         }
     }
@@ -81,6 +96,9 @@ class PlaceListViewModel(
 
     fun retryFetchInviteCode() {
         cachedInviteCode = null
+        if (fetchCodeJob?.isActive == true) {
+            fetchCodeJob?.cancel()
+        }
         fetchInviteCodeIfNeeded()
     }
 
@@ -92,14 +110,13 @@ class PlaceListViewModel(
             return
         }
 
-        if (isFetchingCode) return
-        isFetchingCode = true
+        if (fetchCodeJob?.isActive == true) return
+
         _inviteCodeUiState.value = InviteCodeUiState.Loading
 
-        viewModelScope.launch {
+        fetchCodeJob = viewModelScope.launch {
             try {
                 val room = roomRepository.getRoom(roomId)
-                isFetchingCode = false
                 if (room != null && room.inviteCode.isNotBlank()) {
                     cachedInviteCode = room.inviteCode
                     _inviteCodeUiState.value = InviteCodeUiState.Success(room.inviteCode)
@@ -107,9 +124,17 @@ class PlaceListViewModel(
                     _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
                 }
             } catch (e: Exception) {
-                isFetchingCode = false
                 if (e is CancellationException) throw e
-                _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
+                @StringRes val resId = when (e) {
+                    is FirebaseFirestoreException -> {
+                        when (e.code) {
+                            FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
+                            else -> R.string.error_load_invite_code_failed
+                        }
+                    }
+                    else -> R.string.error_load_invite_code_failed
+                }
+                _inviteCodeUiState.value = InviteCodeUiState.Error(resId)
             }
         }
     }

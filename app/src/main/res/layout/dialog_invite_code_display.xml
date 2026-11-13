@@ -94,6 +94,21 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <TextView
+            android:id="@+id/tvErrorMessage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:textColor="@color/text_dark"
+            android:textSize="14sp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/pbLoading"
+            tools:text="초대 코드 정보를 불러오지 못했습니다."
+            tools:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/layoutButtons"
             android:layout_width="0dp"
@@ -103,6 +118,18 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/cardCodeContainer">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRetry"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="@string/btn_retry"
+                android:textColor="@color/pintrip_blue"
+                android:visibility="gone"
+                app:strokeColor="@color/pintrip_blue" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCopyCode"

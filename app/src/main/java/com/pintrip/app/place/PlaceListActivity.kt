@@ -118,7 +118,7 @@ class PlaceListActivity : AppCompatActivity() {
                     binding.rvPlaces.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = true
-                    binding.tvErrorMessage.text = state.message ?: getString(R.string.place_list_error_default)
+                    binding.tvErrorMessage.text = getString(state.messageResId)
                 }
             }
         }
@@ -134,28 +134,7 @@ class PlaceListActivity : AppCompatActivity() {
         viewModel.inviteCodeUiState.observe(this) { state ->
             val dialogBinding = inviteCodeDialogBinding
             if (dialogBinding != null) {
-                when (state) {
-                    is InviteCodeUiState.Idle -> {
-                        dialogBinding.pbLoading.isVisible = false
-                    }
-                    is InviteCodeUiState.Loading -> {
-                        dialogBinding.pbLoading.isVisible = true
-                        dialogBinding.cardCodeContainer.isVisible = false
-                        dialogBinding.btnCopyCode.isEnabled = false
-                    }
-                    is InviteCodeUiState.Success -> {
-                        dialogBinding.pbLoading.isVisible = false
-                        dialogBinding.cardCodeContainer.isVisible = true
-                        dialogBinding.btnCopyCode.isEnabled = true
-                        dialogBinding.tvInviteCode.text = state.inviteCode
-                    }
-                    is InviteCodeUiState.Error -> {
-                        dialogBinding.pbLoading.isVisible = false
-                        dialogBinding.cardCodeContainer.isVisible = false
-                        dialogBinding.btnCopyCode.isEnabled = false
-                        Toast.makeText(this, state.messageResId, Toast.LENGTH_SHORT).show()
-                    }
-                }
+                renderInviteCodeDialogState(dialogBinding, state)
             }
         }
     }
@@ -171,25 +150,19 @@ class PlaceListActivity : AppCompatActivity() {
 
         dialogBinding.tvTitle.text = getString(R.string.room_invite_code_title)
         dialogBinding.tvSubtitle.text = getString(R.string.room_invite_code_subtext)
-        dialogBinding.btnConfirm.text = getString(R.string.common_confirm)
 
-        val currentState = viewModel.inviteCodeUiState.value
-        if (currentState is InviteCodeUiState.Success) {
-            dialogBinding.pbLoading.isVisible = false
-            dialogBinding.cardCodeContainer.isVisible = true
-            dialogBinding.btnCopyCode.isEnabled = true
-            dialogBinding.tvInviteCode.text = currentState.inviteCode
-        } else if (currentState is InviteCodeUiState.Loading) {
-            dialogBinding.pbLoading.isVisible = true
-            dialogBinding.cardCodeContainer.isVisible = false
-            dialogBinding.btnCopyCode.isEnabled = false
-        }
+        val currentState = viewModel.inviteCodeUiState.value ?: InviteCodeUiState.Idle
+        renderInviteCodeDialogState(dialogBinding, currentState)
 
         dialogBinding.btnCopyCode.setOnClickListener {
             val inviteCode = dialogBinding.tvInviteCode.text?.toString().orEmpty()
             if (inviteCode.isNotBlank()) {
                 copyToClipboard(inviteCode)
             }
+        }
+
+        dialogBinding.btnRetry.setOnClickListener {
+            viewModel.retryFetchInviteCode()
         }
 
         dialogBinding.btnConfirm.setOnClickListener {
@@ -205,6 +178,54 @@ class PlaceListActivity : AppCompatActivity() {
                 viewModel.onInviteCodeDialogDismissed()
             }
             .show()
+    }
+
+    private fun renderInviteCodeDialogState(
+        dialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding,
+        state: InviteCodeUiState,
+    ) {
+        when (state) {
+            is InviteCodeUiState.Idle -> {
+                dialogBinding.pbLoading.isVisible = false
+                dialogBinding.cardCodeContainer.isVisible = false
+                dialogBinding.tvErrorMessage.isVisible = false
+                dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnRetry.isVisible = false
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_go_to_room)
+            }
+            is InviteCodeUiState.Loading -> {
+                dialogBinding.pbLoading.isVisible = true
+                dialogBinding.cardCodeContainer.isVisible = false
+                dialogBinding.tvErrorMessage.isVisible = false
+                dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnRetry.isVisible = false
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_go_to_room)
+            }
+            is InviteCodeUiState.Success -> {
+                dialogBinding.pbLoading.isVisible = false
+                dialogBinding.cardCodeContainer.isVisible = true
+                dialogBinding.tvInviteCode.text = state.inviteCode
+                dialogBinding.tvErrorMessage.isVisible = false
+                dialogBinding.btnCopyCode.isVisible = true
+                dialogBinding.btnCopyCode.isEnabled = true
+                dialogBinding.btnRetry.isVisible = false
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_go_to_room)
+            }
+            is InviteCodeUiState.Error -> {
+                dialogBinding.pbLoading.isVisible = false
+                dialogBinding.cardCodeContainer.isVisible = false
+                dialogBinding.tvErrorMessage.isVisible = true
+                dialogBinding.tvErrorMessage.text = getString(state.messageResId)
+                dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnRetry.isVisible = true
+                dialogBinding.btnRetry.isEnabled = true
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
+            }
+        }
     }
 
     private fun dismissInviteCodeDialog() {
