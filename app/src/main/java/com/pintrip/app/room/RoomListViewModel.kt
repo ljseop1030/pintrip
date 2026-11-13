@@ -57,14 +57,17 @@ class RoomListViewModel(
     private val _toastEvent = MutableLiveData<Event<Int>>()
     val toastEvent: LiveData<Event<Int>> = _toastEvent
 
-    private val _showJoinCodeDialogEvent = MutableLiveData<Event<Unit>>()
-    val showJoinCodeDialogEvent: LiveData<Event<Unit>> = _showJoinCodeDialogEvent
+    private val _isJoinDialogOpen = MutableLiveData<Boolean>(false)
+    val isJoinDialogOpen: LiveData<Boolean> = _isJoinDialogOpen
+
+    private val _joinCodeInput = MutableLiveData<String>("")
+    val joinCodeInput: LiveData<String> = _joinCodeInput
 
     private val _isJoining = MutableLiveData<Boolean>(false)
     val isJoining: LiveData<Boolean> = _isJoining
 
-    private val _joinErrorMessageEvent = MutableLiveData<Event<Int>>()
-    val joinErrorMessageEvent: LiveData<Event<Int>> = _joinErrorMessageEvent
+    private val _joinErrorMessageResId = MutableLiveData<Int?>(null)
+    val joinErrorMessageResId: LiveData<Int?> = _joinErrorMessageResId
 
     private var isDataLoaded = false
     private var isNavigating = false
@@ -136,15 +139,32 @@ class RoomListViewModel(
 
     fun onJoinCodeClick() {
         if (isNavigating || _isJoining.value == true) return
-        _showJoinCodeDialogEvent.value = Event(Unit)
+        _joinErrorMessageResId.value = null
+        _isJoinDialogOpen.value = true
     }
 
-    fun joinRoomWithCode(code: String) {
+    fun onJoinCodeInputChanged(input: String) {
+        if (_joinCodeInput.value != input) {
+            _joinCodeInput.value = input
+        }
+        if (_joinErrorMessageResId.value != null) {
+            _joinErrorMessageResId.value = null
+        }
+    }
+
+    fun onJoinDialogDismissed() {
+        if (_isJoining.value == true) return
+        _isJoinDialogOpen.value = false
+        _joinErrorMessageResId.value = null
+    }
+
+    fun joinRoomWithCode(rawCode: String) {
         if (isNavigating || _isJoining.value == true) return
 
-        val trimmedCode = code.trim().uppercase()
+        val trimmedCode = rawCode.trim().uppercase()
+        _joinCodeInput.value = rawCode
         if (!trimmedCode.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) {
-            _joinErrorMessageEvent.value = Event(R.string.error_invalid_invite_code_format)
+            _joinErrorMessageResId.value = R.string.error_invalid_invite_code_format
             return
         }
 
@@ -154,6 +174,9 @@ class RoomListViewModel(
             try {
                 val room = roomRepository.joinRoomWithCode(trimmedCode)
                 _isJoining.value = false
+                _isJoinDialogOpen.value = false
+                _joinCodeInput.value = ""
+                _joinErrorMessageResId.value = null
                 loadRooms(forceRefresh = true)
                 if (room.id.isNotBlank()) {
                     isNavigating = true
@@ -164,7 +187,7 @@ class RoomListViewModel(
                 throw e
             } catch (e: IllegalArgumentException) {
                 _isJoining.value = false
-                _joinErrorMessageEvent.value = Event(R.string.error_invite_code_not_found)
+                _joinErrorMessageResId.value = R.string.error_invite_code_not_found
             } catch (e: FirebaseFirestoreException) {
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "Failed to join room due to Firestore exception", e)
@@ -175,19 +198,19 @@ class RoomListViewModel(
                     FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_room_join_permission_denied
                     else -> R.string.error_room_join_default
                 }
-                _joinErrorMessageEvent.value = Event(resId)
+                _joinErrorMessageResId.value = resId
             } catch (e: IllegalStateException) {
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "Failed to join room due to IllegalStateException", e)
                 }
                 _isJoining.value = false
-                _joinErrorMessageEvent.value = Event(R.string.error_room_join_permission_denied)
+                _joinErrorMessageResId.value = R.string.error_room_join_permission_denied
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "Failed to join room due to unexpected exception", e)
                 }
                 _isJoining.value = false
-                _joinErrorMessageEvent.value = Event(R.string.error_room_join_default)
+                _joinErrorMessageResId.value = R.string.error_room_join_default
             }
         }
     }
@@ -208,6 +231,7 @@ class RoomListViewModel(
     }
 
     fun logout() {
+        if (isNavigating || _isJoining.value == true) return
         auth.signOut()
     }
 }

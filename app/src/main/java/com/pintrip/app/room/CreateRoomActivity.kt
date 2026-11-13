@@ -208,8 +208,16 @@ class CreateRoomActivity : AppCompatActivity() {
         codeDisplayDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setView(dialogBinding.root)
             .setCancelable(true)
+            .setOnCancelListener {
+                if (!isChangingConfigurations) {
+                    finishWithCreatedRoom(room)
+                }
+            }
             .setOnDismissListener {
                 codeDisplayDialog = null
+                if (!isChangingConfigurations && !isFinishing) {
+                    finishWithCreatedRoom(room)
+                }
             }
             .show()
     }

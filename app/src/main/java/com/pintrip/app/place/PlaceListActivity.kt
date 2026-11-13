@@ -123,17 +123,36 @@ class PlaceListActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.inviteCodeState.observe(this) { event ->
-            event.getContentIfNotHandled()?.let { state ->
+        viewModel.isInviteCodeDialogOpen.observe(this) { isOpen ->
+            if (isOpen) {
+                showInviteCodeDialog()
+            } else {
+                dismissInviteCodeDialog()
+            }
+        }
+
+        viewModel.inviteCodeUiState.observe(this) { state ->
+            val dialogBinding = inviteCodeDialogBinding
+            if (dialogBinding != null) {
                 when (state) {
+                    is InviteCodeUiState.Idle -> {
+                        dialogBinding.pbLoading.isVisible = false
+                    }
                     is InviteCodeUiState.Loading -> {
-                        showInviteCodeDialog(null, isLoading = true)
+                        dialogBinding.pbLoading.isVisible = true
+                        dialogBinding.cardCodeContainer.isVisible = false
+                        dialogBinding.btnCopyCode.isEnabled = false
                     }
                     is InviteCodeUiState.Success -> {
-                        showInviteCodeDialog(state.inviteCode, isLoading = false)
+                        dialogBinding.pbLoading.isVisible = false
+                        dialogBinding.cardCodeContainer.isVisible = true
+                        dialogBinding.btnCopyCode.isEnabled = true
+                        dialogBinding.tvInviteCode.text = state.inviteCode
                     }
                     is InviteCodeUiState.Error -> {
-                        dismissInviteCodeDialog()
+                        dialogBinding.pbLoading.isVisible = false
+                        dialogBinding.cardCodeContainer.isVisible = false
+                        dialogBinding.btnCopyCode.isEnabled = false
                         Toast.makeText(this, state.messageResId, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -144,14 +163,8 @@ class PlaceListActivity : AppCompatActivity() {
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
 
-    private fun showInviteCodeDialog(code: String?, isLoading: Boolean) {
-        if (inviteCodeDialog?.isShowing == true) {
-            val dialogBinding = inviteCodeDialogBinding
-            if (dialogBinding != null) {
-                updateInviteCodeDialog(dialogBinding, code, isLoading)
-                return
-            }
-        }
+    private fun showInviteCodeDialog() {
+        if (inviteCodeDialog?.isShowing == true) return
 
         val dialogBinding = com.pintrip.app.databinding.DialogInviteCodeDisplayBinding.inflate(layoutInflater)
         inviteCodeDialogBinding = dialogBinding
@@ -160,7 +173,17 @@ class PlaceListActivity : AppCompatActivity() {
         dialogBinding.tvSubtitle.text = getString(R.string.room_invite_code_subtext)
         dialogBinding.btnConfirm.text = getString(R.string.common_confirm)
 
-        updateInviteCodeDialog(dialogBinding, code, isLoading)
+        val currentState = viewModel.inviteCodeUiState.value
+        if (currentState is InviteCodeUiState.Success) {
+            dialogBinding.pbLoading.isVisible = false
+            dialogBinding.cardCodeContainer.isVisible = true
+            dialogBinding.btnCopyCode.isEnabled = true
+            dialogBinding.tvInviteCode.text = currentState.inviteCode
+        } else if (currentState is InviteCodeUiState.Loading) {
+            dialogBinding.pbLoading.isVisible = true
+            dialogBinding.cardCodeContainer.isVisible = false
+            dialogBinding.btnCopyCode.isEnabled = false
+        }
 
         dialogBinding.btnCopyCode.setOnClickListener {
             val inviteCode = dialogBinding.tvInviteCode.text?.toString().orEmpty()
@@ -177,28 +200,18 @@ class PlaceListActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .setCancelable(true)
             .setOnDismissListener {
-                dismissInviteCodeDialog()
+                inviteCodeDialogBinding = null
+                inviteCodeDialog = null
+                viewModel.onInviteCodeDialogDismissed()
             }
             .show()
     }
 
-    private fun updateInviteCodeDialog(
-        dialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding,
-        code: String?,
-        isLoading: Boolean,
-    ) {
-        dialogBinding.pbLoading.isVisible = isLoading
-        dialogBinding.cardCodeContainer.isVisible = !isLoading && !code.isNullOrBlank()
-        dialogBinding.btnCopyCode.isEnabled = !isLoading && !code.isNullOrBlank()
-        if (!code.isNullOrBlank()) {
-            dialogBinding.tvInviteCode.text = code
-        }
-    }
-
     private fun dismissInviteCodeDialog() {
-        inviteCodeDialog?.dismiss()
+        val dialog = inviteCodeDialog
         inviteCodeDialogBinding = null
         inviteCodeDialog = null
+        dialog?.dismiss()
     }
 
     private fun copyToClipboard(text: String) {

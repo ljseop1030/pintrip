@@ -21,6 +21,7 @@ sealed class PlaceListUiState {
 }
 
 sealed class InviteCodeUiState {
+    object Idle : InviteCodeUiState()
     object Loading : InviteCodeUiState()
     data class Success(val inviteCode: String) : InviteCodeUiState()
     data class Error(@get:StringRes val messageResId: Int) : InviteCodeUiState()
@@ -34,8 +35,11 @@ class PlaceListViewModel(
     private val _uiState = MutableLiveData<PlaceListUiState>()
     val uiState: LiveData<PlaceListUiState> = _uiState
 
-    private val _inviteCodeState = MutableLiveData<Event<InviteCodeUiState>>()
-    val inviteCodeState: LiveData<Event<InviteCodeUiState>> = _inviteCodeState
+    private val _isInviteCodeDialogOpen = MutableLiveData<Boolean>(false)
+    val isInviteCodeDialogOpen: LiveData<Boolean> = _isInviteCodeDialogOpen
+
+    private val _inviteCodeUiState = MutableLiveData<InviteCodeUiState>(InviteCodeUiState.Idle)
+    val inviteCodeUiState: LiveData<InviteCodeUiState> = _inviteCodeUiState
 
     private var currentRoomId: String? = null
     private var cachedInviteCode: String? = null
@@ -67,16 +71,30 @@ class PlaceListViewModel(
     }
 
     fun onInviteCodeClick() {
+        _isInviteCodeDialogOpen.value = true
+        fetchInviteCodeIfNeeded()
+    }
+
+    fun onInviteCodeDialogDismissed() {
+        _isInviteCodeDialogOpen.value = false
+    }
+
+    fun retryFetchInviteCode() {
+        cachedInviteCode = null
+        fetchInviteCodeIfNeeded()
+    }
+
+    private fun fetchInviteCodeIfNeeded() {
         val roomId = currentRoomId ?: return
         val existingCode = cachedInviteCode
         if (!existingCode.isNullOrBlank()) {
-            _inviteCodeState.value = Event(InviteCodeUiState.Success(existingCode))
+            _inviteCodeUiState.value = InviteCodeUiState.Success(existingCode)
             return
         }
 
         if (isFetchingCode) return
         isFetchingCode = true
-        _inviteCodeState.value = Event(InviteCodeUiState.Loading)
+        _inviteCodeUiState.value = InviteCodeUiState.Loading
 
         viewModelScope.launch {
             try {
@@ -84,14 +102,14 @@ class PlaceListViewModel(
                 isFetchingCode = false
                 if (room != null && room.inviteCode.isNotBlank()) {
                     cachedInviteCode = room.inviteCode
-                    _inviteCodeState.value = Event(InviteCodeUiState.Success(room.inviteCode))
+                    _inviteCodeUiState.value = InviteCodeUiState.Success(room.inviteCode)
                 } else {
-                    _inviteCodeState.value = Event(InviteCodeUiState.Error(R.string.error_load_invite_code_failed))
+                    _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
                 }
             } catch (e: Exception) {
                 isFetchingCode = false
                 if (e is CancellationException) throw e
-                _inviteCodeState.value = Event(InviteCodeUiState.Error(R.string.error_load_invite_code_failed))
+                _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
             }
         }
     }

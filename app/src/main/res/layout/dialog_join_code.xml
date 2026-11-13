@@ -57,7 +57,7 @@
                 android:hint="@string/join_code_hint"
                 android:imeOptions="actionDone"
                 android:inputType="textCapCharacters|textNoSuggestions"
-                android:maxLength="6"
+                android:maxLength="30"
                 android:maxLines="1"
                 android:singleLine="true"
                 android:textColor="@color/text_dark"
