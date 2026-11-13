@@ -13,6 +13,7 @@ import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.JoinRoomResult
+import com.pintrip.app.data.repository.RoomJoinException
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.ui.common.Event
@@ -200,29 +201,19 @@ class RoomListViewModel(
             } catch (e: CancellationException) {
                 _isJoining.value = false
                 throw e
-            } catch (e: IllegalArgumentException) {
-                _isJoining.value = false
-                _joinErrorMessageResId.value = R.string.error_invite_code_not_found
-            } catch (e: FirebaseFirestoreException) {
+            } catch (e: RoomJoinException) {
                 if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "Failed to join room due to Firestore exception", e)
+                    Log.e(TAG, "Failed to join room due to RoomJoinException", e)
                 }
                 _isJoining.value = false
-                @StringRes val resId = when (e.code) {
-                    FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
-                    FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_room_join_permission_denied
-                    else -> R.string.error_room_join_default
-                }
-                _joinErrorMessageResId.value = resId
-            } catch (e: IllegalStateException) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "Failed to join room due to IllegalStateException", e)
-                }
-                _isJoining.value = false
-                @StringRes val resId = when {
-                    auth.currentUser == null -> R.string.error_not_logged_in
-                    e.message?.contains("프로필") == true -> R.string.error_profile_check_required
-                    else -> R.string.error_room_join_permission_denied
+                @StringRes val resId = when (e) {
+                    is RoomJoinException.NotLoggedIn -> R.string.error_not_logged_in
+                    is RoomJoinException.ProfileRequired -> R.string.error_profile_check_required
+                    is RoomJoinException.InvalidCodeFormat -> R.string.error_invalid_invite_code_format
+                    is RoomJoinException.CodeNotFound -> R.string.error_invite_code_not_found
+                    is RoomJoinException.NetworkUnavailable -> R.string.error_network_unavailable
+                    is RoomJoinException.PermissionDenied -> R.string.error_room_join_permission_denied
+                    is RoomJoinException.Unknown -> R.string.error_room_join_default
                 }
                 _joinErrorMessageResId.value = resId
             } catch (e: Exception) {
@@ -236,13 +227,24 @@ class RoomListViewModel(
     }
 
     fun onViewPlacesFromJoinSuccess(roomId: String) {
-        _joinSuccessResult.value = null
-        if (roomId.isNotBlank()) {
+        if (isNavigating || _isJoining.value == true) return
+        val currentResult = _joinSuccessResult.value
+        val targetRoomId = currentResult?.room?.id ?: roomId
+        if (targetRoomId.isNotBlank()) {
             isNavigating = true
-            _navigateToPlaceList.value = Event(roomId)
+            _navigateToPlaceList.value = Event(targetRoomId)
         } else {
             _toastEvent.value = Event(R.string.place_list_error_cannot_open)
         }
+    }
+
+    fun onPlaceListLaunchSuccess() {
+        _joinSuccessResult.value = null
+    }
+
+    fun onPlaceListLaunchFailed() {
+        isNavigating = false
+        _toastEvent.value = Event(R.string.place_list_error_cannot_open)
     }
 
     fun onDismissJoinSuccess() {
@@ -250,7 +252,7 @@ class RoomListViewModel(
     }
 
     fun onRoomCardClick(room: Room) {
-        if (isNavigating || _isJoining.value == true) return
+        if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
 
         if (room.id.isNotBlank()) {
             isNavigating = true
@@ -265,7 +267,7 @@ class RoomListViewModel(
     }
 
     fun logout() {
-        if (isNavigating || _isJoining.value == true) return
+        if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
         auth.signOut()
         _navigateToLogin.value = Event(Unit)
     }

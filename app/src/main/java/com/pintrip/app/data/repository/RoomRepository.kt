@@ -41,6 +41,19 @@ sealed class JoinRoomResult {
     data class Rechecked(override val room: Room) : JoinRoomResult()
 }
 
+/**
+ * 방 가입 처리 중 발생하는 명시적 예외 클래스 정의.
+ */
+sealed class RoomJoinException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    class NotLoggedIn : RoomJoinException("로그인이 필요합니다.")
+    class ProfileRequired(message: String) : RoomJoinException(message)
+    class InvalidCodeFormat : RoomJoinException("유효하지 않은 초대 코드 형식입니다.")
+    class CodeNotFound : RoomJoinException("존재하지 않는 초대 코드입니다.")
+    class NetworkUnavailable(cause: Throwable) : RoomJoinException("네트워크 연결 상태를 확인해 주세요.", cause)
+    class PermissionDenied(cause: Throwable? = null) : RoomJoinException("방 가입 권한이 없거나 요청이 거부되었습니다.", cause)
+    class Unknown(message: String, cause: Throwable? = null) : RoomJoinException(message, cause)
+}
+
 class RoomRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -238,28 +251,27 @@ class RoomRepository(
     }
 
     /**
-     * 초대 코드를 입력하여 여행방에 가입하거나, 이미 참여 중인 경우 해당 방 정보를 반환합니다.
+     * 초대 코드를 입력하여 여행방에 가입하거나, 이미 참여 중인 경우 명시적 결과를 반환합니다.
      *
      * docs/data-contract.md 및 AGENTS.md 규격을 준수합니다:
      * 1. 입력된 코드의 앞뒤 공백을 제거하고 대문자로 정규화합니다 (`code.trim().uppercase()`).
      * 2. 가입 전 비멤버 상태에서 `rooms/{roomId}` 문서를 직접 읽지 않습니다.
-     * 3. 이미 참여 중인지 여부는 `getMyRooms(Source.SERVER)` 조회를 통해 확인하며, 기존 참여 방이면 정보 변경 없이 해당 방을 바로 반환합니다.
+     * 3. 이미 참여 중인지 여부는 `getMyRooms(Source.SERVER)` 조회를 통해 확인하며, 기존 방장/멤버인 경우 [JoinRoomResult.Creator] 또는 [JoinRoomResult.ExistingMember]를 반환합니다.
      * 4. `inviteCodes/{code}` 단건 조회를 통해 `roomId`를 얻고, `inviteCodes/{code}/joinProofs/{uid}` 증빙 문서 생성과 `rooms/{roomId}` 멤버 추가 및 `updatedAt` 서버 시각 갱신을 단일 WriteBatch로 원자적 실행합니다.
-     * 5. 예외 발생 시 서버 멤버십을 재확인하여 동시 요청으로 이미 가입이 성공한 경우 방 정보를 정상 반환합니다.
+     * 5. 예외 발생 시 서버 멤버십을 재확인하여 동시 요청으로 이미 가입이 성공한 경우 [JoinRoomResult.Rechecked]를 반환합니다.
      *
      * @param code 6자리 초대 코드
-     * @return 가입 완료되거나 기존 참여 중인 [Room] 객체
-     * @throws IllegalArgumentException 초대 코드가 유효하지 않거나, 코드가 존재하지 않는 경우
-     * @throws IllegalStateException 로그인되어 있지 않거나, 프로필이 없거나, 권한이 거부된 경우
+     * @return 가입 결과 명시적 구분 객체 [JoinRoomResult]
+     * @throws RoomJoinException 구체적으로 분류된 방 가입 예외
      */
     suspend fun joinRoomWithCode(code: String): JoinRoomResult {
         val normalizedCode = code.trim().uppercase()
-        require(normalizedCode.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) {
-            "유효하지 않은 초대 코드 형식입니다. 6자리 영문 대문자 및 숫자를 입력해 주세요."
+        if (!normalizedCode.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) {
+            throw RoomJoinException.InvalidCodeFormat()
         }
 
         val currentUser = auth.currentUser
-        checkNotNull(currentUser) { "로그인된 사용자 정보가 없습니다. (Auth currentUser is null)" }
+            ?: throw RoomJoinException.NotLoggedIn()
         val currentUid = currentUser.uid
 
         // 1. 이미 멤버인 방인지 본인 허용 경로(getMyRooms)로 사전 확인
@@ -274,19 +286,38 @@ class RoomRepository(
         }
 
         // 2. 초대 코드 단건 조회 (비멤버도 get 허용)
-        val inviteSnapshot = db.collection("inviteCodes").document(normalizedCode).get(Source.SERVER).await()
+        val inviteSnapshot = try {
+            db.collection("inviteCodes").document(normalizedCode).get(Source.SERVER).await()
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is com.google.firebase.firestore.FirebaseFirestoreException &&
+                e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAVAILABLE
+            ) {
+                throw RoomJoinException.NetworkUnavailable(e)
+            }
+            throw RoomJoinException.Unknown(e.message ?: "초대 코드 조회 실패", e)
+        }
+
         if (!inviteSnapshot.exists()) {
-            throw IllegalArgumentException("존재하지 않는 초대 코드입니다.")
+            throw RoomJoinException.CodeNotFound()
         }
 
         val roomId = inviteSnapshot.getString("roomId")
-        check(!roomId.isNullOrBlank()) { "초대 코드에 매핑된 방 정보가 올바르지 않습니다." }
+        if (roomId.isNullOrBlank()) {
+            throw RoomJoinException.CodeNotFound()
+        }
 
         // 3. 사용자 프로필 조회
-        val userProfile = userRepository.getUserProfile(currentUid, Source.DEFAULT)
-        checkNotNull(userProfile) { "사용자 프로필 문서를 찾을 수 없습니다: $currentUid" }
-        check(userProfile.nickname.isNotBlank()) { "프로필 닉네임이 비어 있습니다." }
-        check(userProfile.avatarColor.isNotBlank()) { "프로필 아바타 색상이 비어 있습니다." }
+        val userProfile = try {
+            userRepository.getUserProfile(currentUid, Source.DEFAULT)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            throw RoomJoinException.ProfileRequired("사용자 프로필 정보를 읽지 못했습니다.")
+        }
+
+        if (userProfile == null || userProfile.nickname.isBlank() || userProfile.avatarColor.isBlank()) {
+            throw RoomJoinException.ProfileRequired("사용자 프로필 문서가 비어 있거나 닉네임/아바타 색상이 유효하지 않습니다.")
+        }
 
         val member = Member(
             nickname = userProfile.nickname,
@@ -334,12 +365,18 @@ class RoomRepository(
                 return JoinRoomResult.Rechecked(recheckedRoom)
             }
 
-            if (e is com.google.firebase.firestore.FirebaseFirestoreException &&
-                e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED
-            ) {
-                throw IllegalStateException("방 가입 권한이 없거나 요청이 거부되었습니다.", e)
+            if (e is com.google.firebase.firestore.FirebaseFirestoreException) {
+                when (e.code) {
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAVAILABLE -> {
+                        throw RoomJoinException.NetworkUnavailable(e)
+                    }
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
+                        throw RoomJoinException.PermissionDenied(e)
+                    }
+                    else -> throw RoomJoinException.Unknown(e.message ?: "방 가입 중 오류가 발생했습니다.", e)
+                }
             }
-            throw e
+            throw RoomJoinException.Unknown(e.message ?: "방 가입 중 오류가 발생했습니다.", e)
         }
     }
 }

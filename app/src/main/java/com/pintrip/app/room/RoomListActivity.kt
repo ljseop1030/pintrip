@@ -163,8 +163,9 @@ class RoomListActivity : AppCompatActivity() {
                 try {
                     val intent = PlaceListActivity.newIntent(this, roomId)
                     placeListLauncher.launch(intent)
+                    viewModel.onPlaceListLaunchSuccess()
                 } catch (_: Exception) {
-                    viewModel.resetNavigation()
+                    viewModel.onPlaceListLaunchFailed()
                 }
             }
         }
@@ -239,6 +240,8 @@ class RoomListActivity : AppCompatActivity() {
     private fun showJoinSuccessDialog(result: com.pintrip.app.data.repository.JoinRoomResult) {
         if (joinSuccessDialog?.isShowing == true) return
 
+        var isUserExplicitDismiss = false
+
         val dialogBinding = com.pintrip.app.databinding.DialogJoinSuccessBinding.inflate(layoutInflater)
         val roomName = result.room.name
         val titleText = when (result) {
@@ -255,11 +258,11 @@ class RoomListActivity : AppCompatActivity() {
         dialogBinding.tvTitle.text = titleText
 
         dialogBinding.btnViewPlaces.setOnClickListener {
-            dismissJoinSuccessDialog()
             viewModel.onViewPlacesFromJoinSuccess(result.room.id)
         }
 
         dialogBinding.btnGoToList.setOnClickListener {
+            isUserExplicitDismiss = true
             dismissJoinSuccessDialog()
             viewModel.onDismissJoinSuccess()
         }
@@ -269,7 +272,9 @@ class RoomListActivity : AppCompatActivity() {
             .setCancelable(true)
             .setOnDismissListener {
                 joinSuccessDialog = null
-                viewModel.onDismissJoinSuccess()
+                if (!isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
+                    viewModel.onDismissJoinSuccess()
+                }
             }
             .show()
     }
