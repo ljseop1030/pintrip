@@ -54,6 +54,9 @@ class RoomListViewModel(
     private val _navigateToPlaceList = MutableLiveData<Event<String>>()
     val navigateToPlaceList: LiveData<Event<String>> = _navigateToPlaceList
 
+    private val _navigateToLogin = MutableLiveData<Event<Unit>>()
+    val navigateToLogin: LiveData<Event<Unit>> = _navigateToLogin
+
     private val _toastEvent = MutableLiveData<Event<Int>>()
     val toastEvent: LiveData<Event<Int>> = _toastEvent
 
@@ -233,5 +236,6 @@ class RoomListViewModel(
     fun logout() {
         if (isNavigating || _isJoining.value == true) return
         auth.signOut()
+        _navigateToLogin.value = Event(Unit)
     }
 }

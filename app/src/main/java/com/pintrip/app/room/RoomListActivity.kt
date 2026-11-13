@@ -91,7 +91,6 @@ class RoomListActivity : AppCompatActivity() {
 
         binding.btnLogout.setOnClickListener {
             viewModel.logout()
-            navigateToLogin()
         }
     }
 
@@ -167,6 +166,12 @@ class RoomListActivity : AppCompatActivity() {
                 } catch (_: Exception) {
                     viewModel.resetNavigation()
                 }
+            }
+        }
+
+        viewModel.navigateToLogin.observe(this) { event ->
+            event.getContentIfNotHandled()?.let {
+                navigateToLogin()
             }
         }
 
