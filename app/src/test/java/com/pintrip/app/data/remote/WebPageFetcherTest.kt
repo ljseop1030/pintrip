@@ -129,4 +129,59 @@ class WebPageFetcherTest {
 
         assertTrue(text.contains("Redirected Page Content - Haeundae Beach Busan"))
     }
+
+    @Test
+    fun isHtmlContentType_returnsTrueOnlyForHtmlTypes() {
+        assertTrue(webPageFetcher.isHtmlContentType("text/html"))
+        assertTrue(webPageFetcher.isHtmlContentType("text/html; charset=UTF-8"))
+        assertTrue(webPageFetcher.isHtmlContentType("application/xhtml+xml"))
+        assertTrue(webPageFetcher.isHtmlContentType("APPLICATION/XHTML+XML; CHARSET=UTF-8"))
+
+        assertFalse(webPageFetcher.isHtmlContentType("video/mp4"))
+        assertFalse(webPageFetcher.isHtmlContentType("application/pdf"))
+        assertFalse(webPageFetcher.isHtmlContentType("image/png"))
+        assertFalse(webPageFetcher.isHtmlContentType(""))
+        assertFalse(webPageFetcher.isHtmlContentType(null))
+    }
+
+    @Test
+    fun fetchPageText_nonHtmlContentType_throwsIllegalStateException() = runBlocking {
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "video/mp4")
+                .setBody("binary data stream simulation"),
+        )
+
+        val baseUrl = mockWebServer.url("/file.mp4").toString()
+        try {
+            webPageFetcher.fetchPageText(baseUrl)
+            org.junit.Assert.fail("Expected IllegalStateException for non-HTML content type")
+        } catch (e: IllegalStateException) {
+            assertTrue(e.message?.contains("Unsupported Content-Type") == true)
+        }
+    }
+
+    @Test
+    fun fetchPageText_largeHtmlBody_capsReadAmountWithoutOom() = runBlocking {
+        // Create large HTML content larger than MAX_READ_CHARS (500,000 chars)
+        val repeatCount = 30000
+        val paragraph = "<p>Busan Momos Coffee Cafe Review Content Item.</p>\n" // 50 chars
+        val largeHtml = "<html><body>" + paragraph.repeat(repeatCount) + "</body></html>" // ~1.5 million chars
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "text/html; charset=UTF-8")
+                .setBody(largeHtml),
+        )
+
+        val baseUrl = mockWebServer.url("/large").toString()
+        val text = webPageFetcher.fetchPageText(baseUrl)
+
+        // Read text length must be capped and must contain extracted paragraph text
+        assertTrue(text.isNotBlank())
+        assertTrue(text.contains("Busan Momos Coffee Cafe Review Content Item."))
+    }
 }
+

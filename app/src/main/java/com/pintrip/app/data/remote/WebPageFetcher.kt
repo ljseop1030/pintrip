@@ -59,6 +59,10 @@ open class WebPageFetcher {
             } else if (responseCode in 200..299) {
                 try {
                     val contentType = connection.contentType.orEmpty().lowercase()
+                    if (!isHtmlContentType(contentType)) {
+                        throw IllegalStateException("Unsupported Content-Type '$contentType' for URL: $currentUrl")
+                    }
+
                     val charset = if (contentType.contains("charset=")) {
                         contentType.substringAfter("charset=").substringBefore(";").trim().uppercase()
                     } else {
@@ -68,9 +72,16 @@ open class WebPageFetcher {
                     val inputStream = connection.inputStream
                     val html = BufferedReader(InputStreamReader(inputStream, charset)).use { reader ->
                         val builder = StringBuilder()
-                        var line: String?
-                        while (reader.readLine().also { line = it } != null) {
-                            builder.append(line).append("\n")
+                        val buffer = CharArray(BUFFER_SIZE)
+                        var totalRead = 0
+                        var readCount = reader.read(buffer)
+                        while (totalRead < MAX_READ_CHARS && readCount != -1) {
+                            val toAppend = minOf(readCount, MAX_READ_CHARS - totalRead)
+                            builder.appendRange(buffer, 0, toAppend)
+                            totalRead += toAppend
+                            if (totalRead < MAX_READ_CHARS) {
+                                readCount = reader.read(buffer)
+                            }
                         }
                         builder.toString()
                     }
@@ -156,6 +167,11 @@ open class WebPageFetcher {
 
 
 
+    fun isHtmlContentType(contentType: String?): Boolean {
+        val lower = contentType.orEmpty().lowercase()
+        return lower.contains("text/html") || lower.contains("application/xhtml+xml")
+    }
+
     private fun extractTextFromHtml(html: String, baseUrl: String): String {
         val doc = Jsoup.parse(html, baseUrl)
 
@@ -170,5 +186,7 @@ open class WebPageFetcher {
         private const val CONNECT_TIMEOUT_MS = 10000
         private const val READ_TIMEOUT_MS = 10000
         private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+        const val MAX_READ_CHARS = 500_000
+        private const val BUFFER_SIZE = 8192
     }
 }
