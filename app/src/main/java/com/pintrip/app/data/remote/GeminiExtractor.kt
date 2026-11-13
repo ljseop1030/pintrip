@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * - responseMimeType: "application/json"
  * - responseSchema: GEMINI_EXTRACTION_RESPONSE_SCHEMA
  */
-class GeminiExtractor(
+open class GeminiExtractor(
     private val context: Context,
 ) {
     private val generativeModel by lazy {
@@ -48,7 +48,7 @@ class GeminiExtractor(
      * @return 파싱된 [GeminiExtractionResponse]
      * @throws Exception 비트맵 로드 실패, Gemini API 호출 실패 또는 JSON 파싱 실패 시
      */
-    suspend fun extractFromScreenshot(
+    open suspend fun extractFromScreenshot(
         imageUri: Uri,
         roomRegion: String? = null,
     ): GeminiExtractionResponse = withContext(Dispatchers.IO) {
@@ -79,7 +79,7 @@ class GeminiExtractor(
      * @return 파싱된 [GeminiExtractionResponse]
      * @throws Exception Gemini API 호출 실패 또는 JSON 파싱 실패 시
      */
-    suspend fun extractFromText(
+    open suspend fun extractFromText(
         text: String,
         roomRegion: String? = null,
     ): GeminiExtractionResponse = withContext(Dispatchers.IO) {

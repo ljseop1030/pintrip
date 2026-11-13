@@ -127,4 +127,50 @@ class ExtractUtilsTest {
             ),
         )
     }
+
+    @Test
+    fun testCombineShareAndPageText_bothPresent_combinesBoth() {
+        val shareText = "[네이버 지도] 모모스 커피 부산 금정구 오시게로 20 https://naver.me/abc"
+        val pageText = "모모스 커피 블로그 리뷰 포스팅 본문입니다."
+
+        val combined = combineShareAndPageText(shareText, pageText)
+
+        assertEquals("[네이버 지도] 모모스 커피 부산 금정구 오시게로 20 https://naver.me/abc\n\n모모스 커피 블로그 리뷰 포스팅 본문입니다.", combined)
+    }
+
+    @Test
+    fun testCombineShareAndPageText_identical_noDuplication() {
+        val shareText = "https://naver.me/abc 모모스 커피"
+        val pageText = "https://naver.me/abc 모모스 커피"
+
+        val combined = combineShareAndPageText(shareText, pageText)
+
+        assertEquals("https://naver.me/abc 모모스 커피", combined)
+    }
+
+    @Test
+    fun testCombineShareAndPageText_truncation_preservesShareTextIntact() {
+        val shareText = "Share Text Info" // length = 15
+        val longPageText = "A".repeat(100) // length = 100
+        val maxLength = 30 // separator "\n\n" is length 2, remaining page budget = 30 - 15 - 2 = 13
+
+        val combined = combineShareAndPageText(shareText, longPageText, maxLength = maxLength)
+
+        assertEquals(30, combined.length)
+        assertTrue(combined.startsWith("Share Text Info\n\n"))
+        assertEquals("A".repeat(13), combined.substring(17))
+    }
+
+    @Test
+    fun testCombineShareAndPageText_blankShareText_returnsPageText() {
+        val combined = combineShareAndPageText("   ", "본문 텍스트", maxLength = 50)
+        assertEquals("본문 텍스트", combined)
+    }
+
+    @Test
+    fun testCombineShareAndPageText_blankPageText_returnsShareText() {
+        val combined = combineShareAndPageText("공유 텍스트", "   ", maxLength = 50)
+        assertEquals("공유 텍스트", combined)
+    }
 }
+

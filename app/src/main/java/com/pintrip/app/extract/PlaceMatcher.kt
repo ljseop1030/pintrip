@@ -28,7 +28,7 @@ import kotlinx.coroutines.sync.withPermit
  * @property kakaoLocalApiClient 카카오 Local API 검색 클라이언트
  * @property concurrencyLimit 카카오 API 병렬 검색 동시 요청 제한 수 (기본값: 5)
  */
-class PlaceMatcher(
+open class PlaceMatcher(
     private val kakaoLocalApiClient: KakaoLocalApiClient = KakaoLocalApiClient(),
     private val concurrencyLimit: Int = DEFAULT_CONCURRENCY_LIMIT,
 ) {
@@ -40,7 +40,7 @@ class PlaceMatcher(
      * @param roomRegion 방의 대표 지역명 (예: "부산")
      * @return 파싱 및 검색 매칭이 완료된 [MatchResult] 리스트
      */
-    suspend fun matchPlaces(
+    open suspend fun matchPlaces(
         extractionResponses: List<GeminiExtractionResponse>,
         roomRegion: String,
         sourceType: String = "screenshot",

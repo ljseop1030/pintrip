@@ -54,10 +54,11 @@ sealed interface ShareNoticeEvent {
 }
 
 class ShareReceiveViewModel(
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val db: FirebaseFirestore? = null,
     private val geminiExtractorFactory: (Context) -> GeminiExtractor = { GeminiExtractor(it) },
     private val webPageFetcherFactory: () -> WebPageFetcher = { WebPageFetcher() },
     private val placeMatcherFactory: () -> PlaceMatcher = { PlaceMatcher() },
+    private val roomRegionFetcher: (suspend (String) -> String)? = null,
 ) : ViewModel() {
 
     private val _shareInput = MutableLiveData<ShareInput>()
@@ -211,12 +212,17 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.PENDING)
 
                 // 1. 방 정보(지역명) 조회
-                val roomSnapshot = db.collection("rooms")
-                    .document(roomId)
-                    .get()
-                    .await()
+                val roomRegion = if (roomRegionFetcher != null) {
+                    roomRegionFetcher.invoke(roomId)
+                } else {
+                    val firestore = db ?: FirebaseFirestore.getInstance()
+                    val roomSnapshot = firestore.collection("rooms")
+                        .document(roomId)
+                        .get()
+                        .await()
 
-                val roomRegion = roomSnapshot.getString("region")?.trim().orEmpty()
+                    roomSnapshot.getString("region")?.trim().orEmpty()
+                }
                 Log.d(TAG, "Fetched room region for roomId=$roomId: '$roomRegion'")
 
                 if (roomRegion.isBlank()) {
@@ -279,7 +285,10 @@ class ShareReceiveViewModel(
                             shareInput.text
                         }
 
-                        val targetText = pageText.ifBlank { shareInput.text }
+                        val targetText = combineShareAndPageText(
+                            shareText = shareInput.text,
+                            pageText = pageText,
+                        )
                         if (targetText.isBlank()) {
                             throw IllegalStateException("Text content is empty for link/text input")
                         }

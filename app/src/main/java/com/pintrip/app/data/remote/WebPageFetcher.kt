@@ -17,7 +17,7 @@ import java.net.URL
  * 2. 네이버 블로그 PC URL(blog.naver.com)을 모바일 URL(m.blog.naver.com)로 자동 변환 (iframe 문제 해결)
  * 3. Jsoup을 이용한 HTML 태그 및 불필요 요소 제거 후 가독성 있는 본문 텍스트 추출
  */
-class WebPageFetcher {
+open class WebPageFetcher {
 
     /**
      * 지정된 [url]의 페이지 본문 텍스트를 추출하여 반환합니다.
@@ -26,7 +26,7 @@ class WebPageFetcher {
      * @return 추출된 페이지 본문 텍스트
      * @throws Exception URL 접속 실패, 4xx/5xx 에러 또는 네트워크 오류 발생 시
      */
-    suspend fun fetchPageText(url: String): String = withContext(Dispatchers.IO) {
+    open suspend fun fetchPageText(url: String): String = withContext(Dispatchers.IO) {
         val (finalUrl, html) = downloadHtmlWithRedirects(url)
         Log.d(TAG, "Fetched page text from final URL: $finalUrl (original: $url)")
         extractTextFromHtml(html, finalUrl)

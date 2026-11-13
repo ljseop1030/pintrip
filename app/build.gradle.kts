@@ -74,6 +74,8 @@ dependencies {
     implementation(libs.coroutines.play.services)
 
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.core.testing)
+    testImplementation(libs.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.org.json)
     implementation(libs.jsoup)
