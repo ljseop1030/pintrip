@@ -1,6 +1,7 @@
 package com.pintrip.app.room
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.repository.JoinRoomResult
@@ -184,42 +185,55 @@ class RoomListViewModelTest {
     @Test
     fun scenario5_exceptionMappingBoundaryPreservesCauseAndReThrowsCancellation() {
         val dummyRepo = RoomRepository(null, null, null)
-        val rootCause = RuntimeException("Network connection lost")
 
-        // 1. NetworkUnavailable 예외 수신 및 cause 보존 검증
-        val networkExp = RoomJoinException.NetworkUnavailable(rootCause)
-        val mappedNetwork = dummyRepo.mapToRoomJoinException(networkExp)
-        assertTrue(mappedNetwork is RoomJoinException.NetworkUnavailable)
-        assertEquals(rootCause, mappedNetwork.cause)
+        // 1. FirebaseFirestoreException UNAVAILABLE -> RoomJoinException.NetworkUnavailable (cause 동일성 검증)
+        val firestoreUnavailable = FirebaseFirestoreException(
+            "Network error",
+            FirebaseFirestoreException.Code.UNAVAILABLE,
+        )
+        val mappedNetwork = dummyRepo.mapToRoomJoinException(firestoreUnavailable)
+        assertTrue("UNAVAILABLE 코드는 NetworkUnavailable로 변환되어야 함", mappedNetwork is RoomJoinException.NetworkUnavailable)
+        assertTrue("원래 예외가 cause로 보존되어야 함", mappedNetwork.cause === firestoreUnavailable)
 
-        // 2. PermissionDenied 예외 수신 및 cause 보존 검증
-        val permCause = RuntimeException("Permission denied by server")
-        val permExp = RoomJoinException.PermissionDenied(permCause)
-        val mappedPermission = dummyRepo.mapToRoomJoinException(permExp)
-        assertTrue(mappedPermission is RoomJoinException.PermissionDenied)
-        assertEquals(permCause, mappedPermission.cause)
+        // 2. FirebaseFirestoreException PERMISSION_DENIED -> RoomJoinException.PermissionDenied (cause 동일성 검증)
+        val firestorePermission = FirebaseFirestoreException(
+            "Permission denied",
+            FirebaseFirestoreException.Code.PERMISSION_DENIED,
+        )
+        val mappedPermission = dummyRepo.mapToRoomJoinException(firestorePermission)
+        assertTrue("PERMISSION_DENIED 코드는 PermissionDenied로 변환되어야 함", mappedPermission is RoomJoinException.PermissionDenied)
+        assertTrue("원래 예외가 cause로 보존되어야 함", mappedPermission.cause === firestorePermission)
 
-        // 3. 프로필 읽기 중 네트워크 실패가 ProfileRequired로 왜곡되지 않고 NetworkUnavailable 타입 유지
-        val mappedProfileNet = dummyRepo.mapToRoomJoinException(networkExp)
+        // 3. FirebaseFirestoreException UNAAUTHENTICATED -> RoomJoinException.NotLoggedIn (cause 동일성 검증)
+        val firestoreUnauth = FirebaseFirestoreException(
+            "Unauthenticated",
+            FirebaseFirestoreException.Code.UNAUTHENTICATED,
+        )
+        val mappedUnauth = dummyRepo.mapToRoomJoinException(firestoreUnauth)
+        assertTrue("UNAUTHENTICATED 코드는 NotLoggedIn으로 변환되어야 함", mappedUnauth is RoomJoinException.NotLoggedIn)
+        assertTrue("원래 예외가 cause로 보존되어야 함", mappedUnauth.cause === firestoreUnauth)
+
+        // 4. 프로필 읽기 중 네트워크 실패(firestoreUnavailable)가 ProfileRequired로 왜곡되지 않고 NetworkUnavailable 타입 유지
+        val mappedProfileNet = dummyRepo.mapToRoomJoinException(firestoreUnavailable)
         assertFalse("프로필 네트워크 에러는 ProfileRequired가 아니라 NetworkUnavailable이어야 함", mappedProfileNet is RoomJoinException.ProfileRequired)
         assertTrue(mappedProfileNet is RoomJoinException.NetworkUnavailable)
 
-        // 4. CancellationException 재던짐 검증
+        // 5. CancellationException 재던짐 검증 (동일 객체 재던짐 확인)
         val cancellation = CancellationException("Job canceled")
-        var rethrown = false
+        var rethrownObj: CancellationException? = null
         try {
             dummyRepo.mapToRoomJoinException(cancellation)
-        } catch (_: CancellationException) {
-            rethrown = true
+        } catch (e: CancellationException) {
+            rethrownObj = e
         }
-        assertTrue("CancellationException은 반드시 재던져져야 함", rethrown)
+        assertTrue("CancellationException은 동일 객체가 재던져져야 함", rethrownObj === cancellation)
 
-        // 5. ViewModel의 RoomJoinException 하위 타입별 한국어 리소스 ID 분류 검증
+        // 6. ViewModel의 RoomJoinException 하위 타입별 한국어 리소스 ID 분류 검증
         val fakeRoomRepo = FakeRoomRepository()
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
 
-        fakeRoomRepo.exceptionToThrow = RoomJoinException.NotLoggedIn()
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.NotLoggedIn(firestoreUnauth)
         viewModel.joinRoomWithCode("K7P2QX")
         assertEquals(R.string.error_not_logged_in, viewModel.joinErrorMessageResId.value)
 
@@ -227,11 +241,11 @@ class RoomListViewModelTest {
         viewModel.joinRoomWithCode("K7P2QX")
         assertEquals(R.string.error_profile_check_required, viewModel.joinErrorMessageResId.value)
 
-        fakeRoomRepo.exceptionToThrow = RoomJoinException.NetworkUnavailable(rootCause)
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.NetworkUnavailable(firestoreUnavailable)
         viewModel.joinRoomWithCode("K7P2QX")
         assertEquals(R.string.error_network_unavailable, viewModel.joinErrorMessageResId.value)
 
-        fakeRoomRepo.exceptionToThrow = RoomJoinException.PermissionDenied()
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.PermissionDenied(firestorePermission)
         viewModel.joinRoomWithCode("K7P2QX")
         assertEquals(R.string.error_room_join_permission_denied, viewModel.joinErrorMessageResId.value)
 
