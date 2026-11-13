@@ -192,7 +192,7 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.btnCopyCode.isVisible = false
                 dialogBinding.btnRetry.isVisible = false
                 dialogBinding.btnConfirm.isVisible = true
-                dialogBinding.btnConfirm.text = getString(R.string.btn_go_to_room)
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
             }
             is InviteCodeUiState.Loading -> {
                 dialogBinding.pbLoading.isVisible = true
@@ -201,7 +201,7 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.btnCopyCode.isVisible = false
                 dialogBinding.btnRetry.isVisible = false
                 dialogBinding.btnConfirm.isVisible = true
-                dialogBinding.btnConfirm.text = getString(R.string.btn_go_to_room)
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
             }
             is InviteCodeUiState.Success -> {
                 dialogBinding.pbLoading.isVisible = false
@@ -212,7 +212,7 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.btnCopyCode.isEnabled = true
                 dialogBinding.btnRetry.isVisible = false
                 dialogBinding.btnConfirm.isVisible = true
-                dialogBinding.btnConfirm.text = getString(R.string.btn_go_to_room)
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
             }
             is InviteCodeUiState.Error -> {
                 dialogBinding.pbLoading.isVisible = false

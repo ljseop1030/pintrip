@@ -109,6 +109,13 @@
             tools:text="초대 코드 정보를 불러오지 못했습니다."
             tools:visibility="gone" />
 
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/barrierContentBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="pbLoading,cardCodeContainer,tvErrorMessage" />
+
         <LinearLayout
             android:id="@+id/layoutButtons"
             android:layout_width="0dp"
@@ -117,7 +124,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cardCodeContainer">
+            app:layout_constraintTop_toBottomOf="@id/barrierContentBottom">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRetry"
