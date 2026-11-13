@@ -31,8 +31,11 @@ sealed class RoomListUiState {
 class RoomListViewModel(
     private val roomRepository: RoomRepository = RoomRepository(),
     private val userRepository: UserRepository = UserRepository(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val auth: FirebaseAuth? = null,
 ) : ViewModel() {
+
+    private val currentAuth: FirebaseAuth?
+        get() = auth ?: try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 
     companion object {
         private const val TAG = "RoomListViewModel"
@@ -89,7 +92,7 @@ class RoomListViewModel(
             return
         }
 
-        val currentUser = auth.currentUser
+        val currentUser = currentAuth?.currentUser
         if (currentUser == null) {
             _uiState.value = RoomListUiState.Error(R.string.error_not_logged_in)
             return
@@ -268,7 +271,7 @@ class RoomListViewModel(
 
     fun logout() {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
-        auth.signOut()
+        currentAuth?.signOut()
         _navigateToLogin.value = Event(Unit)
     }
 }

@@ -270,6 +270,10 @@ class RoomListActivity : AppCompatActivity() {
         joinSuccessDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setView(dialogBinding.root)
             .setCancelable(true)
+            .setOnCancelListener {
+                isUserExplicitDismiss = true
+                viewModel.onDismissJoinSuccess()
+            }
             .setOnDismissListener {
                 joinSuccessDialog = null
                 if (!isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
