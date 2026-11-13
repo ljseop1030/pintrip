@@ -35,6 +35,12 @@ class RoomListActivity : AppCompatActivity() {
         }
     }
 
+    private val placeListLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { _ ->
+        viewModel.loadRooms(forceRefresh = true)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -157,7 +163,7 @@ class RoomListActivity : AppCompatActivity() {
                 dismissJoinCodeDialog()
                 try {
                     val intent = PlaceListActivity.newIntent(this, roomId)
-                    startActivity(intent)
+                    placeListLauncher.launch(intent)
                 } catch (_: Exception) {
                     viewModel.resetNavigation()
                 }
