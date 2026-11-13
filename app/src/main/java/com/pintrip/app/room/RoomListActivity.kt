@@ -154,6 +154,7 @@ class RoomListActivity : AppCompatActivity() {
 
         viewModel.navigateToPlaceList.observe(this) { event ->
             event.getContentIfNotHandled()?.let { roomId ->
+                joinCodeDialog?.dismiss()
                 try {
                     val intent = PlaceListActivity.newIntent(this, roomId)
                     startActivity(intent)
@@ -163,11 +164,74 @@ class RoomListActivity : AppCompatActivity() {
             }
         }
 
+        viewModel.showJoinCodeDialogEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let {
+                showJoinCodeDialog()
+            }
+        }
+
+        viewModel.isJoining.observe(this) { isJoining ->
+            val dialogBinding = joinCodeDialogBinding
+            if (dialogBinding != null) {
+                dialogBinding.pbLoading.isVisible = isJoining
+                dialogBinding.btnJoin.isEnabled = !isJoining
+                dialogBinding.btnCancel.isEnabled = !isJoining
+                dialogBinding.etInviteCode.isEnabled = !isJoining
+            }
+        }
+
+        viewModel.joinErrorMessageEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { resId ->
+                val dialogBinding = joinCodeDialogBinding
+                if (dialogBinding != null) {
+                    dialogBinding.tilInviteCode.error = getString(resId)
+                } else {
+                    Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         viewModel.toastEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { resId ->
                 Toast.makeText(this, resId, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private var joinCodeDialog: androidx.appcompat.app.AlertDialog? = null
+    private var joinCodeDialogBinding: com.pintrip.app.databinding.DialogJoinCodeBinding? = null
+
+    private fun showJoinCodeDialog() {
+        if (joinCodeDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.DialogJoinCodeBinding.inflate(layoutInflater)
+        joinCodeDialogBinding = dialogBinding
+
+        dialogBinding.etInviteCode.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                dialogBinding.tilInviteCode.error = null
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        dialogBinding.btnCancel.setOnClickListener {
+            joinCodeDialog?.dismiss()
+        }
+
+        dialogBinding.btnJoin.setOnClickListener {
+            val code = dialogBinding.etInviteCode.text?.toString().orEmpty()
+            viewModel.joinRoomWithCode(code)
+        }
+
+        joinCodeDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .setOnDismissListener {
+                joinCodeDialogBinding = null
+                joinCodeDialog = null
+            }
+            .show()
     }
 
     private fun navigateToLogin() {

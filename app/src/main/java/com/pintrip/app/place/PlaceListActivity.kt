@@ -64,6 +64,15 @@ class PlaceListActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
+        binding.toolbar.inflateMenu(R.menu.menu_place_list)
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            if (menuItem.itemId == R.id.action_invite_code) {
+                viewModel.onInviteCodeClick()
+                true
+            } else {
+                false
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -113,6 +122,90 @@ class PlaceListActivity : AppCompatActivity() {
                 }
             }
         }
+
+        viewModel.inviteCodeState.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { state ->
+                when (state) {
+                    is InviteCodeUiState.Loading -> {
+                        showInviteCodeDialog(null, isLoading = true)
+                    }
+                    is InviteCodeUiState.Success -> {
+                        showInviteCodeDialog(state.inviteCode, isLoading = false)
+                    }
+                    is InviteCodeUiState.Error -> {
+                        dismissInviteCodeDialog()
+                        Toast.makeText(this, state.messageResId, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
+    private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
+
+    private fun showInviteCodeDialog(code: String?, isLoading: Boolean) {
+        if (inviteCodeDialog?.isShowing == true) {
+            val dialogBinding = inviteCodeDialogBinding
+            if (dialogBinding != null) {
+                updateInviteCodeDialog(dialogBinding, code, isLoading)
+                return
+            }
+        }
+
+        val dialogBinding = com.pintrip.app.databinding.DialogInviteCodeDisplayBinding.inflate(layoutInflater)
+        inviteCodeDialogBinding = dialogBinding
+
+        dialogBinding.tvTitle.text = getString(R.string.room_invite_code_title)
+        dialogBinding.tvSubtitle.text = getString(R.string.room_invite_code_subtext)
+        dialogBinding.btnConfirm.text = getString(R.string.common_confirm)
+
+        updateInviteCodeDialog(dialogBinding, code, isLoading)
+
+        dialogBinding.btnCopyCode.setOnClickListener {
+            val inviteCode = dialogBinding.tvInviteCode.text?.toString().orEmpty()
+            if (inviteCode.isNotBlank()) {
+                copyToClipboard(inviteCode)
+            }
+        }
+
+        dialogBinding.btnConfirm.setOnClickListener {
+            dismissInviteCodeDialog()
+        }
+
+        inviteCodeDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .setOnDismissListener {
+                dismissInviteCodeDialog()
+            }
+            .show()
+    }
+
+    private fun updateInviteCodeDialog(
+        dialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding,
+        code: String?,
+        isLoading: Boolean,
+    ) {
+        dialogBinding.pbLoading.isVisible = isLoading
+        dialogBinding.cardCodeContainer.isVisible = !isLoading && !code.isNullOrBlank()
+        dialogBinding.btnCopyCode.isEnabled = !isLoading && !code.isNullOrBlank()
+        if (!code.isNullOrBlank()) {
+            dialogBinding.tvInviteCode.text = code
+        }
+    }
+
+    private fun dismissInviteCodeDialog() {
+        inviteCodeDialog?.dismiss()
+        inviteCodeDialogBinding = null
+        inviteCodeDialog = null
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("invite_code", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, R.string.notice_invite_code_copied, Toast.LENGTH_SHORT).show()
     }
 
     private fun openKakaoPlaceUrl(url: String) {

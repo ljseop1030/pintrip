@@ -1,5 +1,6 @@
 package com.pintrip.app.room
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -94,7 +95,10 @@ class CreateRoomActivity : AppCompatActivity() {
     }
 
     private fun handleBackPress() {
-        if (viewModel.isLoading.value == true) {
+        val created = viewModel.createdRoom.value
+        if (created != null) {
+            finishWithCreatedRoom(created)
+        } else if (viewModel.isLoading.value == true) {
             Toast.makeText(this, R.string.notice_creating_room_in_progress, Toast.LENGTH_SHORT).show()
         } else {
             finish()
@@ -149,7 +153,8 @@ class CreateRoomActivity : AppCompatActivity() {
         }
 
         viewModel.isLoading.observe(this) { isLoading ->
-            binding.btnCreate.isEnabled = !isLoading
+            val isCreated = viewModel.createdRoom.value != null
+            binding.btnCreate.isEnabled = !isLoading && !isCreated
             binding.btnCreate.text = if (isLoading) {
                 getString(R.string.btn_creating_room_in_progress)
             } else {
@@ -163,16 +168,65 @@ class CreateRoomActivity : AppCompatActivity() {
             }
         }
 
+        viewModel.createdRoom.observe(this) { room ->
+            if (room != null) {
+                binding.btnCreate.isEnabled = false
+                binding.etRoomName.isEnabled = false
+                binding.etRegion.isEnabled = false
+                showCodeDisplayDialog(room)
+            }
+        }
+
         viewModel.createSuccessEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { room ->
                 Toast.makeText(this, R.string.status_room_created, Toast.LENGTH_SHORT).show()
-                val resultIntent = Intent().apply {
-                    putExtra(PlaceListActivity.EXTRA_ROOM_ID, room.id)
-                }
-                setResult(RESULT_OK, resultIntent)
-                finish()
             }
         }
+    }
+
+    private var codeDisplayDialog: androidx.appcompat.app.AlertDialog? = null
+
+    private fun showCodeDisplayDialog(room: com.pintrip.app.data.model.Room) {
+        if (codeDisplayDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.DialogInviteCodeDisplayBinding.inflate(layoutInflater)
+        dialogBinding.tvTitle.text = getString(R.string.created_room_code_title)
+        dialogBinding.tvSubtitle.text = getString(R.string.created_room_code_subtext)
+        dialogBinding.tvInviteCode.text = room.inviteCode
+        dialogBinding.pbLoading.isVisible = false
+        dialogBinding.cardCodeContainer.isVisible = true
+
+        dialogBinding.btnCopyCode.setOnClickListener {
+            copyToClipboard(room.inviteCode)
+        }
+
+        dialogBinding.btnConfirm.setOnClickListener {
+            codeDisplayDialog?.dismiss()
+            finishWithCreatedRoom(room)
+        }
+
+        codeDisplayDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .setOnDismissListener {
+                codeDisplayDialog = null
+            }
+            .show()
+    }
+
+    private fun finishWithCreatedRoom(room: com.pintrip.app.data.model.Room) {
+        val resultIntent = Intent().apply {
+            putExtra(PlaceListActivity.EXTRA_ROOM_ID, room.id)
+        }
+        setResult(RESULT_OK, resultIntent)
+        finish()
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("invite_code", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, R.string.notice_invite_code_copied, Toast.LENGTH_SHORT).show()
     }
 
     private fun updateDateDisplay(start: Timestamp?, end: Timestamp?) {

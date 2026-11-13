@@ -155,6 +155,30 @@
     <string name="room_list_load_error">방 목록을 불러오지 못했습니다.\n원인: %1$s</string>
     <string name="notice_join_code_feature_later">초대 코드로 참여하기 기능은 다음 업데이트에서 제공됩니다.</string>
 
+    <!-- Join Room & Invite Code Display UI -->
+    <string name="join_code_dialog_title">코드로 참여하기</string>
+    <string name="join_code_dialog_subtext">전달받은 6자리 초대 코드를 입력해 주세요.</string>
+    <string name="join_code_hint">초대 코드 (6자리)</string>
+    <string name="btn_join_action">참여하기</string>
+    <string name="btn_cancel">취소</string>
+    <string name="error_invalid_invite_code_format">유효하지 않은 초대 코드 형식입니다. 6자리 영문 대문자 및 숫자를 입력해 주세요.</string>
+    <string name="error_invite_code_not_found">존재하지 않는 초대 코드입니다.</string>
+    <string name="error_room_join_permission_denied">방 가입 권한이 없거나 요청이 거부되었습니다.</string>
+    <string name="error_room_join_default">방 가입 중 오류가 발생했습니다. 다시 시도해 주세요.</string>
+    <string name="notice_joining_room_in_progress">여행방에 가입하고 있습니다. 잠시만 기다려 주세요.</string>
+
+    <string name="created_room_code_title">방 생성이 완료되었습니다!</string>
+    <string name="created_room_code_subtext">아래 초대 코드를 친구들에게 공유하여 함께 장소를 모아보세요.</string>
+    <string name="created_room_code_label">초대 코드</string>
+    <string name="btn_copy_code">코드 복사</string>
+    <string name="btn_go_to_room">방으로 이동</string>
+    <string name="notice_invite_code_copied">초대 코드가 클립보드에 복사되었습니다.</string>
+
+    <string name="room_invite_code_title">여행방 초대 코드</string>
+    <string name="room_invite_code_subtext">친구를 초대하고 함께 장소를 기록해 보세요.</string>
+    <string name="btn_view_invite_code">초대 코드 확인</string>
+    <string name="error_load_invite_code_failed">초대 코드 정보를 불러오지 못했습니다.</string>
+
     <string name="error_empty_room_name">방 이름을 입력해 주세요.</string>
     <string name="error_empty_region">여행 지역을 입력해 주세요.</string>
     <string name="error_invalid_date_range">종료일은 시작일보다 빠를 수 없습니다.</string>
