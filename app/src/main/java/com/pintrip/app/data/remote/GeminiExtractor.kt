@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * - responseMimeType: "application/json"
  * - responseSchema: GEMINI_EXTRACTION_RESPONSE_SCHEMA
  */
-class GeminiExtractor(
+open class GeminiExtractor(
     private val context: Context,
 ) {
     private val generativeModel by lazy {
@@ -48,7 +48,7 @@ class GeminiExtractor(
      * @return 파싱된 [GeminiExtractionResponse]
      * @throws Exception 비트맵 로드 실패, Gemini API 호출 실패 또는 JSON 파싱 실패 시
      */
-    suspend fun extractFromScreenshot(
+    open suspend fun extractFromScreenshot(
         imageUri: Uri,
         roomRegion: String? = null,
     ): GeminiExtractionResponse = withContext(Dispatchers.IO) {
@@ -57,6 +57,40 @@ class GeminiExtractor(
 
         val inputContent = content {
             image(bitmap)
+            text(promptText)
+        }
+
+        val response = generativeModel.generateContent(inputContent)
+        val jsonText = response.text
+            ?: throw IllegalStateException("Gemini response text is null")
+
+        parseGeminiExtractionResponse(jsonText)
+    }
+
+    /**
+     * 텍스트(웹페이지 본문 또는 공유된 텍스트)를 받아 Gemini에 전송하고, 장소 추출 결과를 파싱하여 반환합니다.
+     *
+     * docs/data-contract.md §8 규격을 준수합니다:
+     * - 광고, 관련 글/추천 글에 기재된 장소는 제외
+     * - 장소명과 위치(주소/지역)가 함께 기재된 경우만 추출
+     *
+     * @param text 추출 대상 본문/텍스트
+     * @param roomRegion 여행 방의 대표 지역 (예: "부산"). 지정되지 않은 경우 null
+     * @return 파싱된 [GeminiExtractionResponse]
+     * @throws Exception Gemini API 호출 실패 또는 JSON 파싱 실패 시
+     */
+    open suspend fun extractFromText(
+        text: String,
+        roomRegion: String? = null,
+    ): GeminiExtractionResponse = withContext(Dispatchers.IO) {
+        val sanitizedText = if (text.length > MAX_TEXT_LENGTH) {
+            text.take(MAX_TEXT_LENGTH)
+        } else {
+            text
+        }
+        val promptText = buildTextPromptText(text = sanitizedText, roomRegion = roomRegion)
+
+        val inputContent = content {
             text(promptText)
         }
 
@@ -103,8 +137,37 @@ class GeminiExtractor(
         """.trimIndent()
     }
 
+    private fun buildTextPromptText(text: String, roomRegion: String?): String {
+        val regionContext = if (!roomRegion.isNullOrBlank()) {
+            "This trip room's region is \"${roomRegion.trim()}\"."
+        } else {
+            "No specific trip room region is specified."
+        }
+
+        return """
+            $regionContext
+            
+            Analyze the provided web page / blog text and extract real shop, restaurant, cafe, accommodation, or tourist attraction names according to these strict rules:
+            1. Extract ONLY places where both the place name AND its specific location, address, or region are mentioned together in the text.
+            2. EXCLUDE any places that appear in advertisements, sponsorships, promotional links, sidebars, or recommended/related posts sections (e.g., "관련글", "추천글", "광고", "협찬", "이 블로그의 다른 글").
+            3. Extract only real shop/attraction names actually written in the text. Never invent places.
+            4. Do not extract addresses, menu items, hashtags, person names, or bare region names as places.
+            5. 'name': the Korean name used for Kakao Map search. If the text shows an English or romanized name, write the Korean name. If you are not sure of the exact Korean name, transliterate the original name as pronounced. Never replace it with a different place's name. Keep branch names (e.g., "이재모피자 본점"). Strip numbering, emojis, and quotes.
+            6. 'rawText': the short original sentence where the place is mentioned (at most about 100 characters).
+            7. 'region': a region or district written near the place or read from its location/address (e.g. "부산 금정구"). Otherwise null. Never fill it with the room region.
+            8. 'categoryHint': one of ["dining", "cafe", "sights", "stay", "etc"], or null.
+            9. 'outsideRoomRegion': true ONLY with clear evidence the place is outside the room region. Otherwise false.
+            10. 'regionHint': the region context the whole text is about, if clear. Otherwise null.
+            11. Deduplicate repeated places.
+            
+            Source Text:
+            $text
+        """.trimIndent()
+    }
+
     companion object {
         const val MODEL_NAME = "gemini-3.5-flash-lite"
         const val MAX_IMAGE_WIDTH = 1080
+        const val MAX_TEXT_LENGTH = 20000
     }
 }

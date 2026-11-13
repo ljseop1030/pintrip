@@ -2,6 +2,7 @@ package com.pintrip.app.extract
 
 import com.pintrip.app.data.model.GeminiExtractionResponse
 import com.pintrip.app.data.model.GeminiPlace
+import com.pintrip.app.data.remote.GeminiExtractor
 
 /**
  * 장소명의 공백을 제거하고 소문자로 변환하여 정규화된 비교용 문자열을 반환합니다.
@@ -62,3 +63,46 @@ fun isCandidateAddressOutsideRoomRegion(
     // 주소에 방 지역명이 포함되어 있지 않으면 방 지역 밖으로 판정
     return !trimmedAddress.contains(trimmedRoomRegion)
 }
+
+/**
+ * 공유 텍스트([shareText])와 페이지 본문([pageText])을 결합한 텍스트를 생성합니다.
+ *
+ * - 공유 텍스트와 본문이 모두 존재하는 경우 두 텍스트를 결합합니다.
+ * - [maxLength]를 초과하여 자를 때는 공유 텍스트([shareText])가 잘리지 않도록
+ *   공유 텍스트를 우선 배치하고, 남은 길이만큼 페이지 본문을 자릅니다.
+ * - [shareText]와 [pageText]가 동일하거나 한쪽이 비어있는 경우 중복을 방지합니다.
+ *
+ * @param shareText 공유 입력에서 온 텍스트 (예: 네이버지도/카카오맵 공유 텍스트)
+ * @param pageText 웹페이지에서 크롤링한 본문 텍스트 (또는 fallback 텍스트)
+ * @param maxLength Gemini 전달용 최대 텍스트 길이 제한 (기본값: [GeminiExtractor.MAX_TEXT_LENGTH])
+ * @return 결합 및 길이 제한이 적용된 텍스트
+ */
+fun combineShareAndPageText(
+    shareText: String,
+    pageText: String,
+    maxLength: Int = GeminiExtractor.MAX_TEXT_LENGTH,
+): String {
+    val trimmedShare = shareText.trim()
+    val trimmedPage = pageText.trim()
+
+    if (trimmedShare.isBlank()) {
+        return trimmedPage.take(maxLength)
+    }
+    if (trimmedPage.isBlank() || trimmedShare == trimmedPage) {
+        return trimmedShare.take(maxLength)
+    }
+
+    val separator = "\n\n"
+    if (trimmedShare.length >= maxLength) {
+        return trimmedShare.take(maxLength)
+    }
+
+    val availablePageLength = maxLength - trimmedShare.length - separator.length
+    if (availablePageLength <= 0) {
+        return trimmedShare
+    }
+
+    val truncatedPage = trimmedPage.take(availablePageLength)
+    return "$trimmedShare$separator$truncatedPage"
+}
+

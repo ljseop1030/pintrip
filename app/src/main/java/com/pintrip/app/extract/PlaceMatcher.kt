@@ -28,7 +28,7 @@ import kotlinx.coroutines.sync.withPermit
  * @property kakaoLocalApiClient 카카오 Local API 검색 클라이언트
  * @property concurrencyLimit 카카오 API 병렬 검색 동시 요청 제한 수 (기본값: 5)
  */
-class PlaceMatcher(
+open class PlaceMatcher(
     private val kakaoLocalApiClient: KakaoLocalApiClient = KakaoLocalApiClient(),
     private val concurrencyLimit: Int = DEFAULT_CONCURRENCY_LIMIT,
 ) {
@@ -40,19 +40,23 @@ class PlaceMatcher(
      * @param roomRegion 방의 대표 지역명 (예: "부산")
      * @return 파싱 및 검색 매칭이 완료된 [MatchResult] 리스트
      */
-    suspend fun matchPlaces(
+    open suspend fun matchPlaces(
         extractionResponses: List<GeminiExtractionResponse>,
         roomRegion: String,
+        sourceType: String = "screenshot",
+        sourceUrl: String? = null,
     ): List<MatchResult> {
         if (extractionResponses.isEmpty()) return emptyList()
 
-        // 1. 여러 스크린샷 결과를 하나로 병합 (중복 제거)
+        // 1. 여러 스크린샷/텍스트 결과를 하나로 병합 (중복 제거)
         val mergedResponse = mergeGeminiExtractionResponses(extractionResponses)
         if (mergedResponse.places.isEmpty()) return emptyList()
 
         return matchMergedPlaces(
             mergedResponse = mergedResponse,
             roomRegion = roomRegion,
+            sourceType = sourceType,
+            sourceUrl = sourceUrl,
         )
     }
 
@@ -62,13 +66,17 @@ class PlaceMatcher(
     suspend fun matchPlaces(
         extractionResponse: GeminiExtractionResponse,
         roomRegion: String,
+        sourceType: String = "screenshot",
+        sourceUrl: String? = null,
     ): List<MatchResult> {
-        return matchPlaces(listOf(extractionResponse), roomRegion)
+        return matchPlaces(listOf(extractionResponse), roomRegion, sourceType, sourceUrl)
     }
 
     private suspend fun matchMergedPlaces(
         mergedResponse: GeminiExtractionResponse,
         roomRegion: String,
+        sourceType: String,
+        sourceUrl: String?,
     ): List<MatchResult> = coroutineScope {
         val semaphore = Semaphore(concurrencyLimit)
 
@@ -80,6 +88,8 @@ class PlaceMatcher(
                         place = place,
                         roomRegion = roomRegion,
                         regionHint = mergedResponse.regionHint,
+                        sourceType = sourceType,
+                        sourceUrl = sourceUrl,
                     )
                 }
             }
@@ -91,6 +101,8 @@ class PlaceMatcher(
         place: GeminiPlace,
         roomRegion: String,
         regionHint: String?,
+        sourceType: String,
+        sourceUrl: String?,
     ): MatchResult {
         val localId = "img0_p$index"
 
@@ -143,6 +155,8 @@ class PlaceMatcher(
             extracted = place,
             candidates = candidates,
             regionMismatch = place.outsideRoomRegion,
+            sourceType = sourceType,
+            sourceUrl = sourceUrl,
         )
 
         // 7. 선택된 후보(selectedCandidate)가 존재하는 경우 그 주소로 regionMismatch 최종 판정 (docs/data-contract.md §9)

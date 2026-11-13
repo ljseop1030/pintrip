@@ -69,6 +69,8 @@ data class MatchResult(
     val selectedPlaceId: String? = null,
     val regionMismatch: Boolean = false,
     val checked: Boolean = true,
+    val sourceType: String = "screenshot",
+    val sourceUrl: String? = null,
 ) : Serializable {
     /**
      * 현재 [selectedPlaceId]에 해당하는 [MatchCandidate] 객체를 반환합니다.
@@ -107,6 +109,8 @@ data class MatchResult(
             extracted: GeminiPlace,
             candidates: List<MatchCandidate>,
             regionMismatch: Boolean = false,
+            sourceType: String = "screenshot",
+            sourceUrl: String? = null,
         ): MatchResult {
             val cleanExtractedName = normalizePlaceName(extracted.name)
 
@@ -148,6 +152,8 @@ data class MatchResult(
                 selectedPlaceId = autoSelectedId,
                 regionMismatch = isRegionMismatchFinal,
                 checked = initialChecked,
+                sourceType = sourceType,
+                sourceUrl = sourceUrl,
             )
         }
     }

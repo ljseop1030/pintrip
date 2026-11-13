@@ -12,7 +12,9 @@ import com.pintrip.app.R
 import com.pintrip.app.data.TestConfig
 import com.pintrip.app.data.model.GeminiExtractionResponse
 import com.pintrip.app.data.remote.GeminiExtractor
+import com.pintrip.app.data.remote.WebPageFetcher
 import com.pintrip.app.ui.common.Event
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -52,9 +54,11 @@ sealed interface ShareNoticeEvent {
 }
 
 class ShareReceiveViewModel(
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val db: FirebaseFirestore? = null,
     private val geminiExtractorFactory: (Context) -> GeminiExtractor = { GeminiExtractor(it) },
+    private val webPageFetcherFactory: () -> WebPageFetcher = { WebPageFetcher() },
     private val placeMatcherFactory: () -> PlaceMatcher = { PlaceMatcher() },
+    private val roomRegionFetcher: (suspend (String) -> String)? = null,
 ) : ViewModel() {
 
     private val _shareInput = MutableLiveData<ShareInput>()
@@ -94,7 +98,7 @@ class ShareReceiveViewModel(
 
         val input = _shareInput.value ?: return
         if (input is ShareInput.Empty) return
-        if ((input is ShareInput.LinkText) && (input.url == null)) return
+        if ((input is ShareInput.LinkText) && input.text.isBlank()) return
 
         isProceeded = true
 
@@ -135,7 +139,7 @@ class ShareReceiveViewModel(
             }
 
             is ShareInput.LinkText -> {
-                if (input.url != null) {
+                if (input.text.isNotBlank()) {
                     _stepsState.value = ProgressStepsState(
                         step1Status = StepStatus.COMPLETED,
                         step2Status = StepStatus.PENDING,
@@ -149,7 +153,7 @@ class ShareReceiveViewModel(
                     )
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_no_url,
+                            messageResId = R.string.share_receive_error_empty,
                         ),
                     )
                 }
@@ -186,8 +190,8 @@ class ShareReceiveViewModel(
     fun startExtractStep(context: Context, roomId: String, shareInput: ShareInput) {
         Log.d(TAG, "startExtractStep called: roomId=$roomId, shareInput=$shareInput")
 
-        if (shareInput !is ShareInput.Screenshots) {
-            Log.w(TAG, "Unsupported shareInput type for extraction: $shareInput")
+        if (shareInput is ShareInput.Empty) {
+            Log.w(TAG, "ShareInput is Empty for extraction")
             isProceeded = false
             updateStep2Status(StepStatus.ERROR)
             updateStep3Status(StepStatus.ERROR)
@@ -196,7 +200,6 @@ class ShareReceiveViewModel(
                     messageResId = R.string.share_receive_error_could_not_find_places,
                 ),
             )
-            // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
             return
         }
 
@@ -209,12 +212,17 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.PENDING)
 
                 // 1. 방 정보(지역명) 조회
-                val roomSnapshot = db.collection("rooms")
-                    .document(roomId)
-                    .get()
-                    .await()
+                val roomRegion = if (roomRegionFetcher != null) {
+                    roomRegionFetcher.invoke(roomId)
+                } else {
+                    val firestore = db ?: FirebaseFirestore.getInstance()
+                    val roomSnapshot = firestore.collection("rooms")
+                        .document(roomId)
+                        .get()
+                        .await()
 
-                val roomRegion = roomSnapshot.getString("region")?.trim().orEmpty()
+                    roomSnapshot.getString("region")?.trim().orEmpty()
+                }
                 Log.d(TAG, "Fetched room region for roomId=$roomId: '$roomRegion'")
 
                 if (roomRegion.isBlank()) {
@@ -231,28 +239,80 @@ class ShareReceiveViewModel(
                     return@launch
                 }
 
-                // 2. 공유된 스크린샷마다 Gemini 추출 수행 (병렬 async/awaitAll, 스크린샷별 1회 재시도, 순서 유지)
+                // 2. 입력 형태(스크린샷 vs 공유 링크/텍스트)에 따라 Gemini 장소 추출 수행
                 val geminiExtractor = geminiExtractorFactory(appContext)
-                val extractionResponses = coroutineScope {
-                    shareInput.uris.map { uri ->
-                        async(Dispatchers.IO) {
-                            var response: GeminiExtractionResponse? = null
-                            var attempt = 0
-                            while (attempt < 2 && response == null) {
-                                try {
-                                    attempt++
-                                    Log.d(TAG, "Extracting places from screenshot URI (attempt $attempt): $uri")
-                                    response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
-                                } catch (e: Exception) {
-                                    Log.w(TAG, "Gemini extraction attempt $attempt failed for URI $uri: ${e.message}", e)
-                                    if (attempt >= 2) {
-                                        throw e
+                val webPageFetcher = webPageFetcherFactory()
+
+                val extractionResponses = when (shareInput) {
+                    is ShareInput.Screenshots -> {
+                        coroutineScope {
+                            shareInput.uris.map { uri ->
+                                async(Dispatchers.IO) {
+                                    var response: GeminiExtractionResponse? = null
+                                    var attempt = 0
+                                    while (attempt < 2 && response == null) {
+                                        try {
+                                            attempt++
+                                            Log.d(TAG, "Extracting places from screenshot URI (attempt $attempt): $uri")
+                                            response = geminiExtractor.extractFromScreenshot(uri, roomRegion)
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "Gemini extraction attempt $attempt failed for URI $uri: ${e.message}", e)
+                                            if (attempt >= 2) {
+                                                throw e
+                                            }
+                                        }
                                     }
+                                    response ?: throw IllegalStateException("Gemini response is null for URI: $uri")
+                                }
+                            }.awaitAll()
+                        }
+                    }
+
+                    is ShareInput.LinkText -> {
+                        val pageText = if (shareInput.url != null) {
+                            try {
+                                Log.d(TAG, "Fetching web page content for URL: ${shareInput.url}")
+                                webPageFetcher.fetchPageText(shareInput.url)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed to fetch page text from URL ${shareInput.url}, fallback to raw text: ${e.message}")
+                                shareInput.text
+                            }
+                        } else {
+                            shareInput.text
+                        }
+
+                        val targetText = combineShareAndPageText(
+                            shareText = shareInput.text,
+                            pageText = pageText,
+                        )
+                        if (targetText.isBlank()) {
+                            throw IllegalStateException("Text content is empty for link/text input")
+                        }
+
+                        var response: GeminiExtractionResponse? = null
+                        var attempt = 0
+                        while (attempt < 2 && response == null) {
+                            try {
+                                attempt++
+                                Log.d(TAG, "Extracting places from link/text (attempt $attempt)")
+                                response = geminiExtractor.extractFromText(targetText, roomRegion)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Gemini text extraction attempt $attempt failed: ${e.message}", e)
+                                if (attempt >= 2) {
+                                    throw e
                                 }
                             }
-                            response ?: throw IllegalStateException("Gemini response is null for URI: $uri")
                         }
-                    }.awaitAll()
+                        listOf(response ?: throw IllegalStateException("Gemini text response is null"))
+                    }
+
+                    ShareInput.Empty -> throw IllegalArgumentException("ShareInput is Empty")
                 }
 
                 // Step 2 완료: 텍스트 추출 완료
@@ -266,7 +326,7 @@ class ShareReceiveViewModel(
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
+                            messageResId = getNoPlacesErrorResId(shareInput),
                         ),
                     )
                     // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -277,8 +337,25 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.IN_PROGRESS)
 
                 // 3. 추출된 결과를 PlaceMatcher에 전달하여 카카오 장소 매칭 수행
+                val (sourceType, sourceUrl) = when (shareInput) {
+                    is ShareInput.Screenshots -> "screenshot" to null
+                    is ShareInput.LinkText -> {
+                        if (shareInput.url != null) {
+                            "link" to shareInput.url
+                        } else {
+                            "text" to null
+                        }
+                    }
+                    ShareInput.Empty -> "text" to null
+                }
+
                 val placeMatcher = placeMatcherFactory()
-                val matchResults = placeMatcher.matchPlaces(extractionResponses, roomRegion)
+                val matchResults = placeMatcher.matchPlaces(
+                    extractionResponses = extractionResponses,
+                    roomRegion = roomRegion,
+                    sourceType = sourceType,
+                    sourceUrl = sourceUrl,
+                )
 
                 // NOT_FOUND를 제외하고 카카오 매칭이 완료된 유효 장소 개수 계산
                 val validMatchedCount = matchResults.count { it.status != MatchResult.STATUS_NOT_FOUND }
@@ -289,7 +366,7 @@ class ShareReceiveViewModel(
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
                         ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
+                            messageResId = getNoPlacesErrorResId(shareInput),
                         ),
                     )
                     // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
@@ -317,6 +394,8 @@ class ShareReceiveViewModel(
                     ),
                 )
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error during extract step after retry: ${e.message}", e)
                 isProceeded = false
@@ -329,6 +408,14 @@ class ShareReceiveViewModel(
                 )
                 // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
             }
+        }
+    }
+
+    private fun getNoPlacesErrorResId(shareInput: ShareInput): Int {
+        return if (shareInput is ShareInput.LinkText && shareInput.url != null) {
+            R.string.share_receive_error_could_not_find_places_link
+        } else {
+            R.string.share_receive_error_could_not_find_places
         }
     }
 
