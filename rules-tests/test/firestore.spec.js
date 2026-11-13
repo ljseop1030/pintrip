@@ -677,12 +677,16 @@ describe("Firestore Security Rules Tests", () => {
 
       await assertSucceeds(batch.commit());
 
-      // Read back proof document using admin context
+      // Read back proof and room documents using admin context to assert timestamp equality
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const adminDb = context.firestore();
         const proofSnap = await adminDb.collection("inviteCodes").doc(code).collection("joinProofs").doc(joinUid).get();
+        const roomSnap = await adminDb.collection("rooms").doc(roomId).get();
+
         assert.strictEqual(proofSnap.exists, true);
         assert.ok(proofSnap.data().joinedAt != null);
+        assert.ok(typeof proofSnap.data().joinedAt.isEqual === "function");
+        assert.ok(proofSnap.data().joinedAt.isEqual(roomSnap.data().updatedAt));
       });
 
       // Read back room document using member's context to assert field values & timestamp update
@@ -842,11 +846,11 @@ describe("Firestore Security Rules Tests", () => {
       );
     });
 
-    it("rejects reusing proof for a different code or room or uid", async () => {
+    it("rejects reusing proof for a different code or room or uid and verifies correct match succeeds", async () => {
       const ownerUid = "owner_a";
       const joinUid = "user_b";
       const codeTarget = "K7P2QX";
-      const codeOther = "OTHERX";
+      const codeOther = "B8R3SY";
       const roomId = "room_target";
       const roomIdOther = "room_other";
       const now = new Date();
@@ -888,17 +892,26 @@ describe("Firestore Security Rules Tests", () => {
       await seedInviteCode(codeOther, { roomId: roomIdOther, createdAt: now });
 
       const db = getDb({ uid: joinUid });
-      const batch = db.batch();
 
-      // Mismatched proof code (OTHERX instead of K7P2QX)
-      batch.set(db.collection("inviteCodes").doc(codeOther).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
-      batch.update(db.collection("rooms").doc(roomId), {
+      // Mismatched proof code (B8R3SY instead of K7P2QX for room_target)
+      const batchMismatched = db.batch();
+      batchMismatched.set(db.collection("inviteCodes").doc(codeOther).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batchMismatched.update(db.collection("rooms").doc(roomId), {
         memberIds: [ownerUid, joinUid],
         "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
         updatedAt: serverTimestamp(),
       });
+      await assertFails(batchMismatched.commit());
 
-      await assertFails(batch.commit());
+      // Contrast: Matched proof code (K7P2QX for room_target) succeeds
+      const batchMatched = db.batch();
+      batchMatched.set(db.collection("inviteCodes").doc(codeTarget).collection("joinProofs").doc(joinUid), { joinedAt: serverTimestamp() });
+      batchMatched.update(db.collection("rooms").doc(roomId), {
+        memberIds: [ownerUid, joinUid],
+        "members.user_b": { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        updatedAt: serverTimestamp(),
+      });
+      await assertSucceeds(batchMatched.commit());
     });
 
     it("rejects client reading, updating, deleting, or listing EXISTING joinProofs", async () => {
