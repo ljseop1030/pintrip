@@ -68,13 +68,12 @@ class RoomListViewModelTest {
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
 
-        // 1. 완료 상태 설정 (NewJoin)
-        val successResult = JoinRoomResult.NewJoin(sampleRoom)
-        val field = RoomListViewModel::class.java.getDeclaredField("_joinSuccessResult")
-        field.isAccessible = true
-        (field.get(viewModel) as androidx.lifecycle.MutableLiveData<JoinRoomResult?>).value = successResult
+        // 1. 실제 joinRoomWithCode() 호출로 NewJoin 가입 완료 상태 생성
+        fakeRoomRepo.resultToReturn = JoinRoomResult.NewJoin(sampleRoom)
+        viewModel.joinRoomWithCode("K7P2QX")
 
-        assertEquals(successResult, viewModel.joinSuccessResult.value)
+        assertEquals(1, fakeRoomRepo.joinRoomCallCount)
+        assertEquals(JoinRoomResult.NewJoin(sampleRoom), viewModel.joinSuccessResult.value)
 
         // 2. 가입 완료 대기 중에는 다른 버튼/카드 클릭 거부
         viewModel.onRoomCardClick(sampleRoom)
@@ -90,7 +89,11 @@ class RoomListViewModelTest {
         viewModel.onDismissJoinSuccess()
         assertNull("사용자 취소 후 joinSuccessResult는 null이 되어야 함", viewModel.joinSuccessResult.value)
 
-        // 4. 취소 후 정상적으로 버튼 및 카드 클릭 허용
+        // 취소 직후 오래된 완료 버튼 콜백 호출 시 이동 이벤트 미발생 검증
+        viewModel.onViewPlacesFromJoinSuccess("room_123")
+        assertNull("취소 후 오래된 완료 버튼 콜백 호출 시 이동 이벤트가 발생하지 않아야 함", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
+
+        // 4. 취소 후 정상적으로 카드 클릭 허용
         viewModel.onRoomCardClick(sampleRoom)
         assertEquals("room_123", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
     }
@@ -101,32 +104,32 @@ class RoomListViewModelTest {
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
 
-        val successResult = JoinRoomResult.NewJoin(sampleRoom)
-        val field = RoomListViewModel::class.java.getDeclaredField("_joinSuccessResult")
-        field.isAccessible = true
-        (field.get(viewModel) as androidx.lifecycle.MutableLiveData<JoinRoomResult?>).value = successResult
+        // 1. 실제 가입으로 완료 상태 생성
+        fakeRoomRepo.resultToReturn = JoinRoomResult.NewJoin(sampleRoom)
+        viewModel.joinRoomWithCode("K7P2QX")
+        assertEquals(1, fakeRoomRepo.joinRoomCallCount)
 
-        // 1. 장소 목록 보기 선택
+        // 2. 장소 목록 보기 선택
         viewModel.onViewPlacesFromJoinSuccess("room_123")
         assertEquals("room_123", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
 
-        // 2. 이동 중 연타 시 중복 이벤트 차단
+        // 3. 이동 중 연타 시 중복 이벤트 차단
         viewModel.onViewPlacesFromJoinSuccess("room_123")
         assertNull("이동 중 연타 시 두 번째 이벤트는 없어야 함", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
 
-        // 3. launch 예외 발생 시 (onPlaceListLaunchFailed)
+        // 4. launch 예외 발생 시 (onPlaceListLaunchFailed)
         viewModel.onPlaceListLaunchFailed()
 
         // 결과 보존 및 실패 토스트 발송 확인
-        assertEquals(successResult, viewModel.joinSuccessResult.value)
+        assertEquals(JoinRoomResult.NewJoin(sampleRoom), viewModel.joinSuccessResult.value)
         assertEquals(R.string.place_list_error_cannot_open, viewModel.toastEvent.value?.getContentIfNotHandled())
 
-        // 4. 사용자가 완료창에서 다시 [장소 목록 보기] 재시도
+        // 5. 사용자가 완료창에서 다시 [장소 목록 보기] 재시도
         viewModel.onViewPlacesFromJoinSuccess("room_123")
         assertEquals("동일한 roomId로 1회 재시도 이동 이벤트 발생해야 함", "room_123", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
 
-        // Repository의 가입 batch 메서드가 재호출되지 않았음을 검증 (0회 호출)
-        assertEquals(0, fakeRoomRepo.joinRoomCallCount)
+        // Repository의 가입 batch 메서드가 재호출되지 않고 호출 횟수가 1로 유지되어야 함
+        assertEquals(1, fakeRoomRepo.joinRoomCallCount)
     }
 
     @Test
@@ -135,12 +138,9 @@ class RoomListViewModelTest {
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
 
-        val successResult = JoinRoomResult.NewJoin(sampleRoom)
-        val field = RoomListViewModel::class.java.getDeclaredField("_joinSuccessResult")
-        field.isAccessible = true
-        (field.get(viewModel) as androidx.lifecycle.MutableLiveData<JoinRoomResult?>).value = successResult
-
-        // 1. 장소 목록 보기 선택
+        // 1. 실제 가입으로 완료 상태 생성 후 이동 선택
+        fakeRoomRepo.resultToReturn = JoinRoomResult.NewJoin(sampleRoom)
+        viewModel.joinRoomWithCode("K7P2QX")
         viewModel.onViewPlacesFromJoinSuccess("room_123")
         assertEquals("room_123", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
 
@@ -148,7 +148,13 @@ class RoomListViewModelTest {
         viewModel.onPlaceListLaunchSuccess()
         assertNull("launch 성공 시 joinSuccessResult는 null이어야 함", viewModel.joinSuccessResult.value)
 
-        // 3. 이후 사용자 취소나 onViewPlaces 호출 시 무효한 이동 이벤트 발생 없음
+        // 3. 실제 장소 화면에서 복귀한 것처럼 잠금 해제
+        viewModel.resetNavigation()
+
+        // 4. 오래된 완료 버튼 콜백 호출 시 결과가 null이므로 무효한 이동 이벤트 발생 없음 검증
+        viewModel.onViewPlacesFromJoinSuccess("room_123")
+        assertNull("성공 후 오래된 버튼 콜백 호출 시 이동 이벤트가 발생하지 않아야 함", viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
+
         viewModel.onDismissJoinSuccess()
         viewModel.onViewPlacesFromJoinSuccess("room_123")
         assertNull(viewModel.navigateToPlaceList.value?.getContentIfNotHandled())
@@ -178,7 +184,6 @@ class RoomListViewModelTest {
     @Test
     fun scenario5_exceptionMappingBoundaryPreservesCauseAndReThrowsCancellation() {
         val dummyRepo = RoomRepository(null, null, null)
-
         val rootCause = RuntimeException("Network connection lost")
 
         // 1. NetworkUnavailable 예외 수신 및 cause 보존 검증
@@ -208,5 +213,30 @@ class RoomListViewModelTest {
             rethrown = true
         }
         assertTrue("CancellationException은 반드시 재던져져야 함", rethrown)
+
+        // 5. ViewModel의 RoomJoinException 하위 타입별 한국어 리소스 ID 분류 검증
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.NotLoggedIn()
+        viewModel.joinRoomWithCode("K7P2QX")
+        assertEquals(R.string.error_not_logged_in, viewModel.joinErrorMessageResId.value)
+
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.ProfileRequired("손상됨")
+        viewModel.joinRoomWithCode("K7P2QX")
+        assertEquals(R.string.error_profile_check_required, viewModel.joinErrorMessageResId.value)
+
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.NetworkUnavailable(rootCause)
+        viewModel.joinRoomWithCode("K7P2QX")
+        assertEquals(R.string.error_network_unavailable, viewModel.joinErrorMessageResId.value)
+
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.PermissionDenied()
+        viewModel.joinRoomWithCode("K7P2QX")
+        assertEquals(R.string.error_room_join_permission_denied, viewModel.joinErrorMessageResId.value)
+
+        fakeRoomRepo.exceptionToThrow = RoomJoinException.CodeNotFound()
+        viewModel.joinRoomWithCode("K7P2QX")
+        assertEquals(R.string.error_invite_code_not_found, viewModel.joinErrorMessageResId.value)
     }
 }

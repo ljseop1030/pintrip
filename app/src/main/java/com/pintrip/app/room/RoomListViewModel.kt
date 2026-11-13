@@ -231,9 +231,9 @@ class RoomListViewModel(
 
     fun onViewPlacesFromJoinSuccess(roomId: String) {
         if (isNavigating || _isJoining.value == true) return
-        val currentResult = _joinSuccessResult.value
-        val targetRoomId = currentResult?.room?.id ?: roomId
-        if (targetRoomId.isNotBlank()) {
+        val currentResult = _joinSuccessResult.value ?: return
+        val targetRoomId = currentResult.room.id
+        if (targetRoomId == roomId && targetRoomId.isNotBlank()) {
             isNavigating = true
             _navigateToPlaceList.value = Event(targetRoomId)
         } else {
