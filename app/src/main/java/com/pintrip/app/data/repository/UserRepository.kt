@@ -9,10 +9,12 @@ import kotlinx.coroutines.tasks.await
 /**
  * Firestore `users/{uid}` 컬렉션을 관리하는 Repository.
  */
-class UserRepository(
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+open class UserRepository(
+    db: FirebaseFirestore? = null,
+    auth: FirebaseAuth? = null,
 ) {
+    private val db: FirebaseFirestore by lazy { db ?: FirebaseFirestore.getInstance() }
+    private val auth: FirebaseAuth by lazy { auth ?: FirebaseAuth.getInstance() }
     companion object {
         val AVATAR_COLORS = listOf(
             "#3A4A90", "#FF5722", "#4CAF50", "#9C27B0",

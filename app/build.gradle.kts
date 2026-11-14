@@ -73,12 +73,13 @@ dependencies {
     implementation(libs.firebase.ai)
     implementation(libs.coroutines.play.services)
 
+    implementation(libs.jsoup)
+
     testImplementation(libs.junit)
     testImplementation(libs.androidx.core.testing)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.org.json)
-    implementation(libs.jsoup)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }

@@ -64,6 +64,15 @@ class PlaceListActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
+        binding.toolbar.inflateMenu(R.menu.menu_place_list)
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            if (menuItem.itemId == R.id.action_invite_code) {
+                viewModel.onInviteCodeClick()
+                true
+            } else {
+                false
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -109,10 +118,141 @@ class PlaceListActivity : AppCompatActivity() {
                     binding.rvPlaces.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = true
-                    binding.tvErrorMessage.text = state.message ?: getString(R.string.place_list_error_default)
+                    binding.tvErrorMessage.text = getString(state.messageResId)
                 }
             }
         }
+
+        viewModel.isInviteCodeDialogOpen.observe(this) { isOpen ->
+            if (isOpen) {
+                showInviteCodeDialog()
+            } else {
+                dismissInviteCodeDialog()
+            }
+        }
+
+        viewModel.inviteCodeUiState.observe(this) { state ->
+            val dialogBinding = inviteCodeDialogBinding
+            if (dialogBinding != null) {
+                renderInviteCodeDialogState(dialogBinding, state)
+            }
+        }
+    }
+
+    private var isCleaningUpForDestroy = false
+    private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
+    private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isCleaningUpForDestroy = true
+
+        inviteCodeDialog?.setOnDismissListener(null)
+        inviteCodeDialog?.dismiss()
+        inviteCodeDialog = null
+        inviteCodeDialogBinding = null
+    }
+
+    private fun showInviteCodeDialog() {
+        if (inviteCodeDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.DialogInviteCodeDisplayBinding.inflate(layoutInflater)
+        inviteCodeDialogBinding = dialogBinding
+
+        dialogBinding.tvTitle.text = getString(R.string.room_invite_code_title)
+        dialogBinding.tvSubtitle.text = getString(R.string.room_invite_code_subtext)
+
+        val currentState = viewModel.inviteCodeUiState.value ?: InviteCodeUiState.Idle
+        renderInviteCodeDialogState(dialogBinding, currentState)
+
+        dialogBinding.btnCopyCode.setOnClickListener {
+            val inviteCode = dialogBinding.tvInviteCode.text?.toString().orEmpty()
+            if (inviteCode.isNotBlank()) {
+                copyToClipboard(inviteCode)
+            }
+        }
+
+        dialogBinding.btnRetry.setOnClickListener {
+            viewModel.retryFetchInviteCode()
+        }
+
+        dialogBinding.btnConfirm.setOnClickListener {
+            dismissInviteCodeDialog()
+        }
+
+        inviteCodeDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .setOnDismissListener {
+                inviteCodeDialogBinding = null
+                inviteCodeDialog = null
+                if (!isCleaningUpForDestroy && !isChangingConfigurations) {
+                    viewModel.onInviteCodeDialogDismissed()
+                }
+            }
+            .show()
+    }
+
+    private fun renderInviteCodeDialogState(
+        dialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding,
+        state: InviteCodeUiState,
+    ) {
+        when (state) {
+            is InviteCodeUiState.Idle -> {
+                dialogBinding.pbLoading.isVisible = false
+                dialogBinding.cardCodeContainer.isVisible = false
+                dialogBinding.tvErrorMessage.isVisible = false
+                dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnRetry.isVisible = false
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
+            }
+            is InviteCodeUiState.Loading -> {
+                dialogBinding.pbLoading.isVisible = true
+                dialogBinding.cardCodeContainer.isVisible = false
+                dialogBinding.tvErrorMessage.isVisible = false
+                dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnRetry.isVisible = false
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
+            }
+            is InviteCodeUiState.Success -> {
+                dialogBinding.pbLoading.isVisible = false
+                dialogBinding.cardCodeContainer.isVisible = true
+                dialogBinding.tvInviteCode.text = state.inviteCode
+                dialogBinding.tvErrorMessage.isVisible = false
+                dialogBinding.btnCopyCode.isVisible = true
+                dialogBinding.btnCopyCode.isEnabled = true
+                dialogBinding.btnRetry.isVisible = false
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
+            }
+            is InviteCodeUiState.Error -> {
+                dialogBinding.pbLoading.isVisible = false
+                dialogBinding.cardCodeContainer.isVisible = false
+                dialogBinding.tvErrorMessage.isVisible = true
+                dialogBinding.tvErrorMessage.text = getString(state.messageResId)
+                dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnRetry.isVisible = true
+                dialogBinding.btnRetry.isEnabled = true
+                dialogBinding.btnConfirm.isVisible = true
+                dialogBinding.btnConfirm.text = getString(R.string.btn_close)
+            }
+        }
+    }
+
+    private fun dismissInviteCodeDialog() {
+        val dialog = inviteCodeDialog
+        inviteCodeDialogBinding = null
+        inviteCodeDialog = null
+        dialog?.dismiss()
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("invite_code", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, R.string.notice_invite_code_copied, Toast.LENGTH_SHORT).show()
     }
 
     private fun openKakaoPlaceUrl(url: String) {

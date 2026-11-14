@@ -130,7 +130,11 @@ class PlaceRepository(
             }
 
             if (newPlaces.isNotEmpty()) {
-                transaction.update(roomRef, "placeCount", FieldValue.increment(newPlaces.size.toLong()))
+                transaction.update(
+                    roomRef,
+                    "placeCount", FieldValue.increment(newPlaces.size.toLong()),
+                    "updatedAt", FieldValue.serverTimestamp(),
+                )
             }
 
             AddPlacesResult(

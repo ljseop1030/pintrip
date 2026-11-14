@@ -64,12 +64,12 @@ class RoomAdapter(
 
             // 아이콘 종류별 리소스 매핑
             val iconRes = when (room.icon) {
-                "sea" -> R.drawable.ic_room_map_route
-                "food" -> R.drawable.ic_pintrip_pin
-                "nature" -> R.drawable.ic_image
-                "city" -> R.drawable.ic_pintrip_pin
-                "healing" -> R.drawable.ic_check_circle
-                else -> R.drawable.ic_room_map_route
+                "sea" -> R.drawable.ic_room_category_sea
+                "food" -> R.drawable.ic_room_category_food
+                "nature" -> R.drawable.ic_room_category_nature
+                "city" -> R.drawable.ic_room_category_city
+                "healing" -> R.drawable.ic_room_category_healing
+                else -> R.drawable.ic_room_category_sea
             }
             binding.ivRoomIcon.setImageResource(iconRes)
 

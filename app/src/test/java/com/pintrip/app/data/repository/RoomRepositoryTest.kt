@@ -26,4 +26,24 @@ class RoomRepositoryTest {
         val expectedIcons = setOf("sea", "food", "nature", "city", "healing")
         assertEquals(expectedIcons, RoomRepository.VALID_ICONS)
     }
+
+    @Test
+    fun testJoinRoomResultSealedClassExposesRoom() {
+        val sampleRoom = com.pintrip.app.data.model.Room(id = "r1", name = "제주 여행", inviteCode = "K7P2QX")
+
+        val creatorResult: JoinRoomResult = JoinRoomResult.Creator(sampleRoom)
+        val existingResult: JoinRoomResult = JoinRoomResult.ExistingMember(sampleRoom)
+        val newJoinResult: JoinRoomResult = JoinRoomResult.NewJoin(sampleRoom)
+        val recheckedResult: JoinRoomResult = JoinRoomResult.Rechecked(sampleRoom)
+
+        assertEquals(sampleRoom, creatorResult.room)
+        assertEquals(sampleRoom, existingResult.room)
+        assertEquals(sampleRoom, newJoinResult.room)
+        assertEquals(sampleRoom, recheckedResult.room)
+
+        assertTrue(creatorResult is JoinRoomResult.Creator)
+        assertTrue(existingResult is JoinRoomResult.ExistingMember)
+        assertTrue(newJoinResult is JoinRoomResult.NewJoin)
+        assertTrue(recheckedResult is JoinRoomResult.Rechecked)
+    }
 }
