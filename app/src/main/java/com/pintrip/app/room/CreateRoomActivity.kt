@@ -184,7 +184,18 @@ class CreateRoomActivity : AppCompatActivity() {
         }
     }
 
+    private var isCleaningUpForDestroy = false
     private var codeDisplayDialog: androidx.appcompat.app.AlertDialog? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isCleaningUpForDestroy = true
+
+        codeDisplayDialog?.setOnDismissListener(null)
+        codeDisplayDialog?.setOnCancelListener(null)
+        codeDisplayDialog?.dismiss()
+        codeDisplayDialog = null
+    }
 
     private fun showCodeDisplayDialog(room: com.pintrip.app.data.model.Room) {
         if (codeDisplayDialog?.isShowing == true) return
@@ -209,13 +220,13 @@ class CreateRoomActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .setCancelable(true)
             .setOnCancelListener {
-                if (!isChangingConfigurations) {
+                if (!isCleaningUpForDestroy && !isChangingConfigurations) {
                     finishWithCreatedRoom(room)
                 }
             }
             .setOnDismissListener {
                 codeDisplayDialog = null
-                if (!isChangingConfigurations && !isFinishing) {
+                if (!isCleaningUpForDestroy && !isChangingConfigurations && !isFinishing) {
                     finishWithCreatedRoom(room)
                 }
             }

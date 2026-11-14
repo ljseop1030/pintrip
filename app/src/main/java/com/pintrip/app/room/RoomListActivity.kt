@@ -233,9 +233,25 @@ class RoomListActivity : AppCompatActivity() {
         }
     }
 
+    private var isCleaningUpForDestroy = false
     private var joinCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var joinCodeDialogBinding: com.pintrip.app.databinding.DialogJoinCodeBinding? = null
     private var joinSuccessDialog: androidx.appcompat.app.AlertDialog? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isCleaningUpForDestroy = true
+
+        joinCodeDialog?.setOnDismissListener(null)
+        joinCodeDialog?.dismiss()
+        joinCodeDialog = null
+        joinCodeDialogBinding = null
+
+        joinSuccessDialog?.setOnDismissListener(null)
+        joinSuccessDialog?.setOnCancelListener(null)
+        joinSuccessDialog?.dismiss()
+        joinSuccessDialog = null
+    }
 
     private fun showJoinSuccessDialog(result: com.pintrip.app.data.repository.JoinRoomResult) {
         if (joinSuccessDialog?.isShowing == true) return
@@ -271,12 +287,14 @@ class RoomListActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .setCancelable(true)
             .setOnCancelListener {
-                isUserExplicitDismiss = true
-                viewModel.onDismissJoinSuccess()
+                if (!isCleaningUpForDestroy && !isChangingConfigurations) {
+                    isUserExplicitDismiss = true
+                    viewModel.onDismissJoinSuccess()
+                }
             }
             .setOnDismissListener {
                 joinSuccessDialog = null
-                if (!isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
+                if (!isCleaningUpForDestroy && !isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
                     viewModel.onDismissJoinSuccess()
                 }
             }
@@ -335,7 +353,9 @@ class RoomListActivity : AppCompatActivity() {
             .setOnDismissListener {
                 joinCodeDialogBinding = null
                 joinCodeDialog = null
-                viewModel.onJoinDialogDismissed()
+                if (!isCleaningUpForDestroy && !isChangingConfigurations) {
+                    viewModel.onJoinDialogDismissed()
+                }
             }
             .show()
     }

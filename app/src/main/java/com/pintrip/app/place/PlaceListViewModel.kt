@@ -74,7 +74,8 @@ class PlaceListViewModel(
                     is FirebaseFirestoreException -> {
                         when (e.code) {
                             FirebaseFirestoreException.Code.PERMISSION_DENIED -> R.string.error_room_permission_denied
-                            FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
+                            FirebaseFirestoreException.Code.UNAVAILABLE,
+                            FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> R.string.error_network_unavailable
                             else -> R.string.place_list_error_default
                         }
                     }
@@ -128,7 +129,8 @@ class PlaceListViewModel(
                 @StringRes val resId = when (e) {
                     is FirebaseFirestoreException -> {
                         when (e.code) {
-                            FirebaseFirestoreException.Code.UNAVAILABLE -> R.string.error_network_unavailable
+                            FirebaseFirestoreException.Code.UNAVAILABLE,
+                            FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> R.string.error_network_unavailable
                             else -> R.string.error_load_invite_code_failed
                         }
                     }

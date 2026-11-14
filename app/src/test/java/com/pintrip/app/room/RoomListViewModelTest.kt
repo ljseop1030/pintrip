@@ -213,7 +213,16 @@ class RoomListViewModelTest {
         assertTrue("UNAUTHENTICATED 코드는 NotLoggedIn으로 변환되어야 함", mappedUnauth is RoomJoinException.NotLoggedIn)
         assertTrue("원래 예외가 cause로 보존되어야 함", mappedUnauth.cause === firestoreUnauth)
 
-        // 4. 프로필 읽기 중 네트워크 실패(firestoreUnavailable)가 ProfileRequired로 왜곡되지 않고 NetworkUnavailable 타입 유지
+        // 4. FirebaseFirestoreException DEADLINE_EXCEEDED -> RoomJoinException.NetworkUnavailable (cause 동일성 검증)
+        val firestoreDeadline = FirebaseFirestoreException(
+            "Deadline exceeded",
+            FirebaseFirestoreException.Code.DEADLINE_EXCEEDED,
+        )
+        val mappedDeadline = dummyRepo.mapToRoomJoinException(firestoreDeadline)
+        assertTrue("DEADLINE_EXCEEDED 코드는 NetworkUnavailable로 변환되어야 함", mappedDeadline is RoomJoinException.NetworkUnavailable)
+        assertTrue("원래 예외가 cause로 보존되어야 함", mappedDeadline.cause === firestoreDeadline)
+
+        // 5. 프로필 읽기 중 네트워크 실패(firestoreUnavailable)가 ProfileRequired로 왜곡되지 않고 NetworkUnavailable 타입 유지
         val mappedProfileNet = dummyRepo.mapToRoomJoinException(firestoreUnavailable)
         assertFalse("프로필 네트워크 에러는 ProfileRequired가 아니라 NetworkUnavailable이어야 함", mappedProfileNet is RoomJoinException.ProfileRequired)
         assertTrue(mappedProfileNet is RoomJoinException.NetworkUnavailable)

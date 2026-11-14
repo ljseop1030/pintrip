@@ -148,7 +148,7 @@
     <string name="btn_creating_room_in_progress">생성 중…</string>
     <string name="notice_creating_room_in_progress">여행방을 생성하고 있습니다. 잠시만 기다려 주세요.</string>
     <string name="hint_room_name">예: 부산 여행</string>
-    <string name="hint_region">예: 부산, 대전</string>
+    <string name="hint_region">예: 부산</string>
 
     <string name="btn_join_code">코드로 참여</string>
     <string name="btn_new_room">+ 방 만들기</string>

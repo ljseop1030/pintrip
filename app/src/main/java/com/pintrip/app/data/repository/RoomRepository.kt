@@ -260,7 +260,8 @@ open class RoomRepository(
         return when (e) {
             is com.google.firebase.firestore.FirebaseFirestoreException -> {
                 when (e.code) {
-                    com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAVAILABLE -> {
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAVAILABLE,
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> {
                         RoomJoinException.NetworkUnavailable(e)
                     }
                     com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED -> {

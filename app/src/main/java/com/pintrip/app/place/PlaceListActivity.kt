@@ -139,8 +139,19 @@ class PlaceListActivity : AppCompatActivity() {
         }
     }
 
+    private var isCleaningUpForDestroy = false
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isCleaningUpForDestroy = true
+
+        inviteCodeDialog?.setOnDismissListener(null)
+        inviteCodeDialog?.dismiss()
+        inviteCodeDialog = null
+        inviteCodeDialogBinding = null
+    }
 
     private fun showInviteCodeDialog() {
         if (inviteCodeDialog?.isShowing == true) return
@@ -175,7 +186,9 @@ class PlaceListActivity : AppCompatActivity() {
             .setOnDismissListener {
                 inviteCodeDialogBinding = null
                 inviteCodeDialog = null
-                viewModel.onInviteCodeDialogDismissed()
+                if (!isCleaningUpForDestroy && !isChangingConfigurations) {
+                    viewModel.onInviteCodeDialogDismissed()
+                }
             }
             .show()
     }
