@@ -19,9 +19,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://devrepo.kakao.com/nexus/repository/kakaomap-releases/") }
     }
 }
 
 rootProject.name = "pintrip"
 include(":app")
- 

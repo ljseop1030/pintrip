@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.coroutines.play.services)
 
     implementation(libs.jsoup)
+    implementation(libs.kakao.maps)
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.core.testing)

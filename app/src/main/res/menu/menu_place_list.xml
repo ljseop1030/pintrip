@@ -2,6 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_room_map"
+        android:icon="@drawable/ic_room_map"
+        android:title="@string/menu_room_map"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_invite_code"
         android:icon="@drawable/ic_link"
         android:title="@string/btn_view_invite_code"

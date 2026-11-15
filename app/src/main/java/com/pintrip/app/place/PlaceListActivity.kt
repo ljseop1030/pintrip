@@ -66,11 +66,19 @@ class PlaceListActivity : AppCompatActivity() {
         }
         binding.toolbar.inflateMenu(R.menu.menu_place_list)
         binding.toolbar.setOnMenuItemClickListener { menuItem ->
-            if (menuItem.itemId == R.id.action_invite_code) {
-                viewModel.onInviteCodeClick()
-                true
-            } else {
-                false
+            when (menuItem.itemId) {
+                R.id.action_room_map -> {
+                    val roomId = intent.getStringExtra(EXTRA_ROOM_ID)
+                    if (!roomId.isNullOrBlank()) {
+                        startActivity(com.pintrip.app.map.RoomMapActivity.newIntent(this, roomId))
+                    }
+                    true
+                }
+                R.id.action_invite_code -> {
+                    viewModel.onInviteCodeClick()
+                    true
+                }
+                else -> false
             }
         }
     }

@@ -234,4 +234,10 @@
     <string name="place_list_error_no_room_id">방 정보를 찾을 수 없습니다.</string>
     <string name="place_list_error_default">장소 목록을 불러오지 못했습니다.</string>
     <string name="place_list_error_cannot_open_url">링크를 열 수 있는 앱이 설치되어 있지 않습니다.</string>
+
+    <!-- Room Map Screen -->
+    <string name="title_activity_room_map">방 지도</string>
+    <string name="menu_room_map">지도</string>
+    <string name="room_map_error_room_not_found">방 정보를 찾을 수 없습니다.</string>
+    <string name="room_map_error_load_failed">장소 목록을 불러오지 못했습니다.</string>
 </resources>

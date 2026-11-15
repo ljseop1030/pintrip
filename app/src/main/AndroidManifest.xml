@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <application
+        android:name=".PinTripApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -84,6 +85,12 @@
             android:name=".place.PlaceListActivity"
             android:exported="false"
             android:label="@string/title_activity_place_list" />
+
+        <activity
+            android:name=".map.RoomMapActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:label="@string/title_activity_room_map" />
     </application>
 
 </manifest>
