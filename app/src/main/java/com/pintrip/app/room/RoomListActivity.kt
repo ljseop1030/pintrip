@@ -308,7 +308,6 @@ class RoomListActivity : AppCompatActivity() {
         dialogBinding.btnGoToList.setOnClickListener {
             isUserExplicitDismiss = true
             dismissJoinSuccessDialog()
-            viewModel.onDismissJoinSuccess(applicationContext)
         }
 
         joinSuccessDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -317,12 +316,11 @@ class RoomListActivity : AppCompatActivity() {
             .setOnCancelListener {
                 if (!isCleaningUpForDestroy && !isChangingConfigurations) {
                     isUserExplicitDismiss = true
-                    viewModel.onDismissJoinSuccess(applicationContext)
                 }
             }
             .setOnDismissListener {
                 joinSuccessDialog = null
-                if (!isCleaningUpForDestroy && !isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
+                if (!isCleaningUpForDestroy && !isChangingConfigurations && isUserExplicitDismiss) {
                     viewModel.onDismissJoinSuccess(applicationContext)
                 }
             }
