@@ -44,6 +44,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        handleIncomingDeepLink(intent)
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -60,6 +62,22 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.btnTestLogin.isEnabled = false
             verifyProfileAndNavigate(currentUser)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingDeepLink(intent)
+    }
+
+    private fun handleIncomingDeepLink(intent: Intent?) {
+        if (intent == null || intent.action != Intent.ACTION_VIEW) return
+        val code = com.pintrip.app.room.DeepLinkUtils.extractInviteCode(intent)
+        if (code != null) {
+            com.pintrip.app.room.PendingInviteManager.savePendingCode(this, code)
+        } else if (intent.data != null) {
+            com.pintrip.app.room.PendingInviteManager.clearPendingCode(this)
         }
     }
 

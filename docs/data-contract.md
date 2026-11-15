@@ -99,6 +99,15 @@ Separate collection so non-members never need read access to `rooms`, and duplic
 
 **Note:** This subcollection exists solely as an atomic proof of invite code possession during non-member room joining in Firestore Security Rules (`existsAfter` + `joinedAt == request.time`). It is not a duplicated member list or a separate feature. Client read/update/delete/list are blocked.
 
+#### Custom Deep Link URI & Pending Invite Policy
+- **Deep Link Format:** `pintrip://join?code={code}` (e.g. `pintrip://join?code=ABC234`)
+- **Scheme / Host / Query:** Scheme `pintrip` (case-insensitive), Host `join` (case-insensitive), Parameter `code`.
+- **Normalization & Validation:** Client converts to uppercase (`code.trim().uppercase()`) and validates regex `^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$`. Invalid/malformed URIs or codes are rejected and do not execute join requests.
+- **Pre-login Code Storage:** Saved in `SharedPreferences` (`pintrip_invite_prefs`, key: `pending_invite_code`).
+- **Lifecycle & Persistence:** Retained across login, sign-up, profile recovery, screen rotation, task stack clearing, and process death.
+- **Consumption:** Consumed and cleared when `RoomListActivity` populates the join code dialog (`DialogJoinCode`).
+- **Cleanup Policy:** Cleared upon valid consumption, explicit user cancellation, or unrecoverable invalid links. Retained on temporary network errors to allow user retries.
+
 ---
 
 ## 4. In-memory model: PlaceDetail (never stored)
