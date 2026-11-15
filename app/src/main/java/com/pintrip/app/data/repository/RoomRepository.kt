@@ -23,12 +23,45 @@ import java.security.SecureRandom
  *    프로필 누락/조회 실패 시 임의 기본값으로 덮지 않고 예외를 발생시킵니다.
  * 5. `getMyRooms`는 `memberIds` array-contains 조건 및 `updatedAt` 내림차순 정렬을 사용합니다.
  * 6. `lastSeenAt`은 방 생성 시점에는 null로 두고, 이번 단계에서 읽음 처리를 수행하지 않습니다.
- * 7. `updatedAt`은 생성 시점에만 서버 시각으로 초기화합니다.
+ * 7. `updatedAt`은 생성 시점, 코드로 가입 시점, 장소 신규 추가 시점에 서버 시각으로 갱신되어 내 방 목록의 최신순 정렬에 사용됩니다.
  */
-class RoomRepository(
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+sealed class JoinRoomResult {
+    abstract val room: Room
+
+    /** 현재 사용자가 해당 방의 생성자(방장)임 */
+    data class Creator(override val room: Room) : JoinRoomResult()
+
+    /** 현재 사용자가 이미 방의 멤버임 (방장 아님) */
+    data class ExistingMember(override val room: Room) : JoinRoomResult()
+
+    /** 신규 가입 성공 (원자적 batch 쓰기 완료) */
+    data class NewJoin(override val room: Room) : JoinRoomResult()
+
+    /** 네트워크/동시 요청 후 서버 멤버십 재확인으로 가입 확인됨 */
+    data class Rechecked(override val room: Room) : JoinRoomResult()
+}
+
+/**
+ * 방 가입 처리 중 발생하는 명시적 예외 클래스 정의.
+ */
+sealed class RoomJoinException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    class NotLoggedIn(cause: Throwable? = null) : RoomJoinException("로그인이 필요합니다.", cause)
+    class ProfileRequired(message: String, cause: Throwable? = null) : RoomJoinException(message, cause)
+    class InvalidCodeFormat : RoomJoinException("유효하지 않은 초대 코드 형식입니다.")
+    class CodeNotFound : RoomJoinException("존재하지 않는 초대 코드입니다.")
+    class NetworkUnavailable(cause: Throwable) : RoomJoinException("네트워크 연결 상태를 확인해 주세요.", cause)
+    class PermissionDenied(cause: Throwable? = null) : RoomJoinException("방 가입 권한이 없거나 요청이 거부되었습니다.", cause)
+    class Unknown(message: String, cause: Throwable? = null) : RoomJoinException(message, cause)
+}
+
+open class RoomRepository(
+    db: FirebaseFirestore? = null,
+    auth: FirebaseAuth? = null,
+    userRepository: UserRepository? = null,
 ) {
+    private val db: FirebaseFirestore by lazy { db ?: FirebaseFirestore.getInstance() }
+    private val auth: FirebaseAuth by lazy { auth ?: FirebaseAuth.getInstance() }
+    private val userRepository: UserRepository by lazy { userRepository ?: UserRepository(this.db, this.auth) }
 
     companion object {
         // 0, O, 1, I를 제외한 6자리 초대 코드용 문자셋 (총 32자)
@@ -182,7 +215,7 @@ class RoomRepository(
      * @return 최신 활동순으로 정렬된 [Room] 목록 (문서 ID가 `id` 필드에 바인딩됨)
      * @throws IllegalStateException 사용자가 로그인되어 있지 않은 경우
      */
-    suspend fun getMyRooms(source: Source = Source.DEFAULT): List<Room> {
+    open suspend fun getMyRooms(source: Source = Source.DEFAULT): List<Room> {
         val currentUser = auth.currentUser
         checkNotNull(currentUser) { "로그인된 사용자 정보가 없습니다. (Auth currentUser is null)" }
         val currentUid = currentUser.uid
@@ -207,7 +240,7 @@ class RoomRepository(
      * @param source 데이터 소스 ([Source.DEFAULT], [Source.SERVER], [Source.CACHE])
      * @return 방 정보가 존재하면 [Room], 없으면 null
      */
-    suspend fun getRoom(roomId: String, source: Source = Source.DEFAULT): Room? {
+    open suspend fun getRoom(roomId: String, source: Source = Source.DEFAULT): Room? {
         require(roomId.isNotBlank()) { "roomId는 비어 있을 수 없습니다." }
 
         val snapshot = db.collection("rooms").document(roomId).get(source).await()
@@ -217,6 +250,153 @@ class RoomRepository(
             }
         } else {
             null
+        }
+    }
+
+    fun mapToRoomJoinException(e: Throwable): RoomJoinException {
+        if (e is RoomJoinException) return e
+        if (e is kotlinx.coroutines.CancellationException) throw e
+
+        return when (e) {
+            is com.google.firebase.firestore.FirebaseFirestoreException -> {
+                when (e.code) {
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAVAILABLE,
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.DEADLINE_EXCEEDED -> {
+                        RoomJoinException.NetworkUnavailable(e)
+                    }
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
+                        RoomJoinException.PermissionDenied(e)
+                    }
+                    com.google.firebase.firestore.FirebaseFirestoreException.Code.UNAUTHENTICATED -> {
+                        RoomJoinException.NotLoggedIn(e)
+                    }
+                    else -> RoomJoinException.Unknown(e.message ?: "방 가입 중 오류가 발생했습니다.", e)
+                }
+            }
+            is com.google.firebase.auth.FirebaseAuthException -> {
+                RoomJoinException.NotLoggedIn(e)
+            }
+            else -> RoomJoinException.Unknown(e.message ?: "방 가입 중 오류가 발생했습니다.", e)
+        }
+    }
+
+    /**
+     * 초대 코드를 입력하여 여행방에 가입하거나, 이미 참여 중인 경우 명시적 결과를 반환합니다.
+     *
+     * docs/data-contract.md 및 AGENTS.md 규격을 준수합니다:
+     * 1. 입력된 코드의 앞뒤 공백을 제거하고 대문자로 정규화합니다 (`code.trim().uppercase()`).
+     * 2. 가입 전 비멤버 상태에서 `rooms/{roomId}` 문서를 직접 읽지 않습니다.
+     * 3. 이미 참여 중인지 여부는 `getMyRooms(Source.SERVER)` 조회를 통해 확인하며, 기존 방장/멤버인 경우 [JoinRoomResult.Creator] 또는 [JoinRoomResult.ExistingMember]를 반환합니다.
+     * 4. `inviteCodes/{code}` 단건 조회를 통해 `roomId`를 얻고, `inviteCodes/{code}/joinProofs/{uid}` 증빙 문서 생성과 `rooms/{roomId}` 멤버 추가 및 `updatedAt` 서버 시각 갱신을 단일 WriteBatch로 원자적 실행합니다.
+     * 5. 예외 발생 시 서버 멤버십을 재확인하여 동시 요청으로 이미 가입이 성공한 경우 [JoinRoomResult.Rechecked]를 반환합니다.
+     *
+     * @param code 6자리 초대 코드
+     * @return 가입 결과 명시적 구분 객체 [JoinRoomResult]
+     * @throws RoomJoinException 구체적으로 분류된 방 가입 예외
+     */
+    open suspend fun joinRoomWithCode(code: String): JoinRoomResult {
+        val normalizedCode = code.trim().uppercase()
+        if (!normalizedCode.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) {
+            throw RoomJoinException.InvalidCodeFormat()
+        }
+
+        val currentUser = auth.currentUser
+            ?: throw RoomJoinException.NotLoggedIn()
+        val currentUid = currentUser.uid
+
+        // 1. 이미 멤버인 방인지 본인 허용 경로(getMyRooms)로 사전 확인
+        val existingRooms = try {
+            getMyRooms(Source.SERVER)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            throw mapToRoomJoinException(e)
+        }
+
+        val existingRoom = existingRooms.find { it.inviteCode == normalizedCode }
+        if (existingRoom != null) {
+            return if (existingRoom.ownerId == currentUid) {
+                JoinRoomResult.Creator(existingRoom)
+            } else {
+                JoinRoomResult.ExistingMember(existingRoom)
+            }
+        }
+
+        // 2. 초대 코드 단건 조회 (비멤버도 get 허용)
+        val inviteSnapshot = try {
+            db.collection("inviteCodes").document(normalizedCode).get(Source.SERVER).await()
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            throw mapToRoomJoinException(e)
+        }
+
+        if (!inviteSnapshot.exists()) {
+            throw RoomJoinException.CodeNotFound()
+        }
+
+        val roomId = inviteSnapshot.getString("roomId")
+        if (roomId.isNullOrBlank()) {
+            throw RoomJoinException.CodeNotFound()
+        }
+
+        // 3. 사용자 프로필 조회
+        val userProfile = try {
+            userRepository.getUserProfile(currentUid, Source.DEFAULT)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            throw mapToRoomJoinException(e)
+        }
+
+        if (userProfile == null || userProfile.nickname.isBlank() || userProfile.avatarColor.isBlank()) {
+            throw RoomJoinException.ProfileRequired("사용자 프로필 문서가 비어 있거나 닉네임/아바타 색상이 유효하지 않습니다.")
+        }
+
+        val member = Member(
+            nickname = userProfile.nickname,
+            avatarColor = userProfile.avatarColor,
+            lastSeenAt = null,
+        )
+
+        // 4. 원자적 가입 처리: inviteCodes/{code}/joinProofs/{uid} 생성 + rooms/{roomId} 멤버 추가 및 updatedAt 갱신
+        val batch = db.batch()
+        val proofRef = db.collection("inviteCodes")
+            .document(normalizedCode)
+            .collection("joinProofs")
+            .document(currentUid)
+        val roomRef = db.collection("rooms").document(roomId)
+
+        batch.set(proofRef, mapOf("joinedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()))
+        batch.update(
+            roomRef,
+            "memberIds", com.google.firebase.firestore.FieldValue.arrayUnion(currentUid),
+            "members.$currentUid", member,
+            "updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp(),
+        )
+
+        try {
+            batch.commit().await()
+            val joinedRoom = getRoom(roomId, Source.SERVER)
+            checkNotNull(joinedRoom) { "방 가입 완료 후 방 정보를 불러오지 못했습니다: $roomId" }
+            return JoinRoomResult.NewJoin(joinedRoom)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) {
+                throw e
+            }
+            // 동시 요청 또는 네트워크 재시도로 이미 서버에서 가입 처리되었는지 안전하게 재확인
+            val recheckedRoom = try {
+                val recheckedRooms = getMyRooms(Source.SERVER)
+                recheckedRooms.find { it.id == roomId }
+            } catch (recheckError: Exception) {
+                if (recheckError is kotlinx.coroutines.CancellationException) {
+                    throw recheckError
+                }
+                null
+            }
+
+            if (recheckedRoom != null) {
+                return JoinRoomResult.Rechecked(recheckedRoom)
+            }
+
+            throw mapToRoomJoinException(e)
         }
     }
 }

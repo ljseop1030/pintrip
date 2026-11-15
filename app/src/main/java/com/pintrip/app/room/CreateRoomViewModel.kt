@@ -36,6 +36,9 @@ class CreateRoomViewModel(
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _createdRoom = MutableLiveData<Room?>()
+    val createdRoom: LiveData<Room?> = _createdRoom
+
     private val _createSuccessEvent = MutableLiveData<Event<Room>>()
     val createSuccessEvent: LiveData<Event<Room>> = _createSuccessEvent
 
@@ -59,7 +62,7 @@ class CreateRoomViewModel(
     }
 
     fun createRoom(name: String, region: String) {
-        if (_isLoading.value == true) return
+        if (_isLoading.value == true || _createdRoom.value != null) return
 
         val trimmedName = name.trim()
         val trimmedRegion = region.trim()
@@ -92,6 +95,8 @@ class CreateRoomViewModel(
                     endDate = end,
                     icon = _selectedIcon.value ?: "sea",
                 )
+                _createdRoom.value = createdRoom
+                _isLoading.value = false
                 _createSuccessEvent.value = Event(createdRoom)
             } catch (e: CancellationException) {
                 throw e
