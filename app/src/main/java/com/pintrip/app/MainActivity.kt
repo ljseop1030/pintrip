@@ -76,8 +76,6 @@ class MainActivity : AppCompatActivity() {
         val code = com.pintrip.app.room.DeepLinkUtils.extractInviteCode(intent)
         if (code != null) {
             com.pintrip.app.room.PendingInviteManager.savePendingCode(this, code)
-        } else if (intent.data != null) {
-            com.pintrip.app.room.PendingInviteManager.clearPendingCode(this)
         }
     }
 

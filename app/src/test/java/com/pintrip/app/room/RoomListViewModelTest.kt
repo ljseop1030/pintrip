@@ -162,30 +162,58 @@ class RoomListViewModelTest {
     }
 
     @Test
-    fun scenario4_creatorAndExistingMemberResultsSetJoinSuccessResult() {
+    fun scenario4_creatorAndExistingMemberResults_directCodeEntryShowsInlineNotice() {
         val fakeRoomRepo = FakeRoomRepository()
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
 
-        // 1. Creator 반환 검증
+        // 수동 클릭으로 직접 코드 입력 진입
+        viewModel.onJoinCodeClick()
+
+        // 1. 직접 입력시 Creator 반환 -> 인라인 에러 표시, joinSuccessResult null 유지
         fakeRoomRepo.resultToReturn = JoinRoomResult.Creator(sampleRoom)
-        viewModel.joinRoomWithCode("K7P2QX")
+        viewModel.joinRoomWithCode(null, "K7P2QX")
+
+        assertNull("직접 입력 시 Creator 반환은 joinSuccessResult가 null이어야 함", viewModel.joinSuccessResult.value)
+        assertEquals("방장 안내 문구가 설정되어야 함", R.string.notice_join_own_room, viewModel.joinErrorMessageResId.value)
+
+        // 2. 직접 입력시 ExistingMember 반환 -> 인라인 에러 표시, joinSuccessResult null 유지
+        fakeRoomRepo.resultToReturn = JoinRoomResult.ExistingMember(sampleRoom)
+        viewModel.joinRoomWithCode(null, "B8R3SY")
+
+        assertNull("직접 입력 시 ExistingMember 반환은 joinSuccessResult가 null이어야 함", viewModel.joinSuccessResult.value)
+        assertEquals("기존 멤버 안내 문구가 설정되어야 함", R.string.notice_already_joined_room, viewModel.joinErrorMessageResId.value)
+    }
+
+    @Test
+    fun scenario4b_creatorAndExistingMemberResults_deepLinkShowsSuccessDialog() {
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        // 딥링크 수신으로 진입
+        viewModel.handleDeepLinkCode(null, "K7P2QX")
+
+        // 1. 딥링크 경로 Creator 반환 -> completion dialog 표시
+        fakeRoomRepo.resultToReturn = JoinRoomResult.Creator(sampleRoom)
+        viewModel.joinRoomWithCode(null, "K7P2QX")
 
         assertEquals(JoinRoomResult.Creator(sampleRoom), viewModel.joinSuccessResult.value)
         assertFalse("Creator 처리 후 입력을 위한 대화창은 닫혀야 함", viewModel.isJoinDialogOpen.value == true)
 
         viewModel.onDismissJoinSuccess()
 
-        // 2. ExistingMember 반환 검증
+        // 2. 딥링크 경로 ExistingMember 반환 -> completion dialog 표시
+        viewModel.handleDeepLinkCode(null, "B8R3SY")
         fakeRoomRepo.resultToReturn = JoinRoomResult.ExistingMember(sampleRoom)
-        viewModel.joinRoomWithCode("B8R3SY")
+        viewModel.joinRoomWithCode(null, "B8R3SY")
 
         assertEquals(JoinRoomResult.ExistingMember(sampleRoom), viewModel.joinSuccessResult.value)
         assertFalse("ExistingMember 처리 후 입력을 위한 대화창은 닫혀야 함", viewModel.isJoinDialogOpen.value == true)
     }
 
     @Test
-    fun scenario6_checkPendingInvite_consumesCodeAndOpensDialog() {
+    fun scenario6_checkPendingInvite_preservesCodeInStorageUntilConsumedOrCanceled() {
         val fakeRoomRepo = FakeRoomRepository()
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
@@ -200,7 +228,12 @@ class RoomListViewModelTest {
 
             assertTrue("대기 중인 코드가 있을 경우 초대 대화창이 오픈되어야 함", viewModel.isJoinDialogOpen.value == true)
             assertEquals("K7P2QX", viewModel.joinCodeInput.value)
-            assertNull("소비 후 저장소의 대기 코드는 삭제되어야 함", PendingInviteManager.getPendingCode(null))
+            // 단순히 참여창을 띄우는 것만으로는 저장소에서 삭제하지 않음 (프로세스 재생성 복원 보장)
+            assertEquals("K7P2QX", PendingInviteManager.getPendingCode(null))
+
+            // 사용자가 명시적으로 취소한 경우 저장소에서 삭제
+            viewModel.onJoinDialogDismissed(null)
+            assertNull("명시적 취소 후 저장소의 대기 코드는 삭제되어야 함", PendingInviteManager.getPendingCode(null))
         } finally {
             PendingInviteManager.preferenceOverride = null
         }
@@ -212,14 +245,22 @@ class RoomListViewModelTest {
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
 
-        viewModel.handleDeepLinkCode("b8r3sy")
+        val fakePrefs = FakeSharedPreferences()
+        PendingInviteManager.preferenceOverride = fakePrefs
 
-        assertTrue("핫 딥링크 수신 시 초대 대화창이 오픈되어야 함", viewModel.isJoinDialogOpen.value == true)
-        assertEquals("B8R3SY", viewModel.joinCodeInput.value)
+        try {
+            viewModel.handleDeepLinkCode(null, "b8r3sy")
+
+            assertTrue("핫 딥링크 수신 시 초대 대화창이 오픈되어야 함", viewModel.isJoinDialogOpen.value == true)
+            assertEquals("B8R3SY", viewModel.joinCodeInput.value)
+            assertEquals("B8R3SY", PendingInviteManager.getPendingCode(null))
+        } finally {
+            PendingInviteManager.preferenceOverride = null
+        }
     }
 
     @Test
-    fun scenario8_deepLinkDuringIncorporateJoin_doesNotOverwriteInProgressJoin() {
+    fun scenario8_deepLinkDuringIncorporateJoin_doesNotOverwriteInProgressJoinAndPreservesSecondCode() {
         val fakeRoomRepo = object : FakeRoomRepository() {
             override suspend fun joinRoomWithCode(code: String): JoinRoomResult {
                 kotlinx.coroutines.delay(1000)
@@ -236,19 +277,53 @@ class RoomListViewModelTest {
             val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
             Dispatchers.setMain(testDispatcher)
 
-            viewModel.joinRoomWithCode("K7P2QX")
+            viewModel.handleDeepLinkCode(null, "K7P2QX")
+            viewModel.joinRoomWithCode(null, "K7P2QX")
             testDispatcher.scheduler.runCurrent()
 
             assertTrue("가입 실행 중이므로 isJoining은 true여야 함", viewModel.isJoining.value == true)
             assertEquals("K7P2QX", viewModel.joinCodeInput.value)
 
-            PendingInviteManager.savePendingCode(null, "NEW234")
-            viewModel.checkPendingInvite(null)
+            // 방 A 가입 시도 중 방 B 딥링크 수신
+            viewModel.handleDeepLinkCode(null, "NEW234")
 
+            // 진행 중인 방 A 가입 입력을 덮어쓰지 않고, 방 B 코드는 저장소에 보존되어야 함
             assertEquals("K7P2QX", viewModel.joinCodeInput.value)
             assertEquals("NEW234", PendingInviteManager.getPendingCode(null))
 
+            // 방 A 가입 완료 처리
             testDispatcher.scheduler.advanceUntilIdle()
+
+            // 방 A 가입 성공으로 방 A 코드는 정리되었지만, 방 B 코드는 삭제되지 않고 보존됨을 검증
+            assertEquals("NEW234", PendingInviteManager.getPendingCode(null))
+        } finally {
+            PendingInviteManager.preferenceOverride = null
+        }
+    }
+
+    @Test
+    fun scenario9_unrecoverableCodeNotFoundClearsPendingCode_whileNetworkErrorPreservesIt() {
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        val fakePrefs = FakeSharedPreferences()
+        PendingInviteManager.preferenceOverride = fakePrefs
+
+        try {
+            // 1. CodeNotFound (서버 무효 코드) 발생 시 저장소에서 삭제 검증
+            PendingInviteManager.savePendingCode(null, "K7P2QX")
+            fakeRoomRepo.exceptionToThrow = RoomJoinException.CodeNotFound()
+
+            viewModel.joinRoomWithCode(null, "K7P2QX")
+            assertNull("CodeNotFound 발생 시 임시 저장소에서 코드 삭제되어야 함", PendingInviteManager.getPendingCode(null))
+
+            // 2. NetworkUnavailable (일시적 네트워크 에러) 발생 시 저장소에 유지 검증
+            PendingInviteManager.savePendingCode(null, "B8R3SY")
+            fakeRoomRepo.exceptionToThrow = RoomJoinException.NetworkUnavailable(Throwable("Net error"))
+
+            viewModel.joinRoomWithCode(null, "B8R3SY")
+            assertEquals("NetworkUnavailable 발생 시 재시도를 위해 임시 저장소에 코드가 보존되어야 함", "B8R3SY", PendingInviteManager.getPendingCode(null))
         } finally {
             PendingInviteManager.preferenceOverride = null
         }

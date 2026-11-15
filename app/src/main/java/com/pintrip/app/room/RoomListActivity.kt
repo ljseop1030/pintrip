@@ -72,7 +72,7 @@ class RoomListActivity : AppCompatActivity() {
         setIntent(intent)
         val code = DeepLinkUtils.extractInviteCode(intent)
         if (code != null) {
-            viewModel.handleDeepLinkCode(code)
+            viewModel.handleDeepLinkCode(this, code)
         }
     }
 
@@ -357,7 +357,7 @@ class RoomListActivity : AppCompatActivity() {
 
         dialogBinding.btnJoin.setOnClickListener {
             val code = dialogBinding.etInviteCode.text?.toString().orEmpty()
-            viewModel.joinRoomWithCode(code)
+            viewModel.joinRoomWithCode(this, code)
         }
 
         joinCodeDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -367,7 +367,7 @@ class RoomListActivity : AppCompatActivity() {
                 joinCodeDialogBinding = null
                 joinCodeDialog = null
                 if (!isCleaningUpForDestroy && !isChangingConfigurations) {
-                    viewModel.onJoinDialogDismissed()
+                    viewModel.onJoinDialogDismissed(this)
                 }
             }
             .show()

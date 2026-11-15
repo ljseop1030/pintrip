@@ -142,6 +142,9 @@ class RoomListViewModel(
         }
     }
 
+    private var isFromDeepLink: Boolean = false
+    private var activeJoiningCode: String? = null
+
     fun onCreateRoomClick() {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
         isNavigating = true
@@ -150,6 +153,7 @@ class RoomListViewModel(
 
     fun onJoinCodeClick() {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
+        isFromDeepLink = false
         _joinErrorMessageResId.value = null
         _isJoinDialogOpen.value = true
     }
@@ -163,34 +167,42 @@ class RoomListViewModel(
         }
     }
 
-    fun onJoinDialogDismissed() {
+    fun onJoinDialogDismissed(context: android.content.Context? = null) {
         if (_isJoining.value == true) return
+        val currentInput = _joinCodeInput.value.orEmpty()
         _isJoinDialogOpen.value = false
         _joinErrorMessageResId.value = null
+        _joinCodeInput.value = ""
+        if (isFromDeepLink && currentInput.isNotBlank()) {
+            PendingInviteManager.clearPendingCodeIf(context, currentInput)
+        }
+        isFromDeepLink = false
     }
 
     fun checkPendingInvite(context: android.content.Context?) {
         val pendingCode = PendingInviteManager.getPendingCode(context) ?: return
-        if (_isJoining.value == true || _joinSuccessResult.value != null) {
+        if (_isJoining.value == true || _joinSuccessResult.value != null || _isJoinDialogOpen.value == true) {
             return
         }
-        PendingInviteManager.clearPendingCode(context)
+        isFromDeepLink = true
         _joinCodeInput.value = pendingCode
         _joinErrorMessageResId.value = null
         _isJoinDialogOpen.value = true
     }
 
-    fun handleDeepLinkCode(code: String) {
+    fun handleDeepLinkCode(context: android.content.Context?, code: String) {
         val normalized = code.trim().uppercase()
         if (!normalized.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) return
+        PendingInviteManager.savePendingCode(context, normalized)
         if (_isJoining.value == true) return
 
+        isFromDeepLink = true
         _joinCodeInput.value = normalized
         _joinErrorMessageResId.value = null
         _isJoinDialogOpen.value = true
     }
 
-    fun joinRoomWithCode(rawCode: String) {
+    fun joinRoomWithCode(context: android.content.Context?, rawCode: String) {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
 
         val trimmedCode = rawCode.trim().uppercase()
@@ -200,22 +212,42 @@ class RoomListViewModel(
             return
         }
 
+        activeJoiningCode = trimmedCode
         _isJoining.value = true
 
         viewModelScope.launch {
             try {
                 val result = roomRepository.joinRoomWithCode(trimmedCode)
                 _isJoining.value = false
-                when (result) {
-                    is com.pintrip.app.data.repository.JoinRoomResult.Creator,
-                    is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember,
-                    is com.pintrip.app.data.repository.JoinRoomResult.NewJoin,
-                    is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
-                        _isJoinDialogOpen.value = false
-                        _joinCodeInput.value = ""
-                        _joinErrorMessageResId.value = null
-                        loadRooms(forceRefresh = true)
-                        _joinSuccessResult.value = result
+                PendingInviteManager.clearPendingCodeIf(context, trimmedCode)
+
+                if (activeJoiningCode == trimmedCode) {
+                    when (result) {
+                        is com.pintrip.app.data.repository.JoinRoomResult.Creator,
+                        is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember -> {
+                            if (isFromDeepLink) {
+                                _isJoinDialogOpen.value = false
+                                _joinCodeInput.value = ""
+                                _joinErrorMessageResId.value = null
+                                _joinSuccessResult.value = result
+                                loadRooms(forceRefresh = true)
+                            } else {
+                                val resId = if (result is com.pintrip.app.data.repository.JoinRoomResult.Creator) {
+                                    R.string.notice_join_own_room
+                                } else {
+                                    R.string.notice_already_joined_room
+                                }
+                                _joinErrorMessageResId.value = resId
+                            }
+                        }
+                        is com.pintrip.app.data.repository.JoinRoomResult.NewJoin,
+                        is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
+                            _isJoinDialogOpen.value = false
+                            _joinCodeInput.value = ""
+                            _joinErrorMessageResId.value = null
+                            _joinSuccessResult.value = result
+                            loadRooms(forceRefresh = true)
+                        }
                     }
                 }
             } catch (e: CancellationException) {
@@ -226,6 +258,10 @@ class RoomListViewModel(
                     Log.e(TAG, "Failed to join room due to RoomJoinException", e)
                 }
                 _isJoining.value = false
+                if (e is RoomJoinException.CodeNotFound || e is RoomJoinException.InvalidCodeFormat) {
+                    PendingInviteManager.clearPendingCodeIf(context, trimmedCode)
+                }
+
                 @StringRes val resId = when (e) {
                     is RoomJoinException.NotLoggedIn -> R.string.error_not_logged_in
                     is RoomJoinException.ProfileRequired -> R.string.error_profile_check_required
@@ -235,15 +271,23 @@ class RoomListViewModel(
                     is RoomJoinException.PermissionDenied -> R.string.error_room_join_permission_denied
                     is RoomJoinException.Unknown -> R.string.error_room_join_default
                 }
-                _joinErrorMessageResId.value = resId
+                if (activeJoiningCode == trimmedCode) {
+                    _joinErrorMessageResId.value = resId
+                }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "Failed to join room due to unexpected exception", e)
                 }
                 _isJoining.value = false
-                _joinErrorMessageResId.value = R.string.error_room_join_default
+                if (activeJoiningCode == trimmedCode) {
+                    _joinErrorMessageResId.value = R.string.error_room_join_default
+                }
             }
         }
+    }
+
+    fun joinRoomWithCode(rawCode: String) {
+        joinRoomWithCode(null, rawCode)
     }
 
     fun onViewPlacesFromJoinSuccess(roomId: String) {
