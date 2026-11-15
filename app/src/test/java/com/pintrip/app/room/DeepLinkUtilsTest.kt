@@ -19,6 +19,12 @@ class DeepLinkUtilsTest {
     }
 
     @Test
+    fun extractInviteCode_validUriWithSlashPath_returnsCode() {
+        val extracted = DeepLinkUtils.extractInviteCode("pintrip://join/?code=k7p2qx")
+        assertEquals("K7P2QX", extracted)
+    }
+
+    @Test
     fun extractInviteCode_caseInsensitiveSchemeAndHost_returnsCode() {
         val extracted = DeepLinkUtils.extractInviteCode("PINTRIP://JOIN?code=B8R3SY")
         assertEquals("B8R3SY", extracted)
@@ -32,6 +38,31 @@ class DeepLinkUtilsTest {
     @Test
     fun extractInviteCode_invalidHost_returnsNull() {
         assertNull(DeepLinkUtils.extractInviteCode("pintrip://invite?code=K7P2QX"))
+    }
+
+    @Test
+    fun extractInviteCode_nonStandardPath_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join/extra/path?code=K7P2QX"))
+    }
+
+    @Test
+    fun extractInviteCode_duplicateCodeParam_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join?code=K7P2QX&code=B8R3SY"))
+    }
+
+    @Test
+    fun extractInviteCode_uriWithUserInfo_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://user:pass@join?code=K7P2QX"))
+    }
+
+    @Test
+    fun extractInviteCode_uriWithPort_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join:8080?code=K7P2QX"))
+    }
+
+    @Test
+    fun extractInviteCode_uriWithFragment_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join?code=K7P2QX#section"))
     }
 
     @Test

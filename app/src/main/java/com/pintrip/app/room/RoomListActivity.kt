@@ -64,7 +64,7 @@ class RoomListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.resetNavigation()
-        viewModel.checkPendingInvite(this)
+        viewModel.checkPendingInvite(applicationContext)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -72,7 +72,9 @@ class RoomListActivity : AppCompatActivity() {
         setIntent(intent)
         val code = DeepLinkUtils.extractInviteCode(intent)
         if (code != null) {
-            viewModel.handleDeepLinkCode(this, code)
+            viewModel.handleDeepLinkCode(applicationContext, code)
+        } else {
+            viewModel.checkPendingInvite(applicationContext)
         }
     }
 
@@ -293,7 +295,7 @@ class RoomListActivity : AppCompatActivity() {
         dialogBinding.btnGoToList.setOnClickListener {
             isUserExplicitDismiss = true
             dismissJoinSuccessDialog()
-            viewModel.onDismissJoinSuccess()
+            viewModel.onDismissJoinSuccess(applicationContext)
         }
 
         joinSuccessDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -302,13 +304,13 @@ class RoomListActivity : AppCompatActivity() {
             .setOnCancelListener {
                 if (!isCleaningUpForDestroy && !isChangingConfigurations) {
                     isUserExplicitDismiss = true
-                    viewModel.onDismissJoinSuccess()
+                    viewModel.onDismissJoinSuccess(applicationContext)
                 }
             }
             .setOnDismissListener {
                 joinSuccessDialog = null
                 if (!isCleaningUpForDestroy && !isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
-                    viewModel.onDismissJoinSuccess()
+                    viewModel.onDismissJoinSuccess(applicationContext)
                 }
             }
             .show()
@@ -357,7 +359,7 @@ class RoomListActivity : AppCompatActivity() {
 
         dialogBinding.btnJoin.setOnClickListener {
             val code = dialogBinding.etInviteCode.text?.toString().orEmpty()
-            viewModel.joinRoomWithCode(this, code)
+            viewModel.joinRoomWithCode(applicationContext, code)
         }
 
         joinCodeDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -367,7 +369,7 @@ class RoomListActivity : AppCompatActivity() {
                 joinCodeDialogBinding = null
                 joinCodeDialog = null
                 if (!isCleaningUpForDestroy && !isChangingConfigurations) {
-                    viewModel.onJoinDialogDismissed(this)
+                    viewModel.onJoinDialogDismissed(applicationContext)
                 }
             }
             .show()

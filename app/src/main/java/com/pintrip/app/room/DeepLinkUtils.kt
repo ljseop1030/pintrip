@@ -9,7 +9,9 @@ import android.net.Uri
  * 규격: `pintrip://join?code=ABC234`
  * - scheme: pintrip (대소문자 미구분)
  * - host: join (대소문자 미구분)
- * - query param: code (6자리 영문 대문자 및 숫자, 0/O/1/I 제외)
+ * - path: 비어 있거나 "/"
+ * - query param: code (단 1개만 허용, 6자리 영문 대문자 및 숫자, 0/O/1/I 제외)
+ * - userInfo, port, fragment 등 비표준 요소가 포함된 경우 거부
  */
 object DeepLinkUtils {
     const val SCHEME_PINTRIP = "pintrip"
@@ -44,7 +46,7 @@ object DeepLinkUtils {
     }
 
     /**
-     * URI 문자열 표현에서 scheme, host, code 파라미터를 검사하여 유효한 초대 코드를 추출합니다.
+     * URI 문자열 표현에서 엄격한 구문 검사를 수행하여 유효한 초대 코드를 추출합니다.
      */
     fun extractInviteCode(uriString: String?): String? {
         if (uriString.isNullOrBlank()) return null
@@ -55,13 +57,23 @@ object DeepLinkUtils {
 
             if (scheme != SCHEME_PINTRIP || host != HOST_JOIN) return null
 
-            val query = javaUri.rawQuery ?: return null
-            val codeParam = query.split("&")
-                .map { it.split("=") }
-                .firstOrNull { it.size == 2 && it[0].equals(PARAM_CODE, ignoreCase = true) }
-                ?.get(1) ?: return null
+            // 비표준 경로, 포트, 사용자 정보, 해시(fragment)가 포함된 경우 거부
+            val path = javaUri.path
+            if (!path.isNullOrEmpty() && path != "/") return null
+            if (!javaUri.userInfo.isNullOrBlank()) return null
+            if (javaUri.port != -1) return null
+            if (!javaUri.fragment.isNullOrBlank()) return null
 
-            val decodedCode = java.net.URLDecoder.decode(codeParam, "UTF-8")
+            val query = javaUri.rawQuery ?: return null
+            val codeParams = query.split("&")
+                .map { it.split("=") }
+                .filter { it.size == 2 && it[0].equals(PARAM_CODE, ignoreCase = true) }
+
+            // code 파라미터가 없거나 중복(2개 이상) 정의된 경우 거부
+            if (codeParams.size != 1) return null
+
+            val rawCodeVal = codeParams[0][1]
+            val decodedCode = java.net.URLDecoder.decode(rawCodeVal, "UTF-8")
             val normalizedCode = decodedCode.trim().uppercase()
 
             if (normalizedCode.matches(CODE_REGEX)) {

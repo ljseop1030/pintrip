@@ -144,6 +144,7 @@ class RoomListViewModel(
 
     private var isFromDeepLink: Boolean = false
     private var activeJoiningCode: String? = null
+    private var activePendingCode: String? = null
 
     fun onCreateRoomClick() {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
@@ -153,6 +154,7 @@ class RoomListViewModel(
 
     fun onJoinCodeClick() {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
+        activePendingCode = null
         isFromDeepLink = false
         _joinErrorMessageResId.value = null
         _isJoinDialogOpen.value = true
@@ -169,12 +171,13 @@ class RoomListViewModel(
 
     fun onJoinDialogDismissed(context: android.content.Context? = null) {
         if (_isJoining.value == true) return
-        val currentInput = _joinCodeInput.value.orEmpty()
+        val pendingToClear = activePendingCode
+        activePendingCode = null
         _isJoinDialogOpen.value = false
         _joinErrorMessageResId.value = null
         _joinCodeInput.value = ""
-        if (isFromDeepLink && currentInput.isNotBlank()) {
-            PendingInviteManager.clearPendingCodeIf(context, currentInput)
+        if (isFromDeepLink && !pendingToClear.isNullOrBlank()) {
+            PendingInviteManager.clearPendingCodeIf(context, pendingToClear)
         }
         isFromDeepLink = false
     }
@@ -184,6 +187,7 @@ class RoomListViewModel(
         if (_isJoining.value == true || _joinSuccessResult.value != null || _isJoinDialogOpen.value == true) {
             return
         }
+        activePendingCode = pendingCode
         isFromDeepLink = true
         _joinCodeInput.value = pendingCode
         _joinErrorMessageResId.value = null
@@ -196,6 +200,7 @@ class RoomListViewModel(
         PendingInviteManager.savePendingCode(context, normalized)
         if (_isJoining.value == true) return
 
+        activePendingCode = normalized
         isFromDeepLink = true
         _joinCodeInput.value = normalized
         _joinErrorMessageResId.value = null
@@ -220,6 +225,9 @@ class RoomListViewModel(
                 val result = roomRepository.joinRoomWithCode(trimmedCode)
                 _isJoining.value = false
                 PendingInviteManager.clearPendingCodeIf(context, trimmedCode)
+                if (activePendingCode == trimmedCode) {
+                    activePendingCode = null
+                }
 
                 if (activeJoiningCode == trimmedCode) {
                     when (result) {
@@ -260,6 +268,9 @@ class RoomListViewModel(
                 _isJoining.value = false
                 if (e is RoomJoinException.CodeNotFound || e is RoomJoinException.InvalidCodeFormat) {
                     PendingInviteManager.clearPendingCodeIf(context, trimmedCode)
+                    if (activePendingCode == trimmedCode) {
+                        activePendingCode = null
+                    }
                 }
 
                 @StringRes val resId = when (e) {
@@ -311,8 +322,9 @@ class RoomListViewModel(
         _toastEvent.value = Event(R.string.place_list_error_cannot_open)
     }
 
-    fun onDismissJoinSuccess() {
+    fun onDismissJoinSuccess(context: android.content.Context? = null) {
         _joinSuccessResult.value = null
+        checkPendingInvite(context)
     }
 
     fun onRoomCardClick(room: Room) {
