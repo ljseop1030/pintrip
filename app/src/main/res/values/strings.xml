@@ -172,6 +172,9 @@
     <string name="created_room_code_subtext">아래 초대 코드를 친구들에게 공유하여 함께 장소를 모아보세요.</string>
     <string name="created_room_code_label">초대 코드</string>
     <string name="btn_copy_code">코드 복사</string>
+    <string name="btn_share_link">링크 공유</string>
+    <string name="title_share_invite_link">초대 링크 공유</string>
+    <string name="share_invite_link_format">[PinTrip] 여행방 초대\n초대 코드: %1$s\n초대 링크: %2$s</string>
     <string name="btn_go_to_room">목록으로</string>
     <string name="notice_invite_code_copied">초대 코드가 클립보드에 복사되었습니다.</string>
 
@@ -183,6 +186,8 @@
     <!-- Join Result Notices & Dialogs -->
     <string name="notice_join_own_room">직접 만든 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
     <string name="notice_already_joined_room">이미 참여 중인 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
+    <string name="notice_join_own_room_format">‘%1$s’ 방은 내가 만든 여행방입니다.</string>
+    <string name="notice_already_joined_room_format">‘%1$s’ 방은 이미 참여 중인 여행방입니다.</string>
     <string name="notice_join_room_success_format">‘%1$s’ 방에 참여했습니다.</string>
     <string name="notice_join_room_rechecked_format">‘%1$s’ 방 참여가 확인되었습니다.</string>
     <string name="btn_view_places">장소 목록 보기</string>

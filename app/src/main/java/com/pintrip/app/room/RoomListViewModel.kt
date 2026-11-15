@@ -169,6 +169,27 @@ class RoomListViewModel(
         _joinErrorMessageResId.value = null
     }
 
+    fun checkPendingInvite(context: android.content.Context?) {
+        val pendingCode = PendingInviteManager.getPendingCode(context) ?: return
+        if (_isJoining.value == true || _joinSuccessResult.value != null) {
+            return
+        }
+        PendingInviteManager.clearPendingCode(context)
+        _joinCodeInput.value = pendingCode
+        _joinErrorMessageResId.value = null
+        _isJoinDialogOpen.value = true
+    }
+
+    fun handleDeepLinkCode(code: String) {
+        val normalized = code.trim().uppercase()
+        if (!normalized.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) return
+        if (_isJoining.value == true) return
+
+        _joinCodeInput.value = normalized
+        _joinErrorMessageResId.value = null
+        _isJoinDialogOpen.value = true
+    }
+
     fun joinRoomWithCode(rawCode: String) {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
 
@@ -186,12 +207,8 @@ class RoomListViewModel(
                 val result = roomRepository.joinRoomWithCode(trimmedCode)
                 _isJoining.value = false
                 when (result) {
-                    is com.pintrip.app.data.repository.JoinRoomResult.Creator -> {
-                        _joinErrorMessageResId.value = R.string.notice_join_own_room
-                    }
-                    is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember -> {
-                        _joinErrorMessageResId.value = R.string.notice_already_joined_room
-                    }
+                    is com.pintrip.app.data.repository.JoinRoomResult.Creator,
+                    is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember,
                     is com.pintrip.app.data.repository.JoinRoomResult.NewJoin,
                     is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
                         _isJoinDialogOpen.value = false

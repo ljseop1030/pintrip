@@ -64,6 +64,16 @@ class RoomListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.resetNavigation()
+        viewModel.checkPendingInvite(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val code = DeepLinkUtils.extractInviteCode(intent)
+        if (code != null) {
+            viewModel.handleDeepLinkCode(code)
+        }
     }
 
     private fun setupRecyclerView() {
@@ -267,8 +277,11 @@ class RoomListActivity : AppCompatActivity() {
             is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
                 getString(R.string.notice_join_room_rechecked_format, roomName)
             }
-            else -> {
-                getString(R.string.notice_join_room_success_format, roomName)
+            is com.pintrip.app.data.repository.JoinRoomResult.Creator -> {
+                getString(R.string.notice_join_own_room_format, roomName)
+            }
+            is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember -> {
+                getString(R.string.notice_already_joined_room_format, roomName)
             }
         }
         dialogBinding.tvTitle.text = titleText

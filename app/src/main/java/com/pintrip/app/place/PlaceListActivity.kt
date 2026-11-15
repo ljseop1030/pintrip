@@ -172,6 +172,13 @@ class PlaceListActivity : AppCompatActivity() {
             }
         }
 
+        dialogBinding.btnShareLink.setOnClickListener {
+            val inviteCode = dialogBinding.tvInviteCode.text?.toString().orEmpty()
+            if (inviteCode.isNotBlank()) {
+                shareInviteLink(inviteCode)
+            }
+        }
+
         dialogBinding.btnRetry.setOnClickListener {
             viewModel.retryFetchInviteCode()
         }
@@ -203,6 +210,7 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.cardCodeContainer.isVisible = false
                 dialogBinding.tvErrorMessage.isVisible = false
                 dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnShareLink.isVisible = false
                 dialogBinding.btnRetry.isVisible = false
                 dialogBinding.btnConfirm.isVisible = true
                 dialogBinding.btnConfirm.text = getString(R.string.btn_close)
@@ -212,6 +220,7 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.cardCodeContainer.isVisible = false
                 dialogBinding.tvErrorMessage.isVisible = false
                 dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnShareLink.isVisible = false
                 dialogBinding.btnRetry.isVisible = false
                 dialogBinding.btnConfirm.isVisible = true
                 dialogBinding.btnConfirm.text = getString(R.string.btn_close)
@@ -223,6 +232,8 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.tvErrorMessage.isVisible = false
                 dialogBinding.btnCopyCode.isVisible = true
                 dialogBinding.btnCopyCode.isEnabled = true
+                dialogBinding.btnShareLink.isVisible = true
+                dialogBinding.btnShareLink.isEnabled = true
                 dialogBinding.btnRetry.isVisible = false
                 dialogBinding.btnConfirm.isVisible = true
                 dialogBinding.btnConfirm.text = getString(R.string.btn_close)
@@ -233,6 +244,7 @@ class PlaceListActivity : AppCompatActivity() {
                 dialogBinding.tvErrorMessage.isVisible = true
                 dialogBinding.tvErrorMessage.text = getString(state.messageResId)
                 dialogBinding.btnCopyCode.isVisible = false
+                dialogBinding.btnShareLink.isVisible = false
                 dialogBinding.btnRetry.isVisible = true
                 dialogBinding.btnRetry.isEnabled = true
                 dialogBinding.btnConfirm.isVisible = true
@@ -253,6 +265,16 @@ class PlaceListActivity : AppCompatActivity() {
         val clip = android.content.ClipData.newPlainText("invite_code", text)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(this, R.string.notice_invite_code_copied, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun shareInviteLink(code: String) {
+        val shareLink = com.pintrip.app.room.DeepLinkUtils.buildInviteLink(code)
+        val shareText = getString(R.string.share_invite_link_format, code, shareLink)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.title_share_invite_link)))
     }
 
     private fun openKakaoPlaceUrl(url: String) {
