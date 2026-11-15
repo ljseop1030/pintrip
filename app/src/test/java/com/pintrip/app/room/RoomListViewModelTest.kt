@@ -22,7 +22,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class FakeRoomRepository : RoomRepository(null, null, null) {
+open class FakeRoomRepository : RoomRepository(null, null, null) {
     var resultToReturn: JoinRoomResult? = null
     var exceptionToThrow: Exception? = null
     var joinRoomCallCount = 0
@@ -162,7 +162,7 @@ class RoomListViewModelTest {
     }
 
     @Test
-    fun scenario4_creatorAndExistingMemberResultsInlineNoticeInJoinCodeDialog() {
+    fun scenario4_creatorAndExistingMemberResultsSetJoinSuccessResult() {
         val fakeRoomRepo = FakeRoomRepository()
         val fakeUserRepo = FakeUserRepository()
         val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
@@ -171,15 +171,87 @@ class RoomListViewModelTest {
         fakeRoomRepo.resultToReturn = JoinRoomResult.Creator(sampleRoom)
         viewModel.joinRoomWithCode("K7P2QX")
 
-        assertNull("Creator 반환 시 완료 대기 창(joinSuccessResult)은 null이어야 함", viewModel.joinSuccessResult.value)
-        assertEquals("방장 안내 문구가 설정되어야 함", R.string.notice_join_own_room, viewModel.joinErrorMessageResId.value)
+        assertEquals(JoinRoomResult.Creator(sampleRoom), viewModel.joinSuccessResult.value)
+        assertFalse("Creator 처리 후 입력을 위한 대화창은 닫혀야 함", viewModel.isJoinDialogOpen.value == true)
+
+        viewModel.onDismissJoinSuccess()
 
         // 2. ExistingMember 반환 검증
         fakeRoomRepo.resultToReturn = JoinRoomResult.ExistingMember(sampleRoom)
         viewModel.joinRoomWithCode("B8R3SY")
 
-        assertNull("ExistingMember 반환 시 완료 대기 창은 null이어야 함", viewModel.joinSuccessResult.value)
-        assertEquals("기존 멤버 안내 문구가 설정되어야 함", R.string.notice_already_joined_room, viewModel.joinErrorMessageResId.value)
+        assertEquals(JoinRoomResult.ExistingMember(sampleRoom), viewModel.joinSuccessResult.value)
+        assertFalse("ExistingMember 처리 후 입력을 위한 대화창은 닫혀야 함", viewModel.isJoinDialogOpen.value == true)
+    }
+
+    @Test
+    fun scenario6_checkPendingInvite_consumesCodeAndOpensDialog() {
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        val fakePrefs = FakeSharedPreferences()
+        PendingInviteManager.preferenceOverride = fakePrefs
+
+        try {
+            PendingInviteManager.savePendingCode(null, "K7P2QX")
+
+            viewModel.checkPendingInvite(null)
+
+            assertTrue("대기 중인 코드가 있을 경우 초대 대화창이 오픈되어야 함", viewModel.isJoinDialogOpen.value == true)
+            assertEquals("K7P2QX", viewModel.joinCodeInput.value)
+            assertNull("소비 후 저장소의 대기 코드는 삭제되어야 함", PendingInviteManager.getPendingCode(null))
+        } finally {
+            PendingInviteManager.preferenceOverride = null
+        }
+    }
+
+    @Test
+    fun scenario7_handleDeepLinkCode_opensDialogWithCode() {
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        viewModel.handleDeepLinkCode("b8r3sy")
+
+        assertTrue("핫 딥링크 수신 시 초대 대화창이 오픈되어야 함", viewModel.isJoinDialogOpen.value == true)
+        assertEquals("B8R3SY", viewModel.joinCodeInput.value)
+    }
+
+    @Test
+    fun scenario8_deepLinkDuringIncorporateJoin_doesNotOverwriteInProgressJoin() {
+        val fakeRoomRepo = object : FakeRoomRepository() {
+            override suspend fun joinRoomWithCode(code: String): JoinRoomResult {
+                kotlinx.coroutines.delay(1000)
+                return super.joinRoomWithCode(code)
+            }
+        }
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        val fakePrefs = FakeSharedPreferences()
+        PendingInviteManager.preferenceOverride = fakePrefs
+
+        try {
+            val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher()
+            Dispatchers.setMain(testDispatcher)
+
+            viewModel.joinRoomWithCode("K7P2QX")
+            testDispatcher.scheduler.runCurrent()
+
+            assertTrue("가입 실행 중이므로 isJoining은 true여야 함", viewModel.isJoining.value == true)
+            assertEquals("K7P2QX", viewModel.joinCodeInput.value)
+
+            PendingInviteManager.savePendingCode(null, "NEW234")
+            viewModel.checkPendingInvite(null)
+
+            assertEquals("K7P2QX", viewModel.joinCodeInput.value)
+            assertEquals("NEW234", PendingInviteManager.getPendingCode(null))
+
+            testDispatcher.scheduler.advanceUntilIdle()
+        } finally {
+            PendingInviteManager.preferenceOverride = null
+        }
     }
 
     @Test
