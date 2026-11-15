@@ -51,6 +51,31 @@ class DeepLinkUtilsTest {
     }
 
     @Test
+    fun extractInviteCode_duplicateCodeWithoutValue_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join?code=ABC234&code"))
+    }
+
+    @Test
+    fun extractInviteCode_duplicateCodeWithExtraEquals_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join?code=ABC234&code=DEF234=extra"))
+    }
+
+    @Test
+    fun extractInviteCode_uriWithEmptyFragment_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join?code=ABC234#"))
+    }
+
+    @Test
+    fun extractInviteCode_uriWithEmptyUserInfo_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://@join?code=ABC234"))
+    }
+
+    @Test
+    fun extractInviteCode_uriWithEmptyPort_returnsNull() {
+        assertNull(DeepLinkUtils.extractInviteCode("pintrip://join:?code=ABC234"))
+    }
+
+    @Test
     fun extractInviteCode_uriWithUserInfo_returnsNull() {
         assertNull(DeepLinkUtils.extractInviteCode("pintrip://user:pass@join?code=K7P2QX"))
     }

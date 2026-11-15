@@ -11,7 +11,7 @@ import android.net.Uri
  * - host: join (대소문자 미구분)
  * - path: 비어 있거나 "/"
  * - query param: code (단 1개만 허용, 6자리 영문 대문자 및 숫자, 0/O/1/I 제외)
- * - userInfo, port, fragment 등 비표준 요소가 포함된 경우 거부
+ * - userInfo, port, fragment, 중복 키, 불완전 파라미터가 포함된 비표준 URI 거부
  */
 object DeepLinkUtils {
     const val SCHEME_PINTRIP = "pintrip"
@@ -51,28 +51,43 @@ object DeepLinkUtils {
     fun extractInviteCode(uriString: String?): String? {
         if (uriString.isNullOrBlank()) return null
         return try {
+            // # (fragment) 구문 표기가 포함되어 있으면 즉시 거부 (빈 fragment 포함)
+            if (uriString.contains("#")) return null
+
             val javaUri = java.net.URI(uriString)
             val scheme = javaUri.scheme?.lowercase() ?: return null
             val host = javaUri.host?.lowercase() ?: return null
 
             if (scheme != SCHEME_PINTRIP || host != HOST_JOIN) return null
 
-            // 비표준 경로, 포트, 사용자 정보, 해시(fragment)가 포함된 경우 거부
+            // 비표준 경로, 포트, 사용자 정보가 포함된 경우 거부
             val path = javaUri.path
             if (!path.isNullOrEmpty() && path != "/") return null
-            if (!javaUri.userInfo.isNullOrBlank()) return null
-            if (javaUri.port != -1) return null
-            if (!javaUri.fragment.isNullOrBlank()) return null
+            if (javaUri.userInfo != null || javaUri.rawAuthority?.contains("@") == true) return null
+            if (javaUri.port != -1 || javaUri.rawAuthority?.contains(":") == true) return null
 
             val query = javaUri.rawQuery ?: return null
-            val codeParams = query.split("&")
-                .map { it.split("=") }
-                .filter { it.size == 2 && it[0].equals(PARAM_CODE, ignoreCase = true) }
+            val paramTokens = query.split("&")
 
-            // code 파라미터가 없거나 중복(2개 이상) 정의된 경우 거부
-            if (codeParams.size != 1) return null
+            // code 파라미터 키의 등장 횟수 검사 (불완전 파라미터 포함)
+            val codeKeyCount = paramTokens.count { token ->
+                val key = if (token.contains("=")) token.substringBefore("=") else token
+                key.equals(PARAM_CODE, ignoreCase = true)
+            }
 
-            val rawCodeVal = codeParams[0][1]
+            // code 키가 전혀 없거나 2개 이상(중복) 정의된 경우 거부
+            if (codeKeyCount != 1) return null
+
+            // 단일 code 파라미터 형식이 key=value 문법을 정확히 만족하는지 확인
+            val codeToken = paramTokens.first { token ->
+                val key = if (token.contains("=")) token.substringBefore("=") else token
+                key.equals(PARAM_CODE, ignoreCase = true)
+            }
+
+            val parts = codeToken.split("=")
+            if (parts.size != 2) return null
+
+            val rawCodeVal = parts[1]
             val decodedCode = java.net.URLDecoder.decode(rawCodeVal, "UTF-8")
             val normalizedCode = decodedCode.trim().uppercase()
 
