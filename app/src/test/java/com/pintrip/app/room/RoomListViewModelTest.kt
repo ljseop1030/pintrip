@@ -294,8 +294,90 @@ class RoomListViewModelTest {
             // 방 A 가입 완료 처리
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // 방 A 가입 성공으로 방 A 코드는 정리되었지만, 방 B 코드는 삭제되지 않고 보존됨을 검증
+            // 방 A 가입 완료 결과가 표시되고, 방 B 코드는 삭제되지 않고 보존됨을 검증
             assertEquals("NEW234", PendingInviteManager.getPendingCode(null))
+            assertTrue(viewModel.joinSuccessResult.value != null)
+
+            // 사용자가 방 A 완료창을 닫을 때 방 B 참여창이 즉각 연결되어 표시됨을 검증
+            viewModel.onDismissJoinSuccess(null)
+            assertNull(viewModel.joinSuccessResult.value)
+            assertTrue("방 A 완료창 닫기 후 방 B 참여창이 열려야 함", viewModel.isJoinDialogOpen.value == true)
+            assertEquals("NEW234", viewModel.joinCodeInput.value)
+        } finally {
+            PendingInviteManager.preferenceOverride = null
+        }
+    }
+
+    @Test
+    fun scenario11_deepLinkDuringCompletionDialog_preservesResultAAndShowsBOnDismiss() {
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        val fakePrefs = FakeSharedPreferences()
+        PendingInviteManager.preferenceOverride = fakePrefs
+
+        try {
+            val roomA = Room(id = "room_A", name = "A 여행", inviteCode = "K7P2QX")
+            fakeRoomRepo.resultToReturn = JoinRoomResult.NewJoin(roomA)
+
+            // 방 A 가입 완료 상태
+            viewModel.handleDeepLinkCode(null, "K7P2QX")
+            viewModel.joinRoomWithCode(null, "K7P2QX")
+            assertEquals(JoinRoomResult.NewJoin(roomA), viewModel.joinSuccessResult.value)
+
+            // 방 A 완료창 표시 중 방 B 딥링크 수신
+            viewModel.handleDeepLinkCode(null, "NEW234")
+
+            // 완료창 A 유지, B 코드는 저장소에 보존
+            assertEquals(JoinRoomResult.NewJoin(roomA), viewModel.joinSuccessResult.value)
+            assertEquals("NEW234", PendingInviteManager.getPendingCode(null))
+
+            // 사용자가 방 A 완료창을 [목록으로] 닫음
+            viewModel.onDismissJoinSuccess(null)
+
+            // 완료창 A 닫힌 후 방 B 참여창 오픈
+            assertNull(viewModel.joinSuccessResult.value)
+            assertTrue("방 A 완료창 닫기 후 방 B 참여창이 열려야 함", viewModel.isJoinDialogOpen.value == true)
+            assertEquals("NEW234", viewModel.joinCodeInput.value)
+        } finally {
+            PendingInviteManager.preferenceOverride = null
+        }
+    }
+
+    @Test
+    fun scenario12_selectingViewPlacesOnCompletionA_doesNotShowBImmediately_showsBOnReturnToRoomList() {
+        val fakeRoomRepo = FakeRoomRepository()
+        val fakeUserRepo = FakeUserRepository()
+        val viewModel = RoomListViewModel(fakeRoomRepo, fakeUserRepo, null)
+
+        val fakePrefs = FakeSharedPreferences()
+        PendingInviteManager.preferenceOverride = fakePrefs
+
+        try {
+            val roomA = Room(id = "room_A", name = "A 여행", inviteCode = "K7P2QX")
+            fakeRoomRepo.resultToReturn = JoinRoomResult.NewJoin(roomA)
+
+            // 방 A 가입 완료 상태
+            viewModel.handleDeepLinkCode(null, "K7P2QX")
+            viewModel.joinRoomWithCode(null, "K7P2QX")
+
+            // 방 A 완료창 표시 중 방 B 딥링크 수신
+            viewModel.handleDeepLinkCode(null, "NEW234")
+
+            // [장소 목록 보기] 선택 -> 장소 화면 이동 성공
+            viewModel.onViewPlacesFromJoinSuccess("room_A")
+            viewModel.onPlaceListLaunchSuccess()
+
+            // 장소 화면으로 이동하는 순간에는 방 B 참여창이 바로 뜨지 않음
+            assertNull(viewModel.joinSuccessResult.value)
+            assertFalse("장소 화면 이동 시점에 방 B 참여창이 즉시 뜨면 안 됨", viewModel.isJoinDialogOpen.value == true)
+            assertEquals("NEW234", PendingInviteManager.getPendingCode(null))
+
+            // 장소 화면에서 방 목록으로 복귀하여 checkPendingInvite 호출 시 방 B 참여창 오픈
+            viewModel.checkPendingInvite(null)
+            assertTrue("방 목록 복귀 시 방 B 참여창이 열려야 함", viewModel.isJoinDialogOpen.value == true)
+            assertEquals("NEW234", viewModel.joinCodeInput.value)
         } finally {
             PendingInviteManager.preferenceOverride = null
         }

@@ -41,6 +41,10 @@ class RoomListActivity : AppCompatActivity() {
         viewModel.loadRooms(forceRefresh = true)
     }
 
+    companion object {
+        const val EXTRA_INVITE_CODE = "extra_invite_code"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -58,6 +62,7 @@ class RoomListActivity : AppCompatActivity() {
         setupListeners()
         observeViewModel()
 
+        processIntentInvite(intent)
         viewModel.loadRooms()
     }
 
@@ -70,8 +75,16 @@ class RoomListActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val code = DeepLinkUtils.extractInviteCode(intent)
-        if (code != null) {
+        processIntentInvite(intent)
+    }
+
+    private fun processIntentInvite(intent: Intent?) {
+        val codeFromExtra = intent?.getStringExtra(EXTRA_INVITE_CODE)
+        val codeFromUri = DeepLinkUtils.extractInviteCode(intent)
+        val code = codeFromExtra ?: codeFromUri
+
+        if (!code.isNullOrBlank()) {
+            intent?.removeExtra(EXTRA_INVITE_CODE)
             viewModel.handleDeepLinkCode(applicationContext, code)
         } else {
             viewModel.checkPendingInvite(applicationContext)

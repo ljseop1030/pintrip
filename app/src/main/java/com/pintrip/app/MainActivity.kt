@@ -71,11 +71,14 @@ class MainActivity : AppCompatActivity() {
         handleIncomingDeepLink(intent)
     }
 
+    private var pendingInviteCodeToPass: String? = null
+
     private fun handleIncomingDeepLink(intent: Intent?) {
         if (intent == null || intent.action != Intent.ACTION_VIEW) return
         val code = com.pintrip.app.room.DeepLinkUtils.extractInviteCode(intent)
         if (code != null) {
-            com.pintrip.app.room.PendingInviteManager.savePendingCode(this, code)
+            com.pintrip.app.room.PendingInviteManager.savePendingCode(applicationContext, code)
+            pendingInviteCodeToPass = code
         }
     }
 
@@ -125,7 +128,11 @@ class MainActivity : AppCompatActivity() {
     private fun navigateToRoomList() {
         val intent = Intent(this, RoomListActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            pendingInviteCodeToPass?.let { code ->
+                putExtra(com.pintrip.app.room.RoomListActivity.EXTRA_INVITE_CODE, code)
+            }
         }
+        pendingInviteCodeToPass = null
         startActivity(intent)
         finish()
     }

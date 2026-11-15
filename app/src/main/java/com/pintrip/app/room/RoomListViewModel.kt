@@ -198,7 +198,7 @@ class RoomListViewModel(
         val normalized = code.trim().uppercase()
         if (!normalized.matches(Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$"))) return
         PendingInviteManager.savePendingCode(context, normalized)
-        if (_isJoining.value == true) return
+        if (_isJoining.value == true || _joinSuccessResult.value != null) return
 
         activePendingCode = normalized
         isFromDeepLink = true
