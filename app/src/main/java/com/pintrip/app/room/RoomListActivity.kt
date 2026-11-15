@@ -62,7 +62,9 @@ class RoomListActivity : AppCompatActivity() {
         setupListeners()
         observeViewModel()
 
-        processIntentInvite(intent)
+        if (savedInstanceState == null) {
+            processIntentInvite(intent)
+        }
         viewModel.loadRooms()
     }
 
@@ -79,12 +81,15 @@ class RoomListActivity : AppCompatActivity() {
     }
 
     private fun processIntentInvite(intent: Intent?) {
-        val codeFromExtra = intent?.getStringExtra(EXTRA_INVITE_CODE)
+        if (intent == null) return
+        if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
+
+        val codeFromExtra = intent.getStringExtra(EXTRA_INVITE_CODE)
         val codeFromUri = DeepLinkUtils.extractInviteCode(intent)
         val code = codeFromExtra ?: codeFromUri
 
         if (!code.isNullOrBlank()) {
-            intent?.removeExtra(EXTRA_INVITE_CODE)
+            intent.removeExtra(EXTRA_INVITE_CODE)
             viewModel.handleDeepLinkCode(applicationContext, code)
         } else {
             viewModel.checkPendingInvite(applicationContext)

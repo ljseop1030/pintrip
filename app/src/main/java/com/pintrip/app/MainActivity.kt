@@ -75,6 +75,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIncomingDeepLink(intent: Intent?) {
         if (intent == null || intent.action != Intent.ACTION_VIEW) return
+        if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
         val code = com.pintrip.app.room.DeepLinkUtils.extractInviteCode(intent)
         if (code != null) {
             com.pintrip.app.room.PendingInviteManager.savePendingCode(applicationContext, code)
