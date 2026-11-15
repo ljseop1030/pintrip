@@ -44,6 +44,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        if (savedInstanceState == null) {
+            handleIncomingDeepLink(intent)
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -60,6 +64,24 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.btnTestLogin.isEnabled = false
             verifyProfileAndNavigate(currentUser)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingDeepLink(intent)
+    }
+
+    private var pendingInviteCodeToPass: String? = null
+
+    private fun handleIncomingDeepLink(intent: Intent?) {
+        if (intent == null || intent.action != Intent.ACTION_VIEW) return
+        if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
+        val code = com.pintrip.app.room.DeepLinkUtils.extractInviteCode(intent)
+        if (code != null) {
+            com.pintrip.app.room.PendingInviteManager.savePendingCode(applicationContext, code)
+            pendingInviteCodeToPass = code
         }
     }
 
@@ -108,8 +130,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun navigateToRoomList() {
         val intent = Intent(this, RoomListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            pendingInviteCodeToPass?.let { code ->
+                putExtra(com.pintrip.app.room.RoomListActivity.EXTRA_INVITE_CODE, code)
+            }
         }
+        pendingInviteCodeToPass = null
         startActivity(intent)
         finish()
     }

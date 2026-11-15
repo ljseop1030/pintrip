@@ -211,6 +211,10 @@ class CreateRoomActivity : AppCompatActivity() {
             copyToClipboard(room.inviteCode)
         }
 
+        dialogBinding.btnShareLink.setOnClickListener {
+            shareInviteLink(room.inviteCode)
+        }
+
         dialogBinding.btnConfirm.setOnClickListener {
             codeDisplayDialog?.dismiss()
             finishWithCreatedRoom(room)
@@ -246,6 +250,16 @@ class CreateRoomActivity : AppCompatActivity() {
         val clip = android.content.ClipData.newPlainText("invite_code", text)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(this, R.string.notice_invite_code_copied, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun shareInviteLink(code: String) {
+        val shareLink = DeepLinkUtils.buildInviteLink(code)
+        val shareText = getString(R.string.share_invite_link_format, code, shareLink)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.title_share_invite_link)))
     }
 
     private fun updateDateDisplay(start: Timestamp?, end: Timestamp?) {

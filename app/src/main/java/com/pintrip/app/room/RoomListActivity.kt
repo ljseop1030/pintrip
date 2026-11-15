@@ -41,6 +41,10 @@ class RoomListActivity : AppCompatActivity() {
         viewModel.loadRooms(forceRefresh = true)
     }
 
+    companion object {
+        const val EXTRA_INVITE_CODE = "extra_invite_code"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -58,12 +62,38 @@ class RoomListActivity : AppCompatActivity() {
         setupListeners()
         observeViewModel()
 
+        if (savedInstanceState == null) {
+            processIntentInvite(intent)
+        }
         viewModel.loadRooms()
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.resetNavigation()
+        viewModel.checkPendingInvite(applicationContext)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        processIntentInvite(intent)
+    }
+
+    private fun processIntentInvite(intent: Intent?) {
+        if (intent == null) return
+        if ((intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
+
+        val codeFromExtra = intent.getStringExtra(EXTRA_INVITE_CODE)
+        val codeFromUri = DeepLinkUtils.extractInviteCode(intent)
+        val code = codeFromExtra ?: codeFromUri
+
+        if (!code.isNullOrBlank()) {
+            intent.removeExtra(EXTRA_INVITE_CODE)
+            viewModel.handleDeepLinkCode(applicationContext, code)
+        } else {
+            viewModel.checkPendingInvite(applicationContext)
+        }
     }
 
     private fun setupRecyclerView() {
@@ -267,8 +297,11 @@ class RoomListActivity : AppCompatActivity() {
             is com.pintrip.app.data.repository.JoinRoomResult.Rechecked -> {
                 getString(R.string.notice_join_room_rechecked_format, roomName)
             }
-            else -> {
-                getString(R.string.notice_join_room_success_format, roomName)
+            is com.pintrip.app.data.repository.JoinRoomResult.Creator -> {
+                getString(R.string.notice_join_own_room_format, roomName)
+            }
+            is com.pintrip.app.data.repository.JoinRoomResult.ExistingMember -> {
+                getString(R.string.notice_already_joined_room_format, roomName)
             }
         }
         dialogBinding.tvTitle.text = titleText
@@ -280,7 +313,6 @@ class RoomListActivity : AppCompatActivity() {
         dialogBinding.btnGoToList.setOnClickListener {
             isUserExplicitDismiss = true
             dismissJoinSuccessDialog()
-            viewModel.onDismissJoinSuccess()
         }
 
         joinSuccessDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -289,13 +321,12 @@ class RoomListActivity : AppCompatActivity() {
             .setOnCancelListener {
                 if (!isCleaningUpForDestroy && !isChangingConfigurations) {
                     isUserExplicitDismiss = true
-                    viewModel.onDismissJoinSuccess()
                 }
             }
             .setOnDismissListener {
                 joinSuccessDialog = null
-                if (!isCleaningUpForDestroy && !isChangingConfigurations && (isUserExplicitDismiss || viewModel.joinSuccessResult.value == null)) {
-                    viewModel.onDismissJoinSuccess()
+                if (!isCleaningUpForDestroy && !isChangingConfigurations && isUserExplicitDismiss) {
+                    viewModel.onDismissJoinSuccess(applicationContext)
                 }
             }
             .show()
@@ -344,7 +375,7 @@ class RoomListActivity : AppCompatActivity() {
 
         dialogBinding.btnJoin.setOnClickListener {
             val code = dialogBinding.etInviteCode.text?.toString().orEmpty()
-            viewModel.joinRoomWithCode(code)
+            viewModel.joinRoomWithCode(applicationContext, code)
         }
 
         joinCodeDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
@@ -354,7 +385,7 @@ class RoomListActivity : AppCompatActivity() {
                 joinCodeDialogBinding = null
                 joinCodeDialog = null
                 if (!isCleaningUpForDestroy && !isChangingConfigurations) {
-                    viewModel.onJoinDialogDismissed()
+                    viewModel.onJoinDialogDismissed(applicationContext)
                 }
             }
             .show()

@@ -99,6 +99,18 @@ Separate collection so non-members never need read access to `rooms`, and duplic
 
 **Note:** This subcollection exists solely as an atomic proof of invite code possession during non-member room joining in Firestore Security Rules (`existsAfter` + `joinedAt == request.time`). It is not a duplicated member list or a separate feature. Client read/update/delete/list are blocked.
 
+#### Custom Deep Link URI & Pending Invite Policy
+- **Deep Link Format:** `pintrip://join?code={code}` (e.g. `pintrip://join?code=ABC234`)
+- **Scheme / Host / Query:** Scheme `pintrip` (case-insensitive), Host `join` (case-insensitive), Path empty/`/`, Parameter `code` (단 1개만 허용). 비표준 경로, 포트, userInfo, fragment 등은 거부.
+- **Normalization & Validation:** Client converts to uppercase (`code.trim().uppercase()`) and validates regex `^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$`. Invalid/malformed URIs or codes are rejected without deleting existing valid pending invites.
+- **Pre-login Code Storage:** Saved in `SharedPreferences` (`pintrip_invite_prefs`, key: `pending_invite_code`).
+- **Lifecycle & Persistence:** Retained across login, sign-up, profile recovery, screen rotation, task stack clearing, and process death.
+- **Consumption & Cleanup Policy:**
+  - 참여 대화창(`dialog_join_code.xml` / `DialogJoinCodeBinding`)에 코드를 채우는 표시 시점에는 삭제하지 않고 유지합니다.
+  - 가입 처리 성공/완료(`NewJoin`/`Rechecked`/`Creator`/`ExistingMember`), 사용자의 명시적 대화창 [취소] 클릭, 또는 서버의 무효 코드 확정(`CodeNotFound`/`InvalidCodeFormat`) 시에만 해당 초대 코드를 선택적으로 삭제합니다 (`clearPendingCodeIf`).
+  - 일시적 네트워크 에러(`NetworkUnavailable`) 발생 시에는 재시도를 위해 저장소에 코드를 보존합니다.
+  - 잘못된 새 URI 수신 시 기존 정상 대기 초대를 삭제하지 않고 유지합니다.
+
 ---
 
 ## 4. In-memory model: PlaceDetail (never stored)
