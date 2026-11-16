@@ -11,11 +11,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.databinding.ActivityRoomMapBinding
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
+import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.camera.CameraUpdateFactory
@@ -23,12 +25,20 @@ import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
+import java.util.concurrent.atomic.AtomicReference
 
 class RoomMapActivity : AppCompatActivity() {
+
+    enum class SdkInitState {
+        NOT_INITIALIZED,
+        SUCCESS,
+        FAILED
+    }
 
     companion object {
         private const val TAG = "RoomMapActivity"
         const val EXTRA_ROOM_ID = "extra_room_id"
+        private val sdkInitState = AtomicReference(SdkInitState.NOT_INITIALIZED)
 
         fun newIntent(context: Context, roomId: String): Intent {
             return Intent(context, RoomMapActivity::class.java).apply {
@@ -64,11 +74,35 @@ class RoomMapActivity : AppCompatActivity() {
         }
 
         setupToolbar()
-        setupMapView()
-        setupListeners(roomId)
-        observeViewModel()
 
-        viewModel.loadRoomMap(roomId)
+        val currentState = sdkInitState.get()
+        if (currentState == SdkInitState.FAILED) {
+            binding.mapView.isVisible = false
+            binding.pbLoading.isVisible = false
+            binding.layoutError.isVisible = false
+            binding.tvMapUnavailable.isVisible = true
+            return
+        }
+
+        try {
+            if (currentState == SdkInitState.NOT_INITIALIZED) {
+                KakaoMapSdk.init(applicationContext, BuildConfig.KAKAO_NATIVE_APP_KEY)
+                sdkInitState.set(SdkInitState.SUCCESS)
+            }
+            binding.tvMapUnavailable.isVisible = false
+            setupMapView()
+            setupListeners(roomId)
+            observeViewModel()
+
+            viewModel.loadRoomMap(roomId)
+        } catch (e: Throwable) {
+            Log.e(TAG, "KakaoMapSdk init failed on this device: ${e.message}", e)
+            sdkInitState.set(SdkInitState.FAILED)
+            binding.mapView.isVisible = false
+            binding.pbLoading.isVisible = false
+            binding.layoutError.isVisible = false
+            binding.tvMapUnavailable.isVisible = true
+        }
     }
 
     private fun setupToolbar() {
@@ -99,12 +133,24 @@ class RoomMapActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        binding.mapView.resume()
+        try {
+            if (binding.mapView.isVisible) {
+                binding.mapView.resume()
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "MapView resume failed: ${e.message}", e)
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        binding.mapView.pause()
+        try {
+            if (binding.mapView.isVisible) {
+                binding.mapView.pause()
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "MapView pause failed: ${e.message}", e)
+        }
     }
 
     private fun setupListeners(roomId: String) {
@@ -130,6 +176,7 @@ class RoomMapActivity : AppCompatActivity() {
                     binding.pbLoading.isVisible = false
                     binding.layoutError.isVisible = true
                     binding.tvErrorMessage.text = getString(state.messageResId)
+                    binding.btnRetry.isVisible = true
                 }
             }
         }
