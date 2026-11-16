@@ -1,7 +1,6 @@
 package com.pintrip.app.data.model
 
 import androidx.annotation.Keep
-import java.io.Serializable
 
 /**
  * Firestore [Place] 정보와 카카오 Local API 키워드 검색(재조회) 결과를 결합한 메모리 전용 데이터 모델.
@@ -26,7 +25,7 @@ data class PlaceDetail(
     val lng: Double? = null,
     val category: String? = null,
     val phone: String? = null,
-) : Serializable {
+)  {
 
     companion object {
         const val STATUS_FOUND = "found"
