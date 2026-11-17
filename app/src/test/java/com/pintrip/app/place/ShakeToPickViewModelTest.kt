@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -454,5 +455,22 @@ class ShakeToPickViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state is ShakeToPickUiState.Error)
         assertEquals(R.string.error_room_permission_denied, (state as ShakeToPickUiState.Error).messageResId)
+    }
+
+    @Test
+    fun loadPlaces_nullRoom_setsNoRoomIdErrorAndSkipsDetailsFetch() {
+        fakeRoomRepo.roomToReturn = null
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        viewModel.loadPlaces("room_1")
+
+        val state = viewModel.uiState.value
+        assertTrue(state is ShakeToPickUiState.Error)
+        assertEquals(R.string.place_list_error_no_room_id, (state as ShakeToPickUiState.Error).messageResId)
+        assertEquals("방 정보가 없으면 장소 상세 조회가 실행되지 않아야 함", 0, fakeDetailRepo.getPlaceDetailsCallCount)
+
+        viewModel.pickRandomPlace()
+        assertTrue("Error 상태에서는 추첨이 진행되지 않고 Error가 유지되어야 함", viewModel.uiState.value is ShakeToPickUiState.Error)
+        assertNull("Error 상태에서는 추첨 이벤트가 발생하지 않아야 함", viewModel.shakeEvent.value?.getContentIfNotHandled())
     }
 }

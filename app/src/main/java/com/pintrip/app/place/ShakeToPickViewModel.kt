@@ -82,7 +82,7 @@ class ShakeToPickViewModel(
                 val room = roomRepository.getRoom(roomId)
                 if (currentRequestId != targetRequestId) return@launch
                 if (room == null) {
-                    _uiState.value = ShakeToPickUiState.Error(R.string.place_list_error_default)
+                    _uiState.value = ShakeToPickUiState.Error(R.string.place_list_error_no_room_id)
                     return@launch
                 }
 
