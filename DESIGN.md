@@ -14,7 +14,7 @@
 ### Shake to pick (흔들어서 고르기) Flow
 - Entry point: Room home (방 홈)
 - Trigger: Device shake sensor (가속도 센서)
-- Confirmed Policies:
+- Selection policies:
   - Operates on the in-memory `PlaceDetail` list of the current room.
   - Only `status == "found"` places are eligible candidates. `notFound` places are excluded from selection (per Data Contract §4: list display and external KakaoMap opening only).
   - Category filtering is applied in memory before selection.
