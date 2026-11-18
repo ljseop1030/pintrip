@@ -116,8 +116,21 @@ class RoomMapActivity : AppCompatActivity() {
     private fun setupMapView() {
         binding.mapView.start(object : MapLifeCycleCallback() {
             override fun onMapError(error: Exception) {
-                Log.e(TAG, "onMapError: ${error.message}", error)
-                Toast.makeText(this@RoomMapActivity, R.string.room_map_error_load_failed, Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "onMapError: ${error.message} (cause: ${error.cause})", error)
+                val isAuthError = error is com.kakao.vectormap.MapAuthException ||
+                    error.javaClass.name.contains("Auth", ignoreCase = true) ||
+                    error.message?.contains("auth", ignoreCase = true) == true ||
+                    error.message?.contains("인증", ignoreCase = true) == true
+
+                runOnUiThread {
+                    binding.mapView.isVisible = false
+                    binding.pbLoading.isVisible = false
+                    binding.layoutError.isVisible = false
+                    binding.tvMapUnavailable.isVisible = true
+                    binding.tvMapUnavailable.text = getString(
+                        if (isAuthError) R.string.room_map_auth_failed else R.string.room_map_load_error
+                    )
+                }
             }
 
             override fun onMapDestroy() {
@@ -209,23 +222,20 @@ class RoomMapActivity : AppCompatActivity() {
 
         when (val cmd = success.cameraCommand) {
             is CameraCommand.FitPoints -> {
-                val centerLat = cmd.points.map { it.first }.average()
-                val centerLng = cmd.points.map { it.second }.average()
-                val minLat = cmd.points.minOf { it.first }
-                val maxLat = cmd.points.maxOf { it.first }
-                val minLng = cmd.points.minOf { it.second }
-                val maxLng = cmd.points.maxOf { it.second }
-                val maxSpan = maxOf(maxLat - minLat, maxLng - minLng)
-                val zoom = when {
-                    maxSpan > 1.0 -> 8
-                    maxSpan > 0.5 -> 9
-                    maxSpan > 0.2 -> 10
-                    maxSpan > 0.1 -> 11
-                    maxSpan > 0.05 -> 12
-                    maxSpan > 0.02 -> 13
-                    else -> 14
+                val latLngs = cmd.points.map { LatLng.from(it.first, it.second) }.toTypedArray()
+                try {
+                    val update = CameraUpdateFactory.fitMapPoints(latLngs, 100)
+                    map.moveCamera(update)
+                } catch (e: Throwable) {
+                    Log.w(TAG, "fitMapPoints failed, falling back to center: ${e.message}", e)
+                    val minLat = cmd.points.minOf { it.first }
+                    val maxLat = cmd.points.maxOf { it.first }
+                    val minLng = cmd.points.minOf { it.second }
+                    val maxLng = cmd.points.maxOf { it.second }
+                    val centerLat = (minLat + maxLat) / 2.0
+                    val centerLng = (minLng + maxLng) / 2.0
+                    map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(centerLat, centerLng), 13))
                 }
-                map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(centerLat, centerLng), zoom))
             }
             is CameraCommand.MoveToCenter -> {
                 map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(cmd.lat, cmd.lng), cmd.zoom))
