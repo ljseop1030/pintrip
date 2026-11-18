@@ -8,6 +8,7 @@ import com.pintrip.app.data.remote.KakaoLocalApiClient
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.io.IOException
@@ -281,6 +282,38 @@ class PlaceDetailRepositoryTest {
         val resultIds = result.map { it.place.kakaoPlaceId }
         val originalIds = places.map { it.kakaoPlaceId }
         assertEquals(originalIds, resultIds)
+    }
+
+    @Test
+    fun testSearchRegionCenter_found() = runBlocking {
+        val fakeKakao = FakeKakaoLocalApiClient()
+        val repository = PlaceDetailRepository(kakaoLocalApiClient = fakeKakao)
+
+        val doc = KakaoPlaceDocument(
+            id = "region_1",
+            placeName = "부산광역시",
+            x = "129.0756",
+            y = "35.1796",
+        )
+        fakeKakao.responses[SearchKey("부산", 1)] = KakaoKeywordSearchResponse(
+            documents = listOf(doc),
+        )
+
+        val coord = repository.searchRegionCenter("부산")
+        assertNotNull(coord)
+        assertEquals(35.1796, coord!!.lat, 0.0001)
+        assertEquals(129.0756, coord.lng, 0.0001)
+    }
+
+    @Test
+    fun testSearchRegionCenter_notFound() = runBlocking {
+        val fakeKakao = FakeKakaoLocalApiClient()
+        val repository = PlaceDetailRepository(kakaoLocalApiClient = fakeKakao)
+
+        fakeKakao.responses[SearchKey("없는곳", 1)] = KakaoKeywordSearchResponse(documents = emptyList())
+
+        val coord = repository.searchRegionCenter("없는곳")
+        assertNull(coord)
     }
 
     @Test(expected = IllegalArgumentException::class)

@@ -12,6 +12,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
+data class MapCoordinate(
+    val lat: Double,
+    val lng: Double,
+)
+
 /**
  * 저장된 장소를 카카오 Local API에서 재조회하여 [PlaceDetail] 리스트로 반환하는 Repository.
  *
@@ -54,6 +59,43 @@ open class PlaceDetailRepository(
                     }
                 }
             }.awaitAll()
+        }
+    }
+
+    /**
+     * 방 지역명으로 카카오 키워드 검색을 수행하여 첫 번째 결과의 좌표(위도, 경도)를 반환합니다.
+     * (docs/data-contract.md §4 Map camera: found 장소가 0개일 때 사용)
+     *
+     * @param region 검색할 지역명 (예: "부산")
+     * @return [MapCoordinate] (위도, 경도) 또는 결과가 없으면 null
+     */
+    open suspend fun searchRegionCenter(region: String): MapCoordinate? {
+        val trimmed = region.trim()
+        if (trimmed.isBlank()) return null
+        return try {
+            val response = kakaoLocalApiClient.searchKeyword(
+                query = trimmed,
+                categoryGroupCode = null,
+                page = 1,
+                size = 1,
+            )
+            val doc = response.documents.firstOrNull()
+            if (doc != null) {
+                val lat = doc.y.toDoubleOrNull()
+                val lng = doc.x.toDoubleOrNull()
+                if (lat != null && lng != null) {
+                    MapCoordinate(lat, lng)
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to search region center for '$trimmed': ${e.message}", e)
+            null
         }
     }
 
