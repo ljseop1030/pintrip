@@ -53,6 +53,17 @@
                 android:textColor="@color/text_sub_gray"
                 android:textSize="13sp"
                 tools:text="부산 금정구 오시게로 20" />
+
+            <TextView
+                android:id="@+id/tvCandidateOutsideNotice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/confirm_location_candidate_outside_region"
+                android:textColor="@color/text_sub_gray"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
         </LinearLayout>
 
     </LinearLayout>

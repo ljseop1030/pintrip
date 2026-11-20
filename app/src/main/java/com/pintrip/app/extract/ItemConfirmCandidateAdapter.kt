@@ -1,6 +1,7 @@
 package com.pintrip.app.extract
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -10,12 +11,14 @@ import com.pintrip.app.databinding.ItemConfirmCandidateBinding
 class ItemConfirmCandidateAdapter(
     private var candidates: List<MatchCandidate> = emptyList(),
     private var selectedCandidateId: String? = null,
+    private var roomRegion: String? = null,
     private val onCandidateSelected: (candidate: MatchCandidate) -> Unit = {},
 ) : RecyclerView.Adapter<ItemConfirmCandidateAdapter.ViewHolder>() {
 
-    fun updateData(newCandidates: List<MatchCandidate>, newSelectedId: String?) {
+    fun updateData(newCandidates: List<MatchCandidate>, newSelectedId: String?, newRoomRegion: String?) {
         candidates = newCandidates
         selectedCandidateId = newSelectedId
+        roomRegion = newRoomRegion
         notifyDataSetChanged()
     }
 
@@ -39,23 +42,44 @@ class ItemConfirmCandidateAdapter(
 
         fun bind(candidate: MatchCandidate) {
             val context = binding.root.context
-            val isSelected = (candidate.kakaoPlaceId == selectedCandidateId)
+            val isOutsideRegion = isCandidateAddressOutsideRoomRegion(
+                candidateAddress = candidate.address,
+                roomRegion = roomRegion,
+                geminiOutsideRoomRegion = false,
+            )
 
             binding.tvCandidateName.text = candidate.name
             binding.tvCandidateAddress.text = candidate.address.ifBlank { context.getString(R.string.select_places_item_not_found_subtitle) }
 
-            binding.rbCandidateSelect.isChecked = isSelected
-
-            if (isSelected) {
-                binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.item_check_bg))
-                binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.item_check_border)
-            } else {
+            if (isOutsideRegion) {
+                binding.tvCandidateOutsideNotice.visibility = View.VISIBLE
+                binding.rbCandidateSelect.isEnabled = false
+                binding.rbCandidateSelect.isChecked = false
+                binding.cardCandidateContainer.isEnabled = false
+                binding.cardCandidateContainer.alpha = 0.5f
                 binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
                 binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)
-            }
+                binding.cardCandidateContainer.setOnClickListener(null)
+            } else {
+                binding.tvCandidateOutsideNotice.visibility = View.GONE
+                binding.rbCandidateSelect.isEnabled = true
+                binding.cardCandidateContainer.isEnabled = true
+                binding.cardCandidateContainer.alpha = 1.0f
 
-            binding.cardCandidateContainer.setOnClickListener {
-                onCandidateSelected(candidate)
+                val isSelected = (candidate.kakaoPlaceId == selectedCandidateId)
+                binding.rbCandidateSelect.isChecked = isSelected
+
+                if (isSelected) {
+                    binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.item_check_bg))
+                    binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.item_check_border)
+                } else {
+                    binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
+                    binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)
+                }
+
+                binding.cardCandidateContainer.setOnClickListener {
+                    onCandidateSelected(candidate)
+                }
             }
         }
     }

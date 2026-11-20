@@ -104,6 +104,18 @@
                 android:textStyle="bold"
                 tools:text="후보 3개 중 선택" />
 
+            <!-- All Candidates Outside Region Notice -->
+            <TextView
+                android:id="@+id/tvAllCandidatesOutsideNotice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/confirm_location_all_candidates_outside_region"
+                android:textColor="@color/badge_exception_text"
+                android:textSize="14sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
             <!-- Candidates List -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvCandidates"

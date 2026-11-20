@@ -21,6 +21,9 @@ class ConfirmLocationViewModel : ViewModel() {
     private val _selectedCandidateId = MutableLiveData<String?>()
     val selectedCandidateId: LiveData<String?> = _selectedCandidateId
 
+    private val _areAllCandidatesOutsideRegion = MutableLiveData<Boolean>(false)
+    val areAllCandidatesOutsideRegion: LiveData<Boolean> = _areAllCandidatesOutsideRegion
+
     private val _resultEvent = MutableLiveData<Event<ConfirmLocationResult>>()
     val resultEvent: LiveData<Event<ConfirmLocationResult>> = _resultEvent
 
@@ -33,11 +36,38 @@ class ConfirmLocationViewModel : ViewModel() {
 
         _matchResult.value = matchResultInput
         _roomRegion.value = roomRegionInput
-        _selectedCandidateId.value = matchResultInput.selectedPlaceId
         position = positionInput
+
+        val allOutside = matchResultInput.candidates.isNotEmpty() && matchResultInput.candidates.all { cand ->
+            isCandidateAddressOutsideRoomRegion(cand.address, roomRegionInput, geminiOutsideRoomRegion = false)
+        }
+        _areAllCandidatesOutsideRegion.value = allOutside
+
+        val initialSelectedId = matchResultInput.selectedPlaceId
+        val initialCandidate = matchResultInput.candidates.find { it.kakaoPlaceId == initialSelectedId }
+        val isInitialSelectedOutside = initialCandidate != null && isCandidateAddressOutsideRoomRegion(
+            candidateAddress = initialCandidate.address,
+            roomRegion = roomRegionInput,
+            geminiOutsideRoomRegion = false,
+        )
+
+        _selectedCandidateId.value = if (isInitialSelectedOutside) null else initialSelectedId
+    }
+
+    fun isCandidateDisabled(candidate: MatchCandidate): Boolean {
+        val region = _roomRegion.value
+        return isCandidateAddressOutsideRoomRegion(
+            candidateAddress = candidate.address,
+            roomRegion = region,
+            geminiOutsideRoomRegion = false,
+        )
     }
 
     fun selectCandidate(candidateId: String) {
+        val currentResult = _matchResult.value ?: return
+        val cand = currentResult.candidates.find { it.kakaoPlaceId == candidateId } ?: return
+        if (isCandidateDisabled(cand)) return
+
         _selectedCandidateId.value = candidateId
     }
 
@@ -45,18 +75,12 @@ class ConfirmLocationViewModel : ViewModel() {
         val currentResult = _matchResult.value ?: return
         val currentCandidateId = _selectedCandidateId.value ?: return
         val selectedCand = currentResult.candidates.find { it.kakaoPlaceId == currentCandidateId } ?: return
-        val roomRegionVal = _roomRegion.value.orEmpty()
-
-        val isMismatch = isCandidateAddressOutsideRoomRegion(
-            candidateAddress = selectedCand.address,
-            roomRegion = roomRegionVal,
-            geminiOutsideRoomRegion = currentResult.extracted.outsideRoomRegion,
-        )
+        if (isCandidateDisabled(selectedCand)) return
 
         val updatedResult = currentResult.copy(
             selectedPlaceId = selectedCand.kakaoPlaceId,
-            regionMismatch = isMismatch,
-            checked = !isMismatch,
+            regionMismatch = false,
+            checked = true,
         )
 
         _resultEvent.value = Event(ConfirmLocationResult.Selected(position, updatedResult))

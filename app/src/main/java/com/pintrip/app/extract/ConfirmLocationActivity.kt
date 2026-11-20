@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -91,13 +92,25 @@ class ConfirmLocationActivity : AppCompatActivity() {
             val candidateCount = matchResult.candidates.size
             binding.tvCandidatesGuide.text = getString(R.string.confirm_location_candidates_guide_format, candidateCount)
 
-            adapter.updateData(matchResult.candidates, viewModel.selectedCandidateId.value)
+            adapter.updateData(matchResult.candidates, viewModel.selectedCandidateId.value, viewModel.roomRegion.value)
         }
 
         viewModel.selectedCandidateId.observe(this) { selectedId ->
             val candidates = viewModel.matchResult.value?.candidates ?: emptyList()
-            adapter.updateData(candidates, selectedId)
-            binding.btnSelectThisLocation.isEnabled = (selectedId != null)
+            adapter.updateData(candidates, selectedId, viewModel.roomRegion.value)
+            val allOutside = viewModel.areAllCandidatesOutsideRegion.value == true
+            binding.btnSelectThisLocation.isEnabled = (selectedId != null && !allOutside)
+        }
+
+        viewModel.areAllCandidatesOutsideRegion.observe(this) { allOutside ->
+            if (allOutside) {
+                binding.tvAllCandidatesOutsideNotice.visibility = View.VISIBLE
+                binding.btnSelectThisLocation.isEnabled = false
+            } else {
+                binding.tvAllCandidatesOutsideNotice.visibility = View.GONE
+                val selectedId = viewModel.selectedCandidateId.value
+                binding.btnSelectThisLocation.isEnabled = (selectedId != null)
+            }
         }
 
         viewModel.resultEvent.observe(this) { event ->

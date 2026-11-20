@@ -70,6 +70,8 @@
     <string name="confirm_location_manual_search_placeholder">찾는 장소가 없나요? 직접 검색</string>
     <string name="confirm_location_btn_exclude">제외</string>
     <string name="confirm_location_btn_select_this_location">이 위치 선택</string>
+    <string name="confirm_location_candidate_outside_region">방 지역 밖입니다</string>
+    <string name="confirm_location_all_candidates_outside_region">모든 후보가 방 지역 밖입니다</string>
     <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>

@@ -52,10 +52,11 @@ class ConfirmLocationViewModelTest {
         assertEquals(matchResult, viewModel.matchResult.value)
         assertEquals("부산", viewModel.roomRegion.value)
         assertNull(viewModel.selectedCandidateId.value)
+        assertFalse(viewModel.areAllCandidatesOutsideRegion.value!!)
     }
 
     @Test
-    fun testSelectCandidate_updatesSelectedId() {
+    fun testSelectCandidate_insideRegion_updatesSelectedId() {
         val viewModel = ConfirmLocationViewModel()
 
         val cand1 = MatchCandidate(kakaoPlaceId = "101", name = "모모스 커피 본점", address = "부산 금정구 오시게로 20")
@@ -74,7 +75,84 @@ class ConfirmLocationViewModelTest {
     }
 
     @Test
-    fun testOnSelectThisLocationClicked_insideRoomRegion_setsCheckedTrueAndRegionMismatchFalse() {
+    fun testSelectCandidate_outsideRegionCandidate_cannotBeSelected() {
+        val viewModel = ConfirmLocationViewModel()
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "101", name = "모모스 커피 본점", address = "부산 금정구 오시게로 20")
+        val cand2 = MatchCandidate(kakaoPlaceId = "201", name = "오설록 티하우스", address = "제주 서귀포시 안덕면")
+        val matchResult = MatchResult(
+            localId = "img0_p0",
+            extracted = GeminiPlace(name = "오설록"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = listOf(cand1, cand2),
+            selectedPlaceId = null,
+        )
+
+        viewModel.init(matchResult, "부산", positionInput = 0)
+        viewModel.selectCandidate("201") // Attempt to select outside region candidate
+
+        assertNull(viewModel.selectedCandidateId.value) // Selection must be ignored
+    }
+
+    @Test
+    fun testInit_initialSelectedIdOutsideRegion_resetsToNull() {
+        val viewModel = ConfirmLocationViewModel()
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "201", name = "오설록 티하우스", address = "제주 서귀포시 안덕면")
+        val matchResult = MatchResult(
+            localId = "img0_p0",
+            extracted = GeminiPlace(name = "오설록"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = listOf(cand1),
+            selectedPlaceId = "201", // Initially set to outside region candidate
+        )
+
+        viewModel.init(matchResult, "부산", positionInput = 0)
+
+        assertNull(viewModel.selectedCandidateId.value) // Starts with null selection
+    }
+
+    @Test
+    fun testInit_allCandidatesOutsideRegion_setsAllOutsideTrueAndSelectedIdNull() {
+        val viewModel = ConfirmLocationViewModel()
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "201", name = "오설록 티하우스 1호점", address = "제주 서귀포시 안덕면 1")
+        val cand2 = MatchCandidate(kakaoPlaceId = "202", name = "오설록 티하우스 2호점", address = "제주 서귀포시 안덕면 2")
+        val matchResult = MatchResult(
+            localId = "img0_p0",
+            extracted = GeminiPlace(name = "오설록"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = listOf(cand1, cand2),
+            selectedPlaceId = "201",
+        )
+
+        viewModel.init(matchResult, "부산", positionInput = 0)
+
+        assertTrue(viewModel.areAllCandidatesOutsideRegion.value!!)
+        assertNull(viewModel.selectedCandidateId.value) // Selection disabled
+    }
+
+    @Test
+    fun testInit_blankRoomRegion_allowsAllCandidatesSelection() {
+        val viewModel = ConfirmLocationViewModel()
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "201", name = "오설록 티하우스", address = "제주 서귀포시 안덕면")
+        val matchResult = MatchResult(
+            localId = "img0_p0",
+            extracted = GeminiPlace(name = "오설록"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = listOf(cand1),
+            selectedPlaceId = "201",
+        )
+
+        viewModel.init(matchResult, roomRegionInput = "", positionInput = 0)
+
+        assertFalse(viewModel.areAllCandidatesOutsideRegion.value!!)
+        assertEquals("201", viewModel.selectedCandidateId.value) // Blank roomRegion allows selection
+    }
+
+    @Test
+    fun testOnSelectThisLocationClicked_returnsRegionMismatchFalseAndCheckedTrue() {
         val viewModel = ConfirmLocationViewModel()
 
         val cand1 = MatchCandidate(kakaoPlaceId = "101", name = "모모스 커피 본점", address = "부산 금정구 오시게로 20")
@@ -97,36 +175,8 @@ class ConfirmLocationViewModelTest {
         val selectedResult = (eventResult as ConfirmLocationResult.Selected)
         assertEquals(2, selectedResult.position)
         assertEquals("101", selectedResult.updatedMatchResult.selectedPlaceId)
-        assertFalse(selectedResult.updatedMatchResult.regionMismatch)
-        assertTrue(selectedResult.updatedMatchResult.checked)
-    }
-
-    @Test
-    fun testOnSelectThisLocationClicked_outsideRoomRegion_setsCheckedFalseAndRegionMismatchTrue() {
-        val viewModel = ConfirmLocationViewModel()
-
-        val cand1 = MatchCandidate(kakaoPlaceId = "201", name = "오설록 티하우스", address = "제주 서귀포시 안덕면")
-        val matchResult = MatchResult(
-            localId = "img0_p0",
-            extracted = GeminiPlace(name = "오설록"),
-            status = MatchResult.STATUS_CHECK,
-            candidates = listOf(cand1),
-            selectedPlaceId = null,
-        )
-
-        viewModel.init(matchResult, "부산", positionInput = 1)
-        viewModel.selectCandidate("201")
-        viewModel.onSelectThisLocationClicked()
-
-        val eventResult = viewModel.resultEvent.value?.getContentIfNotHandled()
-        assertNotNull(eventResult)
-        assertTrue(eventResult is ConfirmLocationResult.Selected)
-
-        val selectedResult = (eventResult as ConfirmLocationResult.Selected)
-        assertEquals(1, selectedResult.position)
-        assertEquals("201", selectedResult.updatedMatchResult.selectedPlaceId)
-        assertTrue(selectedResult.updatedMatchResult.regionMismatch)
-        assertFalse(selectedResult.updatedMatchResult.checked) // regionMismatch defaults to unchecked per §9
+        assertFalse(selectedResult.updatedMatchResult.regionMismatch) // Always false for selected candidate
+        assertTrue(selectedResult.updatedMatchResult.checked) // Always true
     }
 
     @Test
