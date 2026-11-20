@@ -51,7 +51,6 @@
     <string name="select_places_badge_check">후보 선택</string>
     <string name="select_places_badge_exception">예외</string>
     <string name="select_places_badge_manual">직접 추가</string>
-    <string name="select_places_btn_add_manual">+ 직접 검색으로 추가</string>
     <string name="select_places_error_duplicate_place">이미 목록에 있는 장소입니다.</string>
     <string name="select_places_item_check_subtitle">%1$d개 후보 · 터치하여 선택</string>
     <string name="select_places_item_not_found_subtitle">장소를 찾을 수 없음</string>
