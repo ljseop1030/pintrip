@@ -17,6 +17,55 @@ class ExtractUtilsTest {
     }
 
     @Test
+    fun testNormalizeRegionName() {
+        assertEquals("부산", normalizeRegionName("부산광역시"))
+        assertEquals("제주", normalizeRegionName("제주특별자치도"))
+        assertEquals("전남", normalizeRegionName("전라남도"))
+        assertEquals("경북", normalizeRegionName("경상북도"))
+        assertEquals("충남", normalizeRegionName("충청남도"))
+        assertEquals("서울", normalizeRegionName("서울특별시"))
+        assertEquals("강릉", normalizeRegionName("강릉시"))
+        assertEquals("세종", normalizeRegionName("세종특별자치시"))
+        assertEquals("경기", normalizeRegionName("경기도"))
+        assertEquals("강원", normalizeRegionName("강원도"))
+    }
+
+    @Test
+    fun testIsCandidateAddressOutsideRoomRegion_normalizedMatches() {
+        // 1. 부산광역시 ↔ 부산
+        assertFalse(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "부산 해운대구 달맞이길 62",
+                roomRegion = "부산광역시",
+            ),
+        )
+
+        // 2. 제주특별자치도 ↔ 제주
+        assertFalse(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "제주 서귀포시 안덕면 신화역사로",
+                roomRegion = "제주특별자치도",
+            ),
+        )
+
+        // 3. 전라남도 ↔ 전남
+        assertFalse(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "전남 여수시 시청로 1",
+                roomRegion = "전라남도",
+            ),
+        )
+
+        // 4. 부산 ↔ 서울 (다른 지역)
+        assertTrue(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "서울 종로구 사직로 161",
+                roomRegion = "부산",
+            ),
+        )
+    }
+
+    @Test
     fun testMergeGeminiExtractionResponses_deduplicatesNameIgnoringSpacesAndCase() {
         val res1 = GeminiExtractionResponse(
             places = listOf(
