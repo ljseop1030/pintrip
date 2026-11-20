@@ -35,4 +35,8 @@
     <color name="badge_exception_text">#F09C6B</color>
     <color name="item_check_border">#FDBA74</color>
     <color name="item_check_bg">#FFFBEB</color>
+
+    <!-- Map Label Colors -->
+    <color name="map_label_text">#1A1C26</color>
+    <color name="map_label_stroke">#FFFFFFFF</color>
 </resources>
