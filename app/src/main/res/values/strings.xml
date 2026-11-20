@@ -250,6 +250,8 @@
     <string name="room_map_load_error">지도를 불러오지 못했어요</string>
     <!-- Room Map Category & BottomSheet Strings -->
     <string name="room_map_saved_places_format">저장한 장소 %1$d</string>
+    <string name="room_map_saved_places_all_format">저장한 장소 %1$d곳</string>
+    <string name="room_map_saved_places_category_format">%1$s %2$d곳</string>
     <string name="room_map_saved_places_title">저장한 장소</string>
     <string name="category_all">전체</string>
     <string name="category_dining">식당</string>

@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/pintrip_bg_gray">
 
     <com.kakao.vectormap.MapView
         android:id="@+id/map_view"
@@ -14,15 +15,16 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
+        android:background="@color/white"
         app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@color/white"
             app:title="@string/title_activity_room_map"
-            app:titleTextColor="?attr/colorOnSurface" />
+            app:titleTextColor="@color/text_dark" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -72,19 +74,6 @@
 
     </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_dice"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:contentDescription="@string/cd_random_pick"
-        app:backgroundTint="@color/card_background"
-        app:fabSize="normal"
-        app:layout_anchor="@id/bottom_sheet"
-        app:layout_anchorGravity="top|end"
-        app:srcCompat="@drawable/ic_dice"
-        app:tint="@color/pintrip_blue" />
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottom_sheet"
         android:layout_width="match_parent"
@@ -92,7 +81,7 @@
         android:background="@drawable/bg_bottom_sheet"
         android:elevation="8dp"
         app:behavior_hideable="false"
-        app:behavior_peekHeight="240dp"
+        app:behavior_peekHeight="@dimen/room_map_bottom_sheet_peek_height"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
         <View
@@ -118,7 +107,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/view_drag_handle"
-            tools:text="저장한 장소 24" />
+            tools:text="저장한 장소 168곳" />
 
         <HorizontalScrollView
             android:id="@+id/scroll_chips"
@@ -147,42 +136,72 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="@string/category_all" />
+                    android:text="@string/category_all"
+                    android:textColor="@color/chip_text_color"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_dining"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/category_dining" />
+                    android:text="@string/category_dining"
+                    android:textColor="@color/chip_text_color"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_cafe"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/category_cafe" />
+                    android:text="@string/category_cafe"
+                    android:textColor="@color/chip_text_color"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_sights"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/category_sights" />
+                    android:text="@string/category_sights"
+                    android:textColor="@color/chip_text_color"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_stay"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/category_stay" />
+                    android:text="@string/category_stay"
+                    android:textColor="@color/chip_text_color"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_etc"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/category_etc" />
+                    android:text="@string/category_etc"
+                    android:textColor="@color/chip_text_color"
+                    app:checkedIconVisible="false"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipStrokeColor="@color/chip_stroke_color"
+                    app:chipStrokeWidth="1dp" />
 
             </com.google.android.material.chip.ChipGroup>
 
@@ -216,5 +235,21 @@
             tools:text="아직 저장한 장소가 없어요" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_dice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:contentDescription="@string/cd_random_pick"
+        android:translationY="-20dp"
+        app:backgroundTint="@color/card_background"
+        app:fabSize="normal"
+        app:layout_anchor="@id/bottom_sheet"
+        app:layout_anchorGravity="top|end"
+        app:srcCompat="@drawable/ic_dice"
+        app:tint="@color/pintrip_blue" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

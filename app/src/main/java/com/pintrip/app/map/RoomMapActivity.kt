@@ -294,6 +294,17 @@ class RoomMapActivity : AppCompatActivity() {
         }
     }
 
+    private fun getCategoryNameResId(category: PlaceCategory): Int {
+        return when (category) {
+            PlaceCategory.ALL -> R.string.category_all
+            PlaceCategory.DINING -> R.string.category_dining
+            PlaceCategory.CAFE -> R.string.category_cafe
+            PlaceCategory.SIGHTS -> R.string.category_sights
+            PlaceCategory.STAY -> R.string.category_stay
+            PlaceCategory.ETC -> R.string.category_etc
+        }
+    }
+
     private fun observeViewModel() {
         viewModel.uiState.observe(this) { state ->
             when (state) {
@@ -307,7 +318,14 @@ class RoomMapActivity : AppCompatActivity() {
                     currentSuccessState = state
 
                     binding.toolbar.title = state.roomName
-                    binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_format, state.totalPlaceCount)
+
+                    val count = state.placeDetails.size
+                    if (state.selectedCategory == PlaceCategory.ALL) {
+                        binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_all_format, count)
+                    } else {
+                        val categoryName = getString(getCategoryNameResId(state.selectedCategory))
+                        binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_category_format, categoryName, count)
+                    }
 
                     val targetChipId = when (state.selectedCategory) {
                         PlaceCategory.ALL -> R.id.chip_all
