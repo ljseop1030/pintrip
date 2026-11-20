@@ -113,24 +113,25 @@ class SelectPlacesActivity : AppCompatActivity() {
             }
         }
 
-        viewModel.isSaving.observe(this) { isSaving ->
-            val confirmableCheckedCount = viewModel.getConfirmableCheckedCount()
-            binding.btnAddPlaces.isEnabled = !isSaving && (confirmableCheckedCount > 0)
+        viewModel.isSaving.observe(this) {
+            updateBottomBar()
         }
 
         viewModel.saveResultEvent.observe(this) { event ->
             event.getContentIfNotHandled()?.let { result ->
-                val message = if (result.skippedCount > 0) {
-                    getString(R.string.select_places_save_success_with_skip_format, result.addedCount, result.skippedCount)
-                } else {
-                    getString(R.string.select_places_save_success_format, result.addedCount)
-                }
+                val message = formatSaveResultMessage(result)
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                Log.d(TAG, "Saved places: added=${result.addedCount}, skipped=${result.skippedCount}")
+                Log.d(TAG, "Saved places: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=${result.excludedCount}")
 
                 val roomId = viewModel.roomId.value.orEmpty()
                 startActivity(PlaceListActivity.newIntent(this, roomId))
                 finish()
+            }
+        }
+
+        viewModel.unconfirmedCheckNotice.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { unconfirmedCount ->
+                showUnconfirmedDialog(unconfirmedCount)
             }
         }
 
@@ -145,6 +146,44 @@ class SelectPlacesActivity : AppCompatActivity() {
                 handleNoticeEvent(notice)
             }
         }
+    }
+
+    private fun formatSaveResultMessage(result: SavePlacesResultState): String {
+        val detailsList = mutableListOf<String>()
+        if (result.skippedCount > 0) {
+            detailsList.add(getString(R.string.select_places_detail_duplicate, result.skippedCount))
+        }
+        if (result.excludedCount > 0) {
+            detailsList.add(getString(R.string.select_places_detail_excluded, result.excludedCount))
+        }
+        val detailsStr = detailsList.joinToString(", ")
+
+        return when {
+            result.addedCount > 0 && detailsStr.isNotBlank() -> {
+                getString(R.string.select_places_save_success_with_details_format, result.addedCount, detailsStr)
+            }
+            result.addedCount > 0 -> {
+                getString(R.string.select_places_save_success_format, result.addedCount)
+            }
+            detailsStr.isNotBlank() -> {
+                getString(R.string.select_places_save_none_with_details_format, detailsStr)
+            }
+            else -> {
+                getString(R.string.select_places_save_none)
+            }
+        }
+    }
+
+    private fun showUnconfirmedDialog(unconfirmedCount: Int) {
+        val message = getString(R.string.select_places_unconfirmed_dialog_message, unconfirmedCount)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.select_places_unconfirmed_dialog_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.select_places_unconfirmed_continue) { _, _ ->
+                viewModel.saveSelectedPlaces(skipUnconfirmed = true)
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
     }
 
     private fun handleNoticeEvent(event: ShareNoticeEvent) {
@@ -172,8 +211,9 @@ class SelectPlacesActivity : AppCompatActivity() {
     private fun updateBottomBar() {
         val isSaving = viewModel.isSaving.value ?: false
         val confirmableCheckedCount = viewModel.getConfirmableCheckedCount()
+        val hasCheckedItems = viewModel.hasAnyCheckedItems()
         binding.btnAddPlaces.text = getString(R.string.select_places_btn_add_places_format, confirmableCheckedCount)
-        binding.btnAddPlaces.isEnabled = !isSaving && (confirmableCheckedCount > 0)
+        binding.btnAddPlaces.isEnabled = !isSaving && hasCheckedItems
     }
 
     companion object {

@@ -54,7 +54,14 @@
     <string name="select_places_region_mismatch_title">지역 불일치 안내</string>
     <string name="select_places_region_mismatch_notice">%1$d개 장소가 방 지역(%2$s) 밖입니다.</string>
     <string name="select_places_save_success_format">%1$d개 장소가 추가되었습니다.</string>
-    <string name="select_places_save_success_with_skip_format">%1$d개 장소가 추가되었습니다 (%2$d개 중복 제외).</string>
+    <string name="select_places_save_success_with_details_format">%1$d개 장소가 추가되었습니다 (%2$s).</string>
+    <string name="select_places_save_none">추가된 장소가 없습니다.</string>
+    <string name="select_places_save_none_with_details_format">추가된 장소가 없습니다 (%1$s).</string>
+    <string name="select_places_detail_duplicate">중복 %1$d개</string>
+    <string name="select_places_detail_excluded">제외 %1$d개</string>
+    <string name="select_places_unconfirmed_dialog_title">미선택 장소 안내</string>
+    <string name="select_places_unconfirmed_dialog_message">선택하지 않은 후보 장소 %1$d개가 있습니다. 제외하고 그대로 진행하시겠습니까?</string>
+    <string name="select_places_unconfirmed_continue">그대로 진행</string>
     <string name="select_places_save_error">장소 저장 중 오류가 발생했습니다.</string>
     <string name="common_confirm">확인</string>
 

@@ -23,13 +23,14 @@ data class RegionMismatchNotice(
 data class SavePlacesResultState(
     val addedCount: Int,
     val skippedCount: Int,
+    val excludedCount: Int = 0,
 )
 
 /**
  * [SelectPlacesActivity]의 화면 상태(매칭 결과 목록, 체크 여부, 선택된 후보)를 관리하는 ViewModel.
  *
  * docs/data-contract.md §9 규격을 준수합니다:
- * 1. CHECK 상태인 항목은 첫 번째 후보([candidates.first()])를 자동으로 선택합니다 (S08 개발 전 임시 처리).
+ * 1. CHECK 항목은 사용자가 후보를 고르기 전까지 미선택(selectedPlaceId = null)으로 유지하며, 저장 시 확인 팝업 후 제외합니다.
  * 2. 자동 선택된 후보의 주소로 기존 [isCandidateAddressOutsideRoomRegion] 함수를 재사용하여 [regionMismatch] 및 초기 [checked] 상태를 재판정합니다.
  * 3. Firestore `rooms/{roomId}`에서 방 이름 및 대표 지역을 단건 조회합니다.
  * 4. 진입 시 지역 불일치([MatchResult.regionMismatch]) 항목이 존재하는 경우 1회성 팝업 이벤트를 발행합니다.
@@ -39,9 +40,10 @@ data class SavePlacesResultState(
  */
 class SelectPlacesViewModel(
     private val db: FirebaseFirestore? = null,
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val auth: FirebaseAuth? = null,
     private val placeRepository: PlaceRepository = PlaceRepository(db = db ?: FirebaseFirestore.getInstance(), auth = auth),
     private val userRepository: UserRepository = UserRepository(db = db ?: FirebaseFirestore.getInstance(), auth = auth),
+    private val currentUidProvider: () -> String? = { FirebaseAuth.getInstance().currentUser?.uid },
 ) : ViewModel() {
 
     private val _roomId = MutableLiveData<String>()
@@ -58,6 +60,9 @@ class SelectPlacesViewModel(
 
     private val _regionMismatchNotice = MutableLiveData<Event<RegionMismatchNotice>>()
     val regionMismatchNotice: LiveData<Event<RegionMismatchNotice>> = _regionMismatchNotice
+
+    private val _unconfirmedCheckNotice = MutableLiveData<Event<Int>>()
+    val unconfirmedCheckNotice: LiveData<Event<Int>> = _unconfirmedCheckNotice
 
     private val _noticeEvent = MutableLiveData<Event<ShareNoticeEvent>>()
     val noticeEvent: LiveData<Event<ShareNoticeEvent>> = _noticeEvent
@@ -92,32 +97,10 @@ class SelectPlacesViewModel(
                     }
                 }
 
-                // CHECK 상태 항목의 첫 번째 후보 자동 선택 및 regionMismatch/checked 재판정 (docs/data-contract.md §9 준수)
-                // TODO: Temporary handling - auto-selecting the first candidate until S08 Confirm Location (candidate selection) screen is built
-                val processedResults = initialResults.map { item ->
-                    if (item.status == MatchResult.STATUS_CHECK && item.selectedPlaceId == null && item.candidates.isNotEmpty()) {
-                        val firstCandidate = item.candidates.first()
-                        val autoSelectedId = firstCandidate.kakaoPlaceId
-
-                        val isMismatch = isCandidateAddressOutsideRoomRegion(
-                            candidateAddress = firstCandidate.address,
-                            roomRegion = roomRegionStr,
-                            geminiOutsideRoomRegion = item.extracted.outsideRoomRegion,
-                        )
-
-                        item.copy(
-                            selectedPlaceId = autoSelectedId,
-                            regionMismatch = isMismatch,
-                            checked = if (isMismatch) false else item.checked,
-                        )
-                    } else {
-                        item
-                    }
-                }
-                _matchResults.postValue(processedResults)
+                _matchResults.postValue(initialResults)
 
                 // 지역 불일치 안내 (docs/data-contract.md §9): 진입 시 n개 장소가 방 지역 밖임을 팝업 이벤트로 전달
-                val mismatchCount = processedResults.count { it.regionMismatch }
+                val mismatchCount = initialResults.count { it.regionMismatch }
                 if (mismatchCount > 0 && roomRegionStr.isNotBlank()) {
                     _regionMismatchNotice.postValue(
                         Event(
@@ -148,26 +131,47 @@ class SelectPlacesViewModel(
 
     fun getConfirmableCheckedCount(): Int {
         val currentList = _matchResults.value ?: return 0
-        return currentList.count { it.checked && it.selectedCandidate != null }
+        return currentList.count { it.isConfirmable }
+    }
+
+    fun getUnconfirmedCheckedCount(): Int {
+        val currentList = _matchResults.value ?: return 0
+        return currentList.count { it.checked && it.status == MatchResult.STATUS_CHECK && it.selectedPlaceId == null }
+    }
+
+    fun hasAnyCheckedItems(): Boolean {
+        val currentList = _matchResults.value ?: return false
+        return currentList.any { it.checked && it.status != MatchResult.STATUS_NOT_FOUND }
     }
 
     /**
      * 체크된 유효 장소 목록을 [Place] 모델로 변환하여 [PlaceRepository.addPlaces]를 호출해 저장합니다.
      */
-    fun saveSelectedPlaces() {
+    fun saveSelectedPlaces(skipUnconfirmed: Boolean = false) {
         if (_isSaving.value == true) return
         val currentRoomId = _roomId.value.orEmpty()
         if (currentRoomId.isBlank()) return
 
+        val unconfirmedCount = getUnconfirmedCheckedCount()
+        if (unconfirmedCount > 0 && !skipUnconfirmed) {
+            _unconfirmedCheckNotice.postValue(Event(unconfirmedCount))
+            return
+        }
+
+        val excludedCount = if (skipUnconfirmed) unconfirmedCount else 0
         val confirmableItems = _matchResults.value?.filter { it.isConfirmable } ?: emptyList()
-        if (confirmableItems.isEmpty()) return
+
+        if (confirmableItems.isEmpty()) {
+            _saveResultEvent.postValue(Event(SavePlacesResultState(addedCount = 0, skippedCount = 0, excludedCount = excludedCount)))
+            return
+        }
 
         _isSaving.postValue(true)
 
         viewModelScope.launch {
             try {
-                val currentUser = auth.currentUser
-                if (currentUser == null) {
+                val uid = currentUidProvider()
+                if (uid == null) {
                     Log.w(TAG, "Auth currentUser is null, stopping save")
                     _isSaving.postValue(false)
                     _noticeEvent.postValue(
@@ -179,8 +183,6 @@ class SelectPlacesViewModel(
                     )
                     return@launch
                 }
-
-                val uid = currentUser.uid
                 val userProfile = try {
                     userRepository.getUserProfile(uid)
                 } catch (e: Exception) {
@@ -208,7 +210,6 @@ class SelectPlacesViewModel(
 
                     val matchTypeVal = when (item.status) {
                         MatchResult.STATUS_MATCHED -> "auto"
-                        MatchResult.STATUS_CHECK -> "confirmed" // TODO: Temporary handling - CHECK items auto-selected are set to matchType = "confirmed" until S08 Confirm Location screen is built
                         else -> "confirmed"
                     }
 
@@ -229,10 +230,10 @@ class SelectPlacesViewModel(
                 }
 
                 val result = placeRepository.addPlaces(currentRoomId, placesToSave)
-                Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}")
+                Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=$excludedCount")
 
                 _isSaving.postValue(false)
-                _saveResultEvent.postValue(Event(SavePlacesResultState(result.addedCount, result.skippedCount)))
+                _saveResultEvent.postValue(Event(SavePlacesResultState(result.addedCount, result.skippedCount, excludedCount)))
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save selected places: ${e.message}", e)
