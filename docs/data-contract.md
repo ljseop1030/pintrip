@@ -283,6 +283,7 @@ One Kakao keyword search per Gemini place. Passed to the Select Places and Confi
 | 0 results (after one retry without category) | `NOT_FOUND` |
 | 1 result | `MATCHED` |
 | 2+ with exactly one exact name match (ignore spaces/case) | `MATCHED` |
+| 2+ with exactly one candidate address in `extracted.rawText` (excluding first word of address, ignore spaces) | `MATCHED` |
 | 2+ otherwise | `CHECK` (top 5 as candidates) |
 | No region hint at all and too many results | Ask the user for a region before searching |
 

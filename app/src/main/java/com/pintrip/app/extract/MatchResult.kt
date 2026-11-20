@@ -98,7 +98,8 @@ data class MatchResult(
          * 1. 후보 0개: NOT_FOUND
          * 2. 후보 1개: MATCHED (자동 선택)
          * 3. 후보 2개 이상 & 공백/대소문자 무시 장소명이 정확히 1개 일치: MATCHED (자동 선택)
-         * 4. 후보 2개 이상 기타: CHECK (상위 5개 후보)
+         * 4. 후보 2개 이상 & 원문(rawText) 내 후보 주소(첫 단어 제외)가 정확히 1개 포함: MATCHED (자동 선택)
+         * 5. 후보 2개 이상 기타: CHECK (상위 5개 후보)
          *
          * Checked 규칙:
          * - NOT_FOUND: false (선택 비활성화)
@@ -133,7 +134,15 @@ data class MatchResult(
                 }
 
                 else -> {
-                    STATUS_CHECK to null
+                    val addressMatches = candidates.filter { candidate ->
+                        isCandidateAddressInRawText(candidate.address, extracted.rawText)
+                    }
+
+                    if (addressMatches.size == 1) {
+                        STATUS_MATCHED to addressMatches.first().kakaoPlaceId
+                    } else {
+                        STATUS_CHECK to null
+                    }
                 }
             }
 
@@ -156,6 +165,25 @@ data class MatchResult(
                 sourceType = sourceType,
                 sourceUrl = sourceUrl,
             )
+        }
+
+        /**
+         * 후보 주소의 첫 단어(시/도)를 제외하고 모든 공백을 제거한 뒤 [rawText]에 포함되어 있는지 검사합니다.
+         */
+        private fun isCandidateAddressInRawText(candidateAddress: String, rawText: String): Boolean {
+            val trimmedAddress = candidateAddress.trim()
+            val trimmedRawText = rawText.trim()
+            if (trimmedAddress.isBlank() || trimmedRawText.isBlank()) return false
+
+            val words = trimmedAddress.split("\\s+".toRegex())
+            if (words.size <= 1) return false
+
+            val addressWithoutCity = words.drop(1).joinToString("")
+            val cleanCandidateAddress = addressWithoutCity.replace("\\s+".toRegex(), "")
+            if (cleanCandidateAddress.isBlank()) return false
+
+            val cleanRawText = trimmedRawText.replace("\\s+".toRegex(), "")
+            return cleanRawText.contains(cleanCandidateAddress, ignoreCase = true)
         }
     }
 }
