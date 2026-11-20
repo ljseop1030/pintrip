@@ -9,6 +9,7 @@ import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.data.repository.PlaceDetailRepository
 import com.pintrip.app.data.repository.RoomRepository
+import com.pintrip.app.place.PlaceCategory
 import kotlinx.coroutines.launch
 
 sealed class CameraCommand {
@@ -21,7 +22,10 @@ sealed class RoomMapUiState {
     object Loading : RoomMapUiState()
     data class Success(
         val placeDetails: List<PlaceDetail>,
-        val cameraCommand: CameraCommand,
+        val cameraCommand: CameraCommand?,
+        val roomName: String,
+        val selectedCategory: PlaceCategory,
+        val totalPlaceCount: Int,
     ) : RoomMapUiState()
     data class Error(val messageResId: Int) : RoomMapUiState()
 }
@@ -35,6 +39,9 @@ class RoomMapViewModel(
     val uiState: LiveData<RoomMapUiState> = _uiState
 
     private var isDataLoaded = false
+    private var allPlaceDetails: List<PlaceDetail> = emptyList()
+    private var roomName: String = ""
+    private var selectedCategory: PlaceCategory = PlaceCategory.ALL
 
     fun loadRoomMap(roomId: String) {
         if (isDataLoaded) return
@@ -49,8 +56,10 @@ class RoomMapViewModel(
                     return@launch
                 }
 
+                roomName = room.name
                 val roomRegion = room.region
                 val placeDetails = placeDetailRepository.getPlaceDetails(roomId, roomRegion)
+                allPlaceDetails = placeDetails
 
                 val foundPlaces = placeDetails.filter { it.status == PlaceDetail.STATUS_FOUND && it.lat != null && it.lng != null }
 
@@ -65,12 +74,43 @@ class RoomMapViewModel(
                     }
                 }
 
-                _uiState.value = RoomMapUiState.Success(placeDetails, cameraCommand)
+                val filteredList = filterPlaces(allPlaceDetails, selectedCategory)
+
+                _uiState.value = RoomMapUiState.Success(
+                    placeDetails = filteredList,
+                    cameraCommand = cameraCommand,
+                    roomName = roomName,
+                    selectedCategory = selectedCategory,
+                    totalPlaceCount = allPlaceDetails.size,
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load room map data: ${e.message}", e)
                 _uiState.value = RoomMapUiState.Error(R.string.room_map_error_load_failed)
             }
         }
+    }
+
+    fun selectCategory(category: PlaceCategory) {
+        if (selectedCategory == category && (_uiState.value is RoomMapUiState.Success)) {
+            val currentSuccess = _uiState.value as RoomMapUiState.Success
+            if (currentSuccess.selectedCategory == category) return
+        }
+        selectedCategory = category
+
+        if (isDataLoaded) {
+            val filteredList = filterPlaces(allPlaceDetails, selectedCategory)
+            _uiState.value = RoomMapUiState.Success(
+                placeDetails = filteredList,
+                cameraCommand = null,
+                roomName = roomName,
+                selectedCategory = selectedCategory,
+                totalPlaceCount = allPlaceDetails.size,
+            )
+        }
+    }
+
+    private fun filterPlaces(places: List<PlaceDetail>, category: PlaceCategory): List<PlaceDetail> {
+        return places.filter { category.matches(it.category) }
     }
 
     fun retry(roomId: String) {

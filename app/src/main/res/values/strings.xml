@@ -248,4 +248,16 @@
     <string name="room_map_not_supported_on_device">이 기기에서는 지도를 표시할 수 없어요</string>
     <string name="room_map_auth_failed">지도 인증에 실패했어요</string>
     <string name="room_map_load_error">지도를 불러오지 못했어요</string>
+    <!-- Room Map Category & BottomSheet Strings -->
+    <string name="room_map_saved_places_format">저장한 장소 %1$d</string>
+    <string name="room_map_saved_places_title">저장한 장소</string>
+    <string name="category_all">전체</string>
+    <string name="category_dining">식당</string>
+    <string name="category_cafe">카페</string>
+    <string name="category_sights">관광지</string>
+    <string name="category_stay">숙소</string>
+    <string name="category_etc">기타</string>
+    <string name="room_map_empty_no_places">아직 저장한 장소가 없어요</string>
+    <string name="room_map_empty_category">이 카테고리에 저장한 장소가 없어요</string>
+    <string name="cd_random_pick">랜덤으로 장소 고르기</string>
 </resources>

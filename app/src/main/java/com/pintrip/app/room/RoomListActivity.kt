@@ -191,7 +191,7 @@ class RoomListActivity : AppCompatActivity() {
             event.getContentIfNotHandled()?.let { roomId ->
                 dismissJoinCodeDialog()
                 try {
-                    val intent = PlaceListActivity.newIntent(this, roomId)
+                    val intent = com.pintrip.app.map.RoomMapActivity.newIntent(this, roomId)
                     placeListLauncher.launch(intent)
                     viewModel.onPlaceListLaunchSuccess()
                 } catch (_: Exception) {
