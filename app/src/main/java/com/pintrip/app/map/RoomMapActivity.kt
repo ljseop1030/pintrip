@@ -4,10 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -25,6 +28,7 @@ import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
+import com.kakao.vectormap.label.LabelTextStyle
 import java.util.concurrent.atomic.AtomicReference
 
 class RoomMapActivity : AppCompatActivity() {
@@ -51,6 +55,7 @@ class RoomMapActivity : AppCompatActivity() {
     private val viewModel: RoomMapViewModel by viewModels()
 
     private var kakaoMapInstance: KakaoMap? = null
+    private var labelStyles: LabelStyles? = null
     private var currentSuccessState: RoomMapUiState.Success? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,9 +144,41 @@ class RoomMapActivity : AppCompatActivity() {
         }, object : KakaoMapReadyCallback() {
             override fun onMapReady(kakaoMap: KakaoMap) {
                 kakaoMapInstance = kakaoMap
+                initLabelStyles(kakaoMap)
                 applyMapData()
             }
         })
+    }
+
+    private fun initLabelStyles(kakaoMap: KakaoMap) {
+        if (labelStyles != null) return
+
+        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_pintrip_pin)
+        val bitmap = drawable?.toBitmap()
+        if (bitmap == null) {
+            Log.e(TAG, "Failed to convert ic_pintrip_pin to bitmap")
+            return
+        }
+
+        val textColor = ContextCompat.getColor(this, R.color.map_label_text)
+        val strokeColor = ContextCompat.getColor(this, R.color.map_label_stroke)
+
+        val textSizePx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP,
+            13f,
+            resources.displayMetrics
+        ).toInt()
+        val strokeWidthPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            2f,
+            resources.displayMetrics
+        ).toInt()
+
+        val labelStyle = LabelStyle.from(bitmap)
+            .setAnchorPoint(0.5f, 1.0f)
+            .setTextStyles(LabelTextStyle.from(textSizePx, textColor, strokeWidthPx, strokeColor))
+
+        labelStyles = kakaoMap.labelManager?.addLabelStyles(LabelStyles.from(labelStyle))
     }
 
     override fun onResume() {
@@ -204,21 +241,23 @@ class RoomMapActivity : AppCompatActivity() {
         layer?.removeAll()
 
         val foundPlaces = success.placeDetails.filter { it.status == PlaceDetail.STATUS_FOUND && it.lat != null && it.lng != null }
-        if (foundPlaces.isNotEmpty()) {
-            val styles = labelManager?.addLabelStyles(
-                LabelStyles.from(LabelStyle.from(R.drawable.ic_pintrip_pin))
-            )
-            if (styles != null) {
-                foundPlaces.forEach { place ->
-                    val latLng = LatLng.from(place.lat!!, place.lng!!)
-                    val textBuilder = LabelTextBuilder().setTexts(place.name.orEmpty())
-                    val options = LabelOptions.from(latLng)
-                        .setStyles(styles)
-                        .setTexts(textBuilder)
-                    layer?.addLabel(options)
+        var addedLabelCount = 0
+
+        if (foundPlaces.isNotEmpty() && labelStyles != null) {
+            foundPlaces.forEach { place ->
+                val latLng = LatLng.from(place.lat!!, place.lng!!)
+                val textBuilder = LabelTextBuilder().setTexts(place.name.orEmpty())
+                val options = LabelOptions.from(latLng)
+                    .setStyles(labelStyles)
+                    .setTexts(textBuilder)
+                val label = layer?.addLabel(options)
+                if (label != null) {
+                    addedLabelCount++
                 }
             }
         }
+
+        Log.d(TAG, "foundPlaces: ${foundPlaces.size}, addedLabels: $addedLabelCount, isStyleNull: ${labelStyles == null}")
 
         when (val cmd = success.cameraCommand) {
             is CameraCommand.FitPoints -> {
