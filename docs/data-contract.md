@@ -102,7 +102,7 @@ Separate collection so non-members never need read access to `rooms`, and duplic
 #### Custom Deep Link URI & Web Share Link Policy
 - **Custom Deep Link Format (App Internal):** `pintrip://join?code={code}` (e.g. `pintrip://join?code=ABC234`)
 - **Web Share Link Format (External Sharing):** `https://pintrip-a12a6.web.app/join?code={code}`
-- **External Sharing Behavior:** KakaoTalk 등 외부 웹 메신저는 `https://` 링크로 공유되며, 클릭 시 Firebase Hosting 정적 안내 페이지에서 사용자의 명시적 클릭 버튼을 통해 Android Intent URI (`intent://join?code={code}#Intent;scheme=pintrip;package=com.pintrip.app;...;end;`)를 실행합니다. 해당 Intent URI는 안드로이드 OS 수준에서 기존 `pintrip://join?code={code}` 인텐트 수신 경로와 상응하게 앱을 동적으로 실행시킵니다.
+- **External Sharing Behavior:** KakaoTalk 등 외부 웹 메신저는 `https://` 링크로 공유되며, 클릭 시 Firebase Hosting 정적 안내 페이지에서 사용자의 명시적 클릭 버튼을 통해 Android Intent URI (`intent://join?code={code}#Intent;scheme=pintrip;package=com.pintrip.app;S.browser_fallback_url={encodedFallbackUrl};end`)를 실행합니다. 해당 Intent URI는 안드로이드 OS 수준에서 기존 `pintrip://join?code={code}` 인텐트 수신 경로와 상응하게 앱을 동적으로 실행시킵니다.
 - **Firebase Hosting Deployment Command:** Hosting 배포 시 Firestore 규칙 덮어쓰기 사고를 방지하기 위해 반드시 `npx firebase-tools deploy --only hosting --project pintrip-a12a6` 명령어(프로젝트 지정 및 hosting 전용)를 사용해야 합니다.
 - **Scheme / Host / Query:** Scheme `pintrip` (case-insensitive), Host `join` (case-insensitive), Path empty/`/`, Parameter `code` (단 1개만 허용). 비표준 경로, 포트, userInfo, fragment 등은 거부.
 - **Normalization & Validation:** Client converts to uppercase (`code.trim().uppercase()`) and validates regex `^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$`. Invalid/malformed URIs or codes are rejected without deleting existing valid pending invites.
