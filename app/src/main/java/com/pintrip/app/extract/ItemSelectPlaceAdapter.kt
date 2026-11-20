@@ -49,31 +49,32 @@ class ItemSelectPlaceAdapter(
             }
 
             // 2. 장소명
-            binding.tvPlaceName.text = if (item.status == MatchResult.STATUS_MATCHED && item.selectedCandidate != null) {
-                item.selectedCandidate?.name ?: item.extracted.name
-            } else {
-                item.extracted.name
-            }
+            binding.tvPlaceName.text = item.selectedCandidate?.name ?: item.extracted.name
 
             // 3. 서브타이틀 (카테고리, 주소, 후보 정보 등)
-            val subtitleText = when (item.status) {
-                MatchResult.STATUS_NOT_FOUND -> {
-                    binding.tvPlaceSubtitle.setTextColor(ContextCompat.getColor(context, R.color.badge_exception_text))
-                    context.getString(R.string.select_places_item_not_found_subtitle)
-                }
-
-                MatchResult.STATUS_CHECK -> {
-                    binding.tvPlaceSubtitle.setTextColor(ContextCompat.getColor(context, R.color.badge_check_text))
-                    context.getString(R.string.select_places_item_check_subtitle, item.candidates.size)
-                }
-
-                else -> {
+            val subtitleText = when {
+                item.selectedCandidate != null -> {
                     binding.tvPlaceSubtitle.setTextColor(ContextCompat.getColor(context, R.color.text_sub_gray))
                     val candidate = item.selectedCandidate
                     val category = candidate?.category ?: item.extracted.categoryHint.orEmpty()
                     val address = candidate?.address ?: item.extracted.region.orEmpty()
 
                     listOf(category, address).filter { it.isNotBlank() }.joinToString(" · ")
+                }
+
+                item.status == MatchResult.STATUS_NOT_FOUND -> {
+                    binding.tvPlaceSubtitle.setTextColor(ContextCompat.getColor(context, R.color.badge_exception_text))
+                    context.getString(R.string.select_places_item_not_found_subtitle)
+                }
+
+                item.status == MatchResult.STATUS_CHECK -> {
+                    binding.tvPlaceSubtitle.setTextColor(ContextCompat.getColor(context, R.color.badge_check_text))
+                    context.getString(R.string.select_places_item_check_subtitle, item.candidates.size)
+                }
+
+                else -> {
+                    binding.tvPlaceSubtitle.setTextColor(ContextCompat.getColor(context, R.color.text_sub_gray))
+                    context.getString(R.string.select_places_item_not_found_subtitle)
                 }
             }
 

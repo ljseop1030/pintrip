@@ -129,6 +129,14 @@ class SelectPlacesViewModel(
         }
     }
 
+    fun updateItemAt(index: Int, updatedMatchResult: MatchResult) {
+        val currentList = _matchResults.value?.toMutableList() ?: return
+        if (index in currentList.indices) {
+            currentList[index] = updatedMatchResult
+            _matchResults.postValue(currentList)
+        }
+    }
+
     fun getConfirmableCheckedCount(): Int {
         val currentList = _matchResults.value ?: return 0
         return currentList.count { it.isConfirmable }

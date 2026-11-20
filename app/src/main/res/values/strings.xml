@@ -63,6 +63,13 @@
     <string name="select_places_unconfirmed_dialog_message">선택하지 않은 후보 장소 %1$d개가 있습니다. 제외하고 그대로 진행하시겠습니까?</string>
     <string name="select_places_unconfirmed_continue">그대로 진행</string>
     <string name="select_places_save_error">장소 저장 중 오류가 발생했습니다.</string>
+    <string name="confirm_location_title">장소 확인</string>
+    <string name="confirm_location_recognized_text_label">인식된 텍스트</string>
+    <string name="confirm_location_recognized_text_format">\"%1$s\"</string>
+    <string name="confirm_location_candidates_guide_format">%1$d개 후보 중 선택</string>
+    <string name="confirm_location_manual_search_placeholder">찾는 장소가 없나요? 직접 검색</string>
+    <string name="confirm_location_btn_exclude">제외</string>
+    <string name="confirm_location_btn_select_this_location">이 위치 선택</string>
     <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>

@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -25,7 +26,7 @@ import com.pintrip.app.place.PlaceListActivity
  * 2. 방 이름과 지역명은 Firestore `rooms/{roomId}`에서 단건 조회하여 하단 및 헤더에 표시합니다.
  * 3. NOT_FOUND 항목은 체크박스가 비활성화(disabled) 처리됩니다.
  * 4. regionMismatch 항목은 경고 배지와 함께 기본 해제(unchecked) 상태로 시작하며, 진입 시 Alert Dialog 팝업으로 안내합니다.
- * 5. CHECK 상태 항목은 첫 번째 후보가 자동 선택됩니다 (S08 개발 전 임시 처리).
+ * 5. CHECK 상태 항목을 탭하면 [ConfirmLocationActivity]에서 후보를 선택하거나 제외할 수 있습니다.
  * 6. 선택된 장소는 [Place] 객체로 변환하여 Firestore에 저장 후 토스트를 띄우고 화면을 닫습니다.
  */
 class SelectPlacesActivity : AppCompatActivity() {
@@ -33,6 +34,19 @@ class SelectPlacesActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySelectPlacesBinding
     private lateinit var adapter: ItemSelectPlaceAdapter
     private val viewModel: SelectPlacesViewModel by viewModels()
+
+    private val confirmLocationLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data ?: return@registerForActivityResult
+            val position = ConfirmLocationActivity.getPosition(data)
+            val updatedMatchResult = ConfirmLocationActivity.getMatchResult(data)
+            if (position != -1 && updatedMatchResult != null) {
+                viewModel.updateItemAt(position, updatedMatchResult)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,7 +90,15 @@ class SelectPlacesActivity : AppCompatActivity() {
             },
             onItemClicked = { index, item ->
                 Log.d(TAG, "Clicked item at index $index: $item")
-                // TODO: Navigate to S08 Confirm Location (candidate selection) screen when candidate choice is requested
+                if (item.status == MatchResult.STATUS_CHECK && item.candidates.isNotEmpty()) {
+                    val intent = ConfirmLocationActivity.newIntent(
+                        context = this,
+                        matchResult = item,
+                        roomRegion = viewModel.roomRegion.value.orEmpty(),
+                        position = index,
+                    )
+                    confirmLocationLauncher.launch(intent)
+                }
             },
         )
 
