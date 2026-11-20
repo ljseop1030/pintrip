@@ -57,9 +57,11 @@ class ManualSearchBottomSheetFragment : BottomSheetDialogFragment() {
         adapter = ItemConfirmCandidateAdapter(
             onCandidateSelected = { pickedCandidate ->
                 val currentTypedQuery = viewModel.currentQuery.value?.trim().orEmpty().ifBlank { pickedCandidate.name }
+                val targetIndex = arguments?.getInt(ARG_TARGET_INDEX, -1) ?: -1
                 val resultBundle = bundleOf(
                     EXTRA_PICKED_CANDIDATE to pickedCandidate,
                     EXTRA_MANUAL_QUERY to currentTypedQuery,
+                    EXTRA_TARGET_INDEX to targetIndex,
                 )
                 parentFragmentManager.setFragmentResult(REQUEST_KEY_MANUAL_SEARCH, resultBundle)
                 dismiss()
@@ -146,17 +148,21 @@ class ManualSearchBottomSheetFragment : BottomSheetDialogFragment() {
         const val REQUEST_KEY_MANUAL_SEARCH = "REQUEST_KEY_MANUAL_SEARCH"
         const val ARG_ROOM_REGION = "ARG_ROOM_REGION"
         const val ARG_INITIAL_QUERY = "ARG_INITIAL_QUERY"
+        const val ARG_TARGET_INDEX = "ARG_TARGET_INDEX"
         const val EXTRA_PICKED_CANDIDATE = "EXTRA_PICKED_CANDIDATE"
         const val EXTRA_MANUAL_QUERY = "EXTRA_MANUAL_QUERY"
+        const val EXTRA_TARGET_INDEX = "EXTRA_TARGET_INDEX"
 
         fun newInstance(
             roomRegion: String,
             initialQuery: String? = null,
+            targetIndex: Int = -1,
         ): ManualSearchBottomSheetFragment {
             return ManualSearchBottomSheetFragment().apply {
                 arguments = bundleOf(
                     ARG_ROOM_REGION to roomRegion,
                     ARG_INITIAL_QUERY to initialQuery,
+                    ARG_TARGET_INDEX to targetIndex,
                 )
             }
         }

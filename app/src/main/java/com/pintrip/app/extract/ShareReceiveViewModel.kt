@@ -54,6 +54,12 @@ sealed interface ShareNoticeEvent {
         val messageResId: Int,
         val formatArgs: List<Any> = emptyList(),
     ) : ShareNoticeEvent
+
+    data class ExtractionFailedDialogNotice(
+        val messageResId: Int,
+        val roomId: String,
+        val roomRegion: String,
+    ) : ShareNoticeEvent
 }
 
 class ShareReceiveViewModel(
@@ -282,6 +288,7 @@ class ShareReceiveViewModel(
         val appContext = context.applicationContext
 
         viewModelScope.launch {
+            var roomRegion = ""
             try {
                 // Step 2 시작: 텍스트 추출 진행 중, Step 3 대기
                 updateStep2Status(StepStatus.IN_PROGRESS)
@@ -289,7 +296,7 @@ class ShareReceiveViewModel(
 
                 // 1. 방 정보(지역명) 조회
                 val cachedRegion = _rooms.value?.find { it.id == roomId }?.region
-                val roomRegion = if (cachedRegion != null) {
+                roomRegion = if (cachedRegion != null) {
                     cachedRegion
                 } else {
                     roomRepository.getRoom(roomId)?.region?.trim().orEmpty()
@@ -396,11 +403,12 @@ class ShareReceiveViewModel(
                     isProceeded = false
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
+                        ShareNoticeEvent.ExtractionFailedDialogNotice(
                             messageResId = getNoPlacesErrorResId(shareInput),
+                            roomId = roomId,
+                            roomRegion = roomRegion,
                         ),
                     )
-                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
                     return@launch
                 }
 
@@ -436,11 +444,12 @@ class ShareReceiveViewModel(
                     isProceeded = false
                     updateStep3Status(StepStatus.ERROR)
                     _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
+                        ShareNoticeEvent.ExtractionFailedDialogNotice(
                             messageResId = getNoPlacesErrorResId(shareInput),
+                            roomId = roomId,
+                            roomRegion = roomRegion,
                         ),
                     )
-                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
                     return@launch
                 }
 
@@ -473,11 +482,12 @@ class ShareReceiveViewModel(
                 updateStep2Status(StepStatus.ERROR)
                 updateStep3Status(StepStatus.ERROR)
                 _noticeEvent.value = Event(
-                    ShareNoticeEvent.ToastNotice(
+                    ShareNoticeEvent.ExtractionFailedDialogNotice(
                         messageResId = R.string.share_receive_error_could_not_find_places,
+                        roomId = roomId,
+                        roomRegion = roomRegion,
                     ),
                 )
-                // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
             }
         }
     }

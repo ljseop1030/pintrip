@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -57,9 +58,56 @@ class ShareReceiveActivity : AppCompatActivity() {
 
         setupListeners()
         observeViewModel()
+        setupFragmentResultListeners()
 
         viewModel.fetchRooms()
         viewModel.processIntent(intent)
+    }
+
+    private fun setupFragmentResultListeners() {
+        supportFragmentManager.setFragmentResultListener(
+            ManualSearchBottomSheetFragment.REQUEST_KEY_MANUAL_SEARCH,
+            this,
+        ) { _, bundle ->
+            val candidate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bundle.getSerializable(ManualSearchBottomSheetFragment.EXTRA_PICKED_CANDIDATE, MatchCandidate::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                bundle.getSerializable(ManualSearchBottomSheetFragment.EXTRA_PICKED_CANDIDATE) as? MatchCandidate
+            }
+            val manualQuery = bundle.getString(ManualSearchBottomSheetFragment.EXTRA_MANUAL_QUERY).orEmpty()
+
+            if (candidate != null) {
+                val input = viewModel.shareInput.value
+                val (sourceType, sourceUrl) = when (input) {
+                    is ShareInput.Screenshots -> "screenshot" to null
+                    is ShareInput.LinkText -> {
+                        if (input.url != null) "link" to input.url else "text" to null
+                    }
+                    else -> "text" to null
+                }
+
+                val manualMatchResult = MatchResult(
+                    localId = "manual_p0",
+                    extracted = com.pintrip.app.data.model.GeminiPlace(name = manualQuery),
+                    status = MatchResult.STATUS_CHECK,
+                    candidates = listOf(candidate),
+                    selectedPlaceId = candidate.kakaoPlaceId,
+                    manualQuery = manualQuery,
+                    regionMismatch = false,
+                    checked = true,
+                    sourceType = sourceType,
+                    sourceUrl = sourceUrl,
+                )
+
+                val roomId = viewModel.selectedRoom.value?.id.orEmpty()
+                if (roomId.isNotBlank()) {
+                    val intent = SelectPlacesActivity.newIntent(this, roomId, listOf(manualMatchResult))
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -185,6 +233,18 @@ class ShareReceiveActivity : AppCompatActivity() {
                     getString(event.messageResId)
                 }
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            }
+            is ShareNoticeEvent.ExtractionFailedDialogNotice -> {
+                val message = getString(event.messageResId)
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.share_receive_dialog_no_places_title)
+                    .setMessage(message)
+                    .setPositiveButton(R.string.btn_manual_search) { _, _ ->
+                        val sheet = ManualSearchBottomSheetFragment.newInstance(roomRegion = event.roomRegion)
+                        sheet.show(supportFragmentManager, ManualSearchBottomSheetFragment.TAG)
+                    }
+                    .setNegativeButton(R.string.common_confirm, null)
+                    .show()
             }
         }
     }

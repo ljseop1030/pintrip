@@ -332,4 +332,40 @@ class ShareReceiveViewModelTest {
 
         assertEquals(1, repo.fetchCount)
     }
+
+    @Test
+    fun testStartExtractStep_zeroExtractedPlaces_emitsExtractionFailedDialogNotice() = runTest {
+        val fakeWebPageFetcher = FakeWebPageFetcher()
+        val emptyGeminiExtractor = object : GeminiExtractor(DummyContext) {
+            override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
+                return GeminiExtractionResponse(places = emptyList())
+            }
+        }
+        val fakePlaceMatcher = FakePlaceMatcher()
+
+        val viewModel = ShareReceiveViewModel(
+            geminiExtractorFactory = { emptyGeminiExtractor },
+            webPageFetcherFactory = { fakeWebPageFetcher },
+            placeMatcherFactory = { fakePlaceMatcher },
+            roomRepository = FakeRoomRepository("부산"),
+        )
+        viewModel.fetchRooms()
+
+        val shareInput = ShareInput.LinkText(
+            text = "장소가 없는 텍스트",
+            url = null,
+        )
+
+        viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val noticeEvent = viewModel.noticeEvent.value?.getContentIfNotHandled()
+        assertNotNull(noticeEvent)
+        assertTrue(noticeEvent is ShareNoticeEvent.ExtractionFailedDialogNotice)
+
+        val dialogNotice = noticeEvent as ShareNoticeEvent.ExtractionFailedDialogNotice
+        assertEquals("testRoomId", dialogNotice.roomId)
+        assertEquals("부산", dialogNotice.roomRegion)
+        assertEquals(com.pintrip.app.R.string.share_receive_error_could_not_find_places, dialogNotice.messageResId)
+    }
 }

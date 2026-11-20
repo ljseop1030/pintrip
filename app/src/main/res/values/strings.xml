@@ -80,6 +80,8 @@
     <string name="manual_search_input_hint">장소명 입력 (예: 이재모피자)</string>
     <string name="manual_search_empty_result">검색 결과가 없습니다.</string>
     <string name="manual_search_error">장소 검색 중 오류가 발생했습니다.</string>
+    <string name="btn_manual_search">직접 검색</string>
+    <string name="share_receive_dialog_no_places_title">장소 미발견 안내</string>
     <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>

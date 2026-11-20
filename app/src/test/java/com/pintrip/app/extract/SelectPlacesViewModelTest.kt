@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -293,5 +294,53 @@ class SelectPlacesViewModelTest {
         assertEquals("이재모피자", savedPlace.searchKeyword) // Uses manualQuery as searchKeyword
         assertEquals(null, savedPlace.searchRegion) // Manual search sets searchRegion to null
         assertEquals("manual", savedPlace.matchType) // matchType is "manual"
+    }
+
+    @Test
+    fun testOnManualSearchResultPicked_appliedToNotFoundItem_makesItemConfirmableDecreasesNotFoundCountAndSavesAsManual() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val notFoundItem = MatchResult(
+            localId = "1",
+            extracted = GeminiPlace(name = "찾지 못한 장소"),
+            status = MatchResult.STATUS_NOT_FOUND,
+            candidates = emptyList(),
+            selectedPlaceId = null,
+            checked = false,
+        )
+
+        viewModel.init("room_123", listOf(notFoundItem))
+
+        // Initial checks
+        assertEquals(1, viewModel.getNotFoundCount())
+        assertEquals(0, viewModel.getConfirmableCheckedCount())
+        assertFalse(viewModel.matchResults.value!![0].isConfirmable)
+
+        // Apply manual search result to index 0
+        val pickedCandidate = MatchCandidate(kakaoPlaceId = "manual_888", name = "수동검색 장소", address = "부산 금정구 오시게로 20")
+        viewModel.onManualSearchResultPicked(index = 0, candidate = pickedCandidate, manualQuery = "수동검색어")
+
+        // Post-picker checks
+        val updatedItem = viewModel.matchResults.value!![0]
+        assertTrue(updatedItem.isConfirmable)
+        assertEquals("manual_888", updatedItem.selectedPlaceId)
+        assertEquals("수동검색어", updatedItem.manualQuery)
+        assertEquals(0, viewModel.getNotFoundCount())
+        assertEquals(1, viewModel.getConfirmableCheckedCount())
+
+        // Save check
+        fakePlaceRepo.resultToReturn = AddPlacesResult(addedCount = 1, skippedCount = 0)
+        viewModel.saveSelectedPlaces(skipUnconfirmed = false)
+
+        assertEquals(1, fakePlaceRepo.addPlacesCallCount)
+        val savedPlace = fakePlaceRepo.lastPlacesSaved[0]
+        assertEquals("manual_888", savedPlace.kakaoPlaceId)
+        assertEquals("수동검색어", savedPlace.searchKeyword)
+        assertEquals(null, savedPlace.searchRegion)
+        assertEquals("manual", savedPlace.matchType)
     }
 }

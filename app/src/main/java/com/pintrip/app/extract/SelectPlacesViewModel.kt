@@ -138,6 +138,23 @@ class SelectPlacesViewModel(
         }
     }
 
+    fun onManualSearchResultPicked(index: Int, candidate: MatchCandidate, manualQuery: String) {
+        val currentList = _matchResults.value?.toMutableList() ?: return
+        if (index in currentList.indices) {
+            val targetItem = currentList[index]
+            val updatedItem = targetItem.copy(
+                status = MatchResult.STATUS_CHECK,
+                candidates = listOf(candidate),
+                selectedPlaceId = candidate.kakaoPlaceId,
+                manualQuery = manualQuery,
+                regionMismatch = false,
+                checked = true,
+            )
+            currentList[index] = updatedItem
+            _matchResults.postValue(currentList)
+        }
+    }
+
     fun getConfirmableCheckedCount(): Int {
         val currentList = _matchResults.value ?: return 0
         return currentList.count { it.isConfirmable }

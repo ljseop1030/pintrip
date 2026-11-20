@@ -61,8 +61,29 @@ class SelectPlacesActivity : AppCompatActivity() {
         }
 
         parseIntentAndInitViewModel()
+        setupFragmentResultListeners()
         setupViews()
         observeViewModel()
+    }
+
+    private fun setupFragmentResultListeners() {
+        supportFragmentManager.setFragmentResultListener(
+            ManualSearchBottomSheetFragment.REQUEST_KEY_MANUAL_SEARCH,
+            this,
+        ) { _, bundle ->
+            val candidate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bundle.getSerializable(ManualSearchBottomSheetFragment.EXTRA_PICKED_CANDIDATE, MatchCandidate::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                bundle.getSerializable(ManualSearchBottomSheetFragment.EXTRA_PICKED_CANDIDATE) as? MatchCandidate
+            }
+            val manualQuery = bundle.getString(ManualSearchBottomSheetFragment.EXTRA_MANUAL_QUERY).orEmpty()
+            val targetIndex = bundle.getInt(ManualSearchBottomSheetFragment.EXTRA_TARGET_INDEX, -1)
+
+            if (candidate != null && targetIndex != -1) {
+                viewModel.onManualSearchResultPicked(targetIndex, candidate, manualQuery)
+            }
+        }
     }
 
     private fun parseIntentAndInitViewModel() {
@@ -98,6 +119,13 @@ class SelectPlacesActivity : AppCompatActivity() {
                         position = index,
                     )
                     confirmLocationLauncher.launch(intent)
+                } else if (item.status == MatchResult.STATUS_NOT_FOUND) {
+                    val sheet = ManualSearchBottomSheetFragment.newInstance(
+                        roomRegion = viewModel.roomRegion.value.orEmpty(),
+                        initialQuery = item.extracted.name,
+                        targetIndex = index,
+                    )
+                    sheet.show(supportFragmentManager, ManualSearchBottomSheetFragment.TAG)
                 }
             },
         )
@@ -226,6 +254,10 @@ class SelectPlacesActivity : AppCompatActivity() {
                 } else {
                     getString(event.messageResId)
                 }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+            }
+            is ShareNoticeEvent.ExtractionFailedDialogNotice -> {
+                val message = getString(event.messageResId)
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }
