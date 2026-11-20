@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PinTrip 여행방 초대</title>
+    <style>
+        :root {
+            --primary-color: #3B82F6;
+            --primary-hover: #2563EB;
+            --bg-color: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --border-color: #E2E8F0;
+            --error-color: #EF4444;
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            max-width: 420px;
+            width: 100%;
+            padding: 32px 24px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+        }
+
+        .card {
+            background-color: #F1F5F9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .code-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .code-value {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            color: var(--text-primary);
+            user-select: all;
+            -webkit-user-select: all;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #F1F5F9;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #E2E8F0;
+        }
+
+        .guide {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(30, 41, 59, 0.9);
+            color: #FFFFFF;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .error-state {
+            display: none;
+        }
+
+        .error-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--error-color);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">PinTrip</div>
+        <div class="subtitle">함께 만드는 나만의 여행 지도</div>
+
+        <div id="valid-state">
+            <div class="card">
+                <div class="code-label">초대 코드</div>
+                <div id="invite-code" class="code-value">------</div>
+            </div>
+
+            <button id="btn-open-app" class="btn btn-primary">PinTrip 앱에서 열기</button>
+            <button id="btn-copy-code" class="btn btn-secondary">초대 코드 복사</button>
+
+            <div class="guide">
+                앱이 자동으로 열리지 않으면 <b>'초대 코드 복사'</b> 후<br>
+                PinTrip 앱 실행 > <b>'코드로 참여'</b>에 입력해 주세요.
+            </div>
+        </div>
+
+        <div id="error-state" class="error-state">
+            <div class="error-title">유효하지 않은 초대 링크</div>
+            <div class="subtitle" id="error-message">초대 코드가 올바르지 않거나 입력되지 않았습니다.</div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">초대 코드가 복사되었습니다.</div>
+
+    <script>
+        (function() {
+            const CODE_REGEX = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/;
+
+            function getSingleCodeParam() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const codeValues = urlParams.getAll('code');
+                // 중복 파라미터가 지정된 경우 거부 (DeepLinkUtils 검증 정책과 통일)
+                if (codeValues.length !== 1) return null;
+                return codeValues[0];
+            }
+
+            function showToast(message) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }
+
+            const rawCode = getSingleCodeParam();
+            const normalizedCode = rawCode ? rawCode.trim().toUpperCase() : null;
+
+            const validState = document.getElementById('valid-state');
+            const errorState = document.getElementById('error-state');
+            const codeElement = document.getElementById('invite-code');
+            const btnOpenApp = document.getElementById('btn-open-app');
+            const btnCopyCode = document.getElementById('btn-copy-code');
+
+            if (normalizedCode && CODE_REGEX.test(normalizedCode)) {
+                codeElement.textContent = normalizedCode;
+
+                const intentUri = 'intent://join?code=' + encodeURIComponent(normalizedCode) + '#Intent;scheme=pintrip;package=com.pintrip.app;end;';
+
+                btnOpenApp.addEventListener('click', function() {
+                    // 사용자 버튼 클릭 시에만 앱 실행 시도
+                    window.location.href = intentUri;
+                });
+
+                btnCopyCode.addEventListener('click', function() {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(normalizedCode).then(function() {
+                            showToast('초대 코드가 복사되었습니다.');
+                        }).catch(function() {
+                            fallbackCopy(normalizedCode);
+                        });
+                    } else {
+                        fallbackCopy(normalizedCode);
+                    }
+                });
+
+                function fallbackCopy(text) {
+                    const tempInput = document.createElement('input');
+                    tempInput.value = text;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('초대 코드가 복사되었습니다.');
+                    } catch (e) {
+                        showToast('코드 복사에 실패했습니다.');
+                    }
+                    document.body.removeChild(tempInput);
+                }
+            } else {
+                validState.style.display = 'none';
+                errorState.style.display = 'block';
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -99,8 +99,10 @@ Separate collection so non-members never need read access to `rooms`, and duplic
 
 **Note:** This subcollection exists solely as an atomic proof of invite code possession during non-member room joining in Firestore Security Rules (`existsAfter` + `joinedAt == request.time`). It is not a duplicated member list or a separate feature. Client read/update/delete/list are blocked.
 
-#### Custom Deep Link URI & Pending Invite Policy
-- **Deep Link Format:** `pintrip://join?code={code}` (e.g. `pintrip://join?code=ABC234`)
+#### Custom Deep Link URI & Web Share Link Policy
+- **Custom Deep Link Format (App Internal):** `pintrip://join?code={code}` (e.g. `pintrip://join?code=ABC234`)
+- **Web Share Link Format (External Sharing):** `https://<domain>/join?code={code}` (e.g. `https://pintrip.web.app/join?code=ABC234`)
+- **External Sharing Behavior:** KakaoTalk 등 외부 웹 메신저는 `https://` 링크로 공유되며, 클릭 시 Firebase Hosting 정적 안내 페이지에서 사용자의 명시적 클릭 버튼을 통해 앱의 `pintrip://join?code={code}` (또는 `intent://` fallback) 스킴을 호출하여 앱을 실행합니다.
 - **Scheme / Host / Query:** Scheme `pintrip` (case-insensitive), Host `join` (case-insensitive), Path empty/`/`, Parameter `code` (단 1개만 허용). 비표준 경로, 포트, userInfo, fragment 등은 거부.
 - **Normalization & Validation:** Client converts to uppercase (`code.trim().uppercase()`) and validates regex `^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$`. Invalid/malformed URIs or codes are rejected without deleting existing valid pending invites.
 - **Pre-login Code Storage:** Saved in `SharedPreferences` (`pintrip_invite_prefs`, key: `pending_invite_code`).

@@ -17,15 +17,47 @@ object DeepLinkUtils {
     const val SCHEME_PINTRIP = "pintrip"
     const val HOST_JOIN = "join"
     const val PARAM_CODE = "code"
+    const val DEFAULT_WEB_SHARE_BASE_URL = "https://pintrip-a12a6.web.app/join"
 
     private val CODE_REGEX = Regex("^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$")
 
     /**
-     * 초대 코드로 표준 딥링크 문자열을 생성합니다.
+     * 초대 코드로 표준 딥링크 문자열을 생성합니다. (기존 호환성 유지)
      */
     fun buildInviteLink(code: String): String {
+        return buildInviteDeepLink(code)
+    }
+
+    /**
+     * 초대 코드로 표준 커스텀 딥링크 문자열을 생성합니다 (`pintrip://join?code=ABC234`).
+     */
+    fun buildInviteDeepLink(code: String): String {
         val normalizedCode = code.trim().uppercase()
         return "$SCHEME_PINTRIP://$HOST_JOIN?$PARAM_CODE=$normalizedCode"
+    }
+
+    /**
+     * 카카오톡 등 외부 웹 공유용 HTTPS URL을 생성합니다 (`https://<domain>/join?code=ABC234`).
+     *
+     * @param code 6자리 초대 코드
+     * @param baseUrl 웹 공유 기본 URL (기본값: [DEFAULT_WEB_SHARE_BASE_URL])
+     * @return 유효한 HTTPS 공유 URL 또는 null (코드 또는 URL 형식 불일치 시)
+     */
+    fun buildWebShareUrl(code: String, baseUrl: String = DEFAULT_WEB_SHARE_BASE_URL): String? {
+        val normalizedCode = code.trim().uppercase()
+        if (!normalizedCode.matches(CODE_REGEX)) return null
+        if (baseUrl.isBlank()) return null
+        return try {
+            val javaUri = java.net.URI(baseUrl)
+            val scheme = javaUri.scheme?.lowercase() ?: return null
+            if (scheme != "https" && scheme != "http") return null
+
+            val separator = if (baseUrl.contains("?")) "&" else "?"
+            val param = "$PARAM_CODE=${java.net.URLEncoder.encode(normalizedCode, "UTF-8")}"
+            "$baseUrl$separator$param"
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**

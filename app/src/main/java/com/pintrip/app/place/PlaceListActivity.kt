@@ -276,8 +276,13 @@ class PlaceListActivity : AppCompatActivity() {
     }
 
     private fun shareInviteLink(code: String) {
-        val shareLink = com.pintrip.app.room.DeepLinkUtils.buildInviteLink(code)
-        val shareText = getString(R.string.share_invite_link_format, code, shareLink)
+        val baseUrl = getString(R.string.invite_web_share_base_url)
+        val shareLink = com.pintrip.app.room.DeepLinkUtils.buildWebShareUrl(code, baseUrl)
+        val shareText = if (shareLink != null) {
+            getString(R.string.share_invite_link_format, code, shareLink)
+        } else {
+            getString(R.string.share_invite_code_only_format, code)
+        }
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, shareText)

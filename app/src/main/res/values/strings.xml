@@ -174,7 +174,9 @@
     <string name="btn_copy_code">코드 복사</string>
     <string name="btn_share_link">링크 공유</string>
     <string name="title_share_invite_link">초대 링크 공유</string>
+    <string name="invite_web_share_base_url">https://pintrip-a12a6.web.app/join</string>
     <string name="share_invite_link_format">[PinTrip] 여행방 초대\n초대 코드: %1$s\n초대 링크: %2$s</string>
+    <string name="share_invite_code_only_format">[PinTrip] 여행방 초대\n초대 코드: %1$s</string>
     <string name="btn_go_to_room">목록으로</string>
     <string name="notice_invite_code_copied">초대 코드가 클립보드에 복사되었습니다.</string>
 

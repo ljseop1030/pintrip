@@ -13,6 +13,37 @@ class DeepLinkUtilsTest {
     }
 
     @Test
+    fun buildInviteDeepLink_formatsCorrectCustomSchemeUri() {
+        val link = DeepLinkUtils.buildInviteDeepLink("k7p2qx")
+        assertEquals("pintrip://join?code=K7P2QX", link)
+    }
+
+    @Test
+    fun buildWebShareUrl_validCodeAndCustomBaseUrl_returnsHttpsUrl() {
+        val url = DeepLinkUtils.buildWebShareUrl("k7p2qx", "https://pintrip-a12a6.web.app/join")
+        assertEquals("https://pintrip-a12a6.web.app/join?code=K7P2QX", url)
+    }
+
+    @Test
+    fun buildWebShareUrl_defaultBaseUrl_returnsHttpsUrl() {
+        val url = DeepLinkUtils.buildWebShareUrl("k7p2qx")
+        assertEquals("https://pintrip-a12a6.web.app/join?code=K7P2QX", url)
+    }
+
+    @Test
+    fun buildWebShareUrl_invalidCode_returnsNull() {
+        assertNull(DeepLinkUtils.buildWebShareUrl("K7P2Q0")) // '0' forbidden
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC23"))  // 5 chars
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC2345")) // 7 chars
+    }
+
+    @Test
+    fun buildWebShareUrl_invalidBaseUrlScheme_returnsNull() {
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", "ftp://pintrip.web.app"))
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", ""))
+    }
+
+    @Test
     fun extractInviteCode_validUriString_returnsNormalizedCode() {
         val extracted = DeepLinkUtils.extractInviteCode("pintrip://join?code=k7p2qx")
         assertEquals("K7P2QX", extracted)
