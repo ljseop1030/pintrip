@@ -8,5 +8,5 @@
 ## Screen Flow
 - Login → Room list → Room home (map + place list)
 - Room list → Create room / Join room (invite code or deep link)
-- Room home → Place detail / Vote / Day plan / Settlement / Travel mode
+- Room home → Place detail / Shake to pick / Vote / Day plan / Settlement / Travel mode
 - Share from another app → Share receive → Select places → Confirm location → Room home
