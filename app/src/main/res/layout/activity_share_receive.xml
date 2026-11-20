@@ -256,6 +256,89 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Inline Extract Failure Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardExtractFailure"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:strokeColor="@color/card_stroke"
+                app:strokeWidth="1dp"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvFailureMessage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_dark"
+                        android:textSize="14sp"
+                        tools:text="장소를 찾을 수 없습니다." />
+
+                    <LinearLayout
+                        android:id="@+id/layoutFailureButtons"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <!-- Select Other Photos Button (for NoPlaces) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSelectOtherPhotos"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
+                            android:paddingHorizontal="8dp"
+                            android:text="@string/share_receive_btn_select_other_photos"
+                            android:textColor="@color/text_dark"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="8dp"
+                            app:strokeColor="@color/card_stroke"
+                            app:strokeWidth="1dp" />
+
+                        <!-- Direct Search Button (for NoPlaces) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFailureManualSearch"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:paddingHorizontal="8dp"
+                            android:text="@string/btn_manual_search"
+                            android:textColor="@color/white"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:backgroundTint="@color/btn_primary_bg"
+                            app:cornerRadius="8dp" />
+
+                        <!-- Retry Button (for Error) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRetryExtraction"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:text="@string/share_receive_btn_retry"
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:visibility="gone"
+                            app:backgroundTint="@color/btn_primary_bg"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Travel Room Selection Section -->
             <TextView
                 android:layout_width="wrap_content"
@@ -291,9 +374,10 @@
                         android:textColor="@color/text_dark"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        tools:text="test_room_1" />
+                        tools:text="부산 여행방" />
 
                     <ImageView
+                        android:id="@+id/ivRoomSelectArrow"
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:contentDescription="@null"
@@ -315,7 +399,7 @@
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:backgroundTint="@color/pintrip_blue"
+        app:backgroundTint="@color/btn_primary_bg"
         app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

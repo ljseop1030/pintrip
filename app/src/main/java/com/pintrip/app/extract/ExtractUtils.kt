@@ -39,6 +39,61 @@ fun mergeGeminiExtractionResponses(responses: List<GeminiExtractionResponse>): G
 }
 
 /**
+ * 방 지역명 또는 카카오 주소의 시/도/광역시/특별자치도/특별시 등의 명칭을 정규화합니다.
+ *
+ * - "특별자치도/특별자치시/광역시/특별시/도/시" 접미사를 접미사 길이순으로 제거합니다.
+ * - 도(道) 단위의 길고 정식인 명칭은 카카오 Local API 표기 방식(약칭)으로 변환합니다.
+ *   (예: "전라남도" -> "전남", "경상북도" -> "경북", "충청남도" -> "충남", "제주특별자치도" -> "제주", "부산광역시" -> "부산")
+ * - 이 정규화 값은 메모리 상의 [isCandidateAddressOutsideRoomRegion] 지역 판정에만 사용되며,
+ *   Firestore나 모델 객체에 저장되는 데이터는 절대 변경하지 않습니다 (docs/data-contract.md §1 규칙 5 준수).
+ */
+fun normalizeRegionName(region: String?): String {
+    val trimmed = region?.trim().orEmpty()
+    if (trimmed.isBlank()) return ""
+
+    val provinceMap = mapOf(
+        "전라남도" to "전남",
+        "전라북도" to "전북",
+        "전북특별자치도" to "전북",
+        "경상북도" to "경북",
+        "경상남도" to "경남",
+        "충청남도" to "충남",
+        "충청북도" to "충북",
+        "강원특별자치도" to "강원",
+        "강원도" to "강원",
+        "제주특별자치도" to "제주",
+        "제주도" to "제주",
+        "경기도" to "경기",
+        "세종특별자치시" to "세종",
+    )
+
+    provinceMap[trimmed]?.let { return it }
+
+    for ((full, short) in provinceMap) {
+        if (trimmed.startsWith(full)) return short
+    }
+
+    var result = trimmed
+    val suffixes = listOf(
+        "특별자치도",
+        "특별자치시",
+        "광역시",
+        "특별시",
+        "도",
+        "시",
+    )
+
+    for (suffix in suffixes) {
+        if (result.endsWith(suffix) && result.length > suffix.length) {
+            result = result.removeSuffix(suffix)
+            break
+        }
+    }
+
+    return result.trim()
+}
+
+/**
  * 선택된 카카오 후보의 주소(또는 Gemini extracted.outsideRoomRegion)가 방 지역([roomRegion]) 밖인지 판정합니다. (docs/data-contract.md §9 준수)
  *
  * Region mismatch = true 판정 조건:
@@ -46,7 +101,7 @@ fun mergeGeminiExtractionResponses(responses: List<GeminiExtractionResponse>): G
  * 2. 검색 후 선택된 후보의 주소([candidateAddress])가 방 지역([roomRegion]) 밖인 경우 (메모리 내 비교)
  *
  * @param candidateAddress 선택된 카카오 후보의 도로명/지번 주소 (예: "서울 노원구 공릉로 232")
- * @param roomRegion 방의 대표 지역명 (예: "부산")
+ * @param roomRegion 방의 대표 지역명 (예: "부산", "부산광역시", "전라남도")
  * @param geminiOutsideRoomRegion Gemini가 사전에 판정한 outsideRoomRegion 값
  * @return 방 지역 밖인 경우 true, 방 지역 내이거나 판정 불가 시 false
  */
@@ -57,11 +112,20 @@ fun isCandidateAddressOutsideRoomRegion(
 ): Boolean {
     if (geminiOutsideRoomRegion) return true
 
-    val trimmedRoomRegion = roomRegion?.trim()?.ifBlank { null } ?: return false
-    val trimmedAddress = candidateAddress?.trim()?.ifBlank { null } ?: return false
+    val normalizedRoomRegion = normalizeRegionName(roomRegion)
+    if (normalizedRoomRegion.isBlank()) return false
 
-    // 주소에 방 지역명이 포함되어 있지 않으면 방 지역 밖으로 판정
-    return !trimmedAddress.contains(trimmedRoomRegion)
+    val trimmedAddress = candidateAddress?.trim().orEmpty()
+    if (trimmedAddress.isBlank()) return false
+
+    val words = trimmedAddress.split("\\s+".toRegex())
+    val firstWordNormalized = normalizeRegionName(words.firstOrNull())
+
+    val isInside = (firstWordNormalized == normalizedRoomRegion) ||
+            words.any { normalizeRegionName(it) == normalizedRoomRegion } ||
+            trimmedAddress.contains(normalizedRoomRegion)
+
+    return !isInside
 }
 
 /**

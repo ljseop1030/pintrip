@@ -30,10 +30,12 @@ data class AddPlacesResult(
  * 5. 방 문서가 존재하지 않을 경우 `IllegalArgumentException` 발생.
  * 6. 생성 시각(`createdAt`) 내림차순(최신순)으로 목록 1회 조회 (`getPlaces`).
  */
-class PlaceRepository(
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+open class PlaceRepository(
+    db: FirebaseFirestore? = null,
+    auth: FirebaseAuth? = null,
 ) {
+    private val db: FirebaseFirestore by lazy { db ?: FirebaseFirestore.getInstance() }
+    private val auth: FirebaseAuth by lazy { auth ?: FirebaseAuth.getInstance() }
 
     companion object {
         private val VALID_MATCH_TYPES = setOf("auto", "confirmed", "manual")
@@ -54,7 +56,7 @@ class PlaceRepository(
      * @throws IllegalArgumentException 방 ID가 비어있거나, 검증 실패, 또는 방 문서가 존재하지 않는 경우
      * @throws IllegalStateException 사용자가 로그인되어 있지 않은 경우
      */
-    suspend fun addPlaces(roomId: String, places: List<Place>): AddPlacesResult {
+    open suspend fun addPlaces(roomId: String, places: List<Place>): AddPlacesResult {
         require(roomId.isNotBlank()) { "roomId는 비어 있을 수 없습니다." }
         if (places.isEmpty()) {
             return AddPlacesResult(addedCount = 0, skippedCount = 0)

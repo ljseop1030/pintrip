@@ -6,6 +6,9 @@ import com.pintrip.app.data.model.GeminiExtractionResponse
 import com.pintrip.app.data.model.GeminiPlace
 import com.pintrip.app.data.remote.GeminiExtractor
 import com.pintrip.app.data.remote.WebPageFetcher
+import com.pintrip.app.data.model.Room
+import com.pintrip.app.data.repository.RoomRepository
+import com.google.firebase.firestore.Source
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +87,39 @@ class ShareReceiveViewModelTest {
         }
     }
 
+    private class FakeRoomRepository(
+        private val mockRegion: String = "부산"
+    ) : RoomRepository(null, null, null) {
+        override suspend fun getRoom(roomId: String, source: Source): Room? {
+            return Room(
+                id = roomId,
+                name = "Test Room",
+                region = mockRegion,
+                icon = "sea",
+                inviteCode = "ABCDEF",
+                ownerId = "ownerId",
+                memberIds = listOf("ownerId"),
+                members = emptyMap(),
+                placeCount = 0
+            )
+        }
+        override suspend fun getMyRooms(source: Source): List<Room> {
+            return listOf(getRoom("testRoomId", source)!!)
+        }
+    }
+
+    private class ConfigurableFakeRoomRepository(
+        val roomsToReturn: List<Room> = emptyList(),
+        val exceptionToThrow: Exception? = null,
+    ) : RoomRepository(null, null, null) {
+        var fetchCount = 0
+        override suspend fun getMyRooms(source: Source): List<Room> {
+            fetchCount++
+            if (exceptionToThrow != null) throw exceptionToThrow
+            return roomsToReturn
+        }
+    }
+
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -104,8 +140,9 @@ class ShareReceiveViewModelTest {
             geminiExtractorFactory = { fakeGeminiExtractor },
             webPageFetcherFactory = { fakeWebPageFetcher },
             placeMatcherFactory = { fakePlaceMatcher },
-            roomRegionFetcher = { "부산" },
+            roomRepository = FakeRoomRepository("부산"),
         )
+        viewModel.fetchRooms()
 
         val shareInput = ShareInput.LinkText(
             text = "[네이버 지도] 모모스 커피 부산 금정구 오시게로 20 https://naver.me/abc",
@@ -131,8 +168,9 @@ class ShareReceiveViewModelTest {
             geminiExtractorFactory = { fakeGeminiExtractor },
             webPageFetcherFactory = { fakeWebPageFetcher },
             placeMatcherFactory = { fakePlaceMatcher },
-            roomRegionFetcher = { "부산" },
+            roomRepository = FakeRoomRepository("부산"),
         )
+        viewModel.fetchRooms()
 
         val shareInput = ShareInput.LinkText(
             text = "[카카오맵] 모모스 커피 https://kakaomap.place/123",
@@ -156,8 +194,9 @@ class ShareReceiveViewModelTest {
             geminiExtractorFactory = { fakeGeminiExtractor },
             webPageFetcherFactory = { fakeWebPageFetcher },
             placeMatcherFactory = { fakePlaceMatcher },
-            roomRegionFetcher = { "부산" },
+            roomRepository = FakeRoomRepository("부산"),
         )
+        viewModel.fetchRooms()
 
         val shareInput = ShareInput.LinkText(
             text = "공유 텍스트",
@@ -183,8 +222,9 @@ class ShareReceiveViewModelTest {
             geminiExtractorFactory = { fakeGeminiExtractor },
             webPageFetcherFactory = { fakeWebPageFetcher },
             placeMatcherFactory = { fakePlaceMatcher },
-            roomRegionFetcher = { "부산" },
+            roomRepository = FakeRoomRepository("부산"),
         )
+        viewModel.fetchRooms()
 
         val shareInput = ShareInput.LinkText(
             text = "중요 장소 공유 텍스트",
@@ -198,5 +238,214 @@ class ShareReceiveViewModelTest {
         assertNotNull(extractedText)
         assertTrue(extractedText!!.startsWith("중요 장소 공유 텍스트\n\n"))
         assertEquals(GeminiExtractor.MAX_TEXT_LENGTH, extractedText.length)
+    }
+
+    @Test
+    fun testFetchRooms_emptyList_online_showsRoomListEmpty() = runTest {
+        val repo = ConfigurableFakeRoomRepository(roomsToReturn = emptyList())
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { true }
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, viewModel.rooms.value?.size)
+        assertEquals(com.pintrip.app.R.string.room_list_empty, viewModel.roomLoadError.value)
+        assertEquals(null, viewModel.selectedRoom.value)
+    }
+
+    @Test
+    fun testFetchRooms_emptyList_offline_showsNetworkUnavailable() = runTest {
+        val repo = ConfigurableFakeRoomRepository(roomsToReturn = emptyList())
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { false }
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, viewModel.rooms.value?.size)
+        assertEquals(com.pintrip.app.R.string.error_network_unavailable, viewModel.roomLoadError.value)
+        assertEquals(null, viewModel.selectedRoom.value)
+    }
+
+    @Test
+    fun testFetchRooms_singleRoom_autoSelectsRoom() = runTest {
+        val room1 = Room(id = "r1", name = "Room 1", region = "부산", icon = "sea", inviteCode = "ABC123", ownerId = "o1", memberIds = listOf("o1"), members = emptyMap(), placeCount = 0)
+        val repo = ConfigurableFakeRoomRepository(roomsToReturn = listOf(room1))
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { true }
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, viewModel.rooms.value?.size)
+        assertEquals(null, viewModel.roomLoadError.value)
+        assertEquals("r1", viewModel.selectedRoom.value?.id)
+    }
+
+    @Test
+    fun testFetchRooms_multipleRooms_doesNotSelectRoom() = runTest {
+        val room1 = Room(id = "r1", name = "Room 1", region = "부산", icon = "sea", inviteCode = "ABC123", ownerId = "o1", memberIds = listOf("o1"), members = emptyMap(), placeCount = 0)
+        val room2 = Room(id = "r2", name = "Room 2", region = "서울", icon = "city", inviteCode = "DEF456", ownerId = "o1", memberIds = listOf("o1"), members = emptyMap(), placeCount = 0)
+        val repo = ConfigurableFakeRoomRepository(roomsToReturn = listOf(room1, room2))
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { true }
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(2, viewModel.rooms.value?.size)
+        assertEquals(null, viewModel.roomLoadError.value)
+        assertEquals(null, viewModel.selectedRoom.value)
+    }
+
+    @Test
+    fun testFetchRooms_notLoggedIn_showsNotLoggedInError() = runTest {
+        val repo = ConfigurableFakeRoomRepository(exceptionToThrow = IllegalStateException("로그인된 사용자 정보가 없습니다. (Auth currentUser is null)"))
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { true }
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, viewModel.rooms.value?.size)
+        assertEquals(com.pintrip.app.R.string.error_not_logged_in, viewModel.roomLoadError.value)
+        assertEquals(null, viewModel.selectedRoom.value)
+    }
+
+    @Test
+    fun testFetchRooms_duplicateCall_fetchesOnlyOnce() = runTest {
+        val room1 = Room(id = "r1", name = "Room 1", region = "부산", icon = "sea", inviteCode = "ABC123", ownerId = "o1", memberIds = listOf("o1"), members = emptyMap(), placeCount = 0)
+        val repo = ConfigurableFakeRoomRepository(roomsToReturn = listOf(room1))
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { true }
+        )
+        viewModel.fetchRooms()
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, repo.fetchCount)
+    }
+
+    @Test
+    fun testStartExtractStep_zeroExtractedPlaces_setsExtractFailureStateNoPlaces() = runTest {
+        val fakeWebPageFetcher = FakeWebPageFetcher()
+        val emptyGeminiExtractor = object : GeminiExtractor(DummyContext) {
+            override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
+                return GeminiExtractionResponse(places = emptyList())
+            }
+        }
+        val fakePlaceMatcher = FakePlaceMatcher()
+
+        val viewModel = ShareReceiveViewModel(
+            geminiExtractorFactory = { emptyGeminiExtractor },
+            webPageFetcherFactory = { fakeWebPageFetcher },
+            placeMatcherFactory = { fakePlaceMatcher },
+            roomRepository = FakeRoomRepository("부산"),
+        )
+        viewModel.fetchRooms()
+
+        val shareInput = ShareInput.LinkText(
+            text = "장소가 없는 텍스트",
+            url = null,
+        )
+
+        viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val failureState = viewModel.extractFailureState.value
+        assertNotNull(failureState)
+        assertTrue(failureState is ExtractFailureState.NoPlaces)
+
+        val noPlacesState = failureState as ExtractFailureState.NoPlaces
+        assertEquals(com.pintrip.app.R.string.share_receive_error_could_not_find_places, noPlacesState.messageResId)
+    }
+
+    @Test
+    fun testStartExtractStep_exception_setsExtractFailureStateError() = runTest {
+        val fakeWebPageFetcher = FakeWebPageFetcher()
+        val errorGeminiExtractor = object : GeminiExtractor(DummyContext) {
+            override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
+                throw RuntimeException("Extraction error")
+            }
+        }
+        val fakePlaceMatcher = FakePlaceMatcher()
+
+        val viewModel = ShareReceiveViewModel(
+            geminiExtractorFactory = { errorGeminiExtractor },
+            webPageFetcherFactory = { fakeWebPageFetcher },
+            placeMatcherFactory = { fakePlaceMatcher },
+            roomRepository = FakeRoomRepository("부산"),
+        )
+        viewModel.fetchRooms()
+
+        val shareInput = ShareInput.LinkText(
+            text = "오류 발생 텍스트",
+            url = null,
+        )
+
+        viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val failureState = viewModel.extractFailureState.value
+        assertNotNull(failureState)
+        assertTrue(failureState is ExtractFailureState.Error)
+    }
+
+    @Test
+    fun testRetryCurrentExtraction_clearsExtractFailureStateAndNavigates() = runTest {
+        val fakeWebPageFetcher = FakeWebPageFetcher()
+        val fakePlaceMatcher = FakePlaceMatcher()
+
+        var returnEmpty = true
+        val configurableGeminiExtractor = object : GeminiExtractor(DummyContext) {
+            override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
+                return if (returnEmpty) {
+                    GeminiExtractionResponse(places = emptyList())
+                } else {
+                    GeminiExtractionResponse(places = listOf(GeminiPlace(name = "모모스 커피", region = "금정구")))
+                }
+            }
+        }
+
+        val viewModel = ShareReceiveViewModel(
+            geminiExtractorFactory = { configurableGeminiExtractor },
+            webPageFetcherFactory = { fakeWebPageFetcher },
+            placeMatcherFactory = { fakePlaceMatcher },
+            roomRepository = FakeRoomRepository("부산"),
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val shareInput = ShareInput.LinkText(text = "모모스 커피", url = null)
+
+        // 1. First attempt -> returns empty places -> triggers NoPlaces state
+        viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val failureState = viewModel.extractFailureState.value
+        assertNotNull(failureState)
+        assertTrue(failureState is ExtractFailureState.NoPlaces)
+
+        // 2. Change Gemini extractor to succeed
+        returnEmpty = false
+
+        // 3. Retry current extraction
+        viewModel.retryCurrentExtraction(DummyContext)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // 4. Assert failure state is null and navigateToSelectPlaces is emitted
+        assertEquals(null, viewModel.extractFailureState.value)
+
+        val navigateEvent = viewModel.navigateToSelectPlaces.value?.getContentIfNotHandled()
+        assertNotNull(navigateEvent)
+        assertEquals("testRoomId", navigateEvent!!.roomId)
+        assertEquals(1, navigateEvent.matchResults.size)
     }
 }

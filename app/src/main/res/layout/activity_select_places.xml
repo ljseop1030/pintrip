@@ -96,6 +96,44 @@
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_select_place" />
 
+            <!-- Manual Search Placeholder Card (Same as S08 cardManualSearch) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnAddManualPlace"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/card_stroke"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_search"
+                        app:tint="@color/text_sub_gray" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/confirm_location_manual_search_placeholder"
+                        android:textColor="@color/text_sub_gray"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- SNS Notice Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardSnsNotice"
