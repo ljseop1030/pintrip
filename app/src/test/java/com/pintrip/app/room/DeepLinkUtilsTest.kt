@@ -19,28 +19,26 @@ class DeepLinkUtilsTest {
     }
 
     @Test
-    fun buildWebShareUrl_validCodeAndCustomBaseUrl_returnsHttpsUrl() {
+    fun buildWebShareUrl_validCodeAndBaseUrl_returnsHttpsUrl() {
         val url = DeepLinkUtils.buildWebShareUrl("k7p2qx", "https://pintrip-a12a6.web.app/join")
         assertEquals("https://pintrip-a12a6.web.app/join?code=K7P2QX", url)
     }
 
     @Test
-    fun buildWebShareUrl_defaultBaseUrl_returnsHttpsUrl() {
-        val url = DeepLinkUtils.buildWebShareUrl("k7p2qx")
-        assertEquals("https://pintrip-a12a6.web.app/join?code=K7P2QX", url)
-    }
-
-    @Test
     fun buildWebShareUrl_invalidCode_returnsNull() {
-        assertNull(DeepLinkUtils.buildWebShareUrl("K7P2Q0")) // '0' forbidden
-        assertNull(DeepLinkUtils.buildWebShareUrl("ABC23"))  // 5 chars
-        assertNull(DeepLinkUtils.buildWebShareUrl("ABC2345")) // 7 chars
+        val baseUrl = "https://pintrip-a12a6.web.app/join"
+        assertNull(DeepLinkUtils.buildWebShareUrl("K7P2Q0", baseUrl)) // '0' forbidden
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC23", baseUrl))  // 5 chars
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC2345", baseUrl)) // 7 chars
     }
 
     @Test
     fun buildWebShareUrl_invalidBaseUrlScheme_returnsNull() {
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", "http://pintrip.web.app/join")) // http non-secure rejected
         assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", "ftp://pintrip.web.app"))
         assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", ""))
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", "https://pintrip.web.app/join#section")) // fragment rejected
+        assertNull(DeepLinkUtils.buildWebShareUrl("ABC234", "https://user:pass@pintrip.web.app/join")) // userInfo rejected
     }
 
     @Test

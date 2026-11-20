@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
     <title>PinTrip 여행방 초대</title>
     <style>
         :root {
@@ -126,6 +127,17 @@
             border-top: 1px solid var(--border-color);
         }
 
+        .fallback-notice {
+            display: none;
+            font-size: 13px;
+            color: #D97706;
+            background-color: #FEF3C7;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
         .toast {
             position: fixed;
             bottom: 30px;
@@ -168,11 +180,15 @@
                 <div id="invite-code" class="code-value">------</div>
             </div>
 
+            <div id="fallback-notice" class="fallback-notice">
+                앱이 열리지 않거나 미설치된 경우 초대 코드를 복사하여 PinTrip 앱의 [코드로 참여]에 입력해 주세요.
+            </div>
+
             <button id="btn-open-app" class="btn btn-primary">PinTrip 앱에서 열기</button>
             <button id="btn-copy-code" class="btn btn-secondary">초대 코드 복사</button>
 
             <div class="guide">
-                앱이 자동으로 열리지 않으면 <b>'초대 코드 복사'</b> 후<br>
+                버튼을 눌러도 앱이 열리지 않으면 <b>'초대 코드 복사'</b> 후<br>
                 PinTrip 앱 실행 > <b>'코드로 참여'</b>에 입력해 주세요.
             </div>
         </div>
@@ -192,7 +208,6 @@
             function getSingleCodeParam() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const codeValues = urlParams.getAll('code');
-                // 중복 파라미터가 지정된 경우 거부 (DeepLinkUtils 검증 정책과 통일)
                 if (codeValues.length !== 1) return null;
                 return codeValues[0];
             }
@@ -214,14 +229,21 @@
             const codeElement = document.getElementById('invite-code');
             const btnOpenApp = document.getElementById('btn-open-app');
             const btnCopyCode = document.getElementById('btn-copy-code');
+            const fallbackNotice = document.getElementById('fallback-notice');
 
             if (normalizedCode && CODE_REGEX.test(normalizedCode)) {
                 codeElement.textContent = normalizedCode;
 
-                const intentUri = 'intent://join?code=' + encodeURIComponent(normalizedCode) + '#Intent;scheme=pintrip;package=com.pintrip.app;end;';
+                const fallbackUrl = window.location.origin + window.location.pathname + '?code=' + encodeURIComponent(normalizedCode) + '&fallback=1';
+                const intentUri = 'intent://join?code=' + encodeURIComponent(normalizedCode) +
+                    '#Intent;scheme=pintrip;package=com.pintrip.app;S.browser_fallback_url=' + encodeURIComponent(fallbackUrl) + ';end';
+
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('fallback') === '1') {
+                    fallbackNotice.style.display = 'block';
+                }
 
                 btnOpenApp.addEventListener('click', function() {
-                    // 사용자 버튼 클릭 시에만 앱 실행 시도
                     window.location.href = intentUri;
                 });
 
@@ -242,13 +264,18 @@
                     tempInput.value = text;
                     document.body.appendChild(tempInput);
                     tempInput.select();
+                    let successful = false;
                     try {
-                        document.execCommand('copy');
-                        showToast('초대 코드가 복사되었습니다.');
+                        successful = document.execCommand('copy');
                     } catch (e) {
-                        showToast('코드 복사에 실패했습니다.');
+                        successful = false;
                     }
                     document.body.removeChild(tempInput);
+                    if (successful) {
+                        showToast('초대 코드가 복사되었습니다.');
+                    } else {
+                        showToast('코드 복사에 실패했습니다.');
+                    }
                 }
             } else {
                 validState.style.display = 'none';
