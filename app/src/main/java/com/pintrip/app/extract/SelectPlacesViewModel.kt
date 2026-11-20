@@ -32,7 +32,7 @@ data class SavePlacesResultState(
  *
  * docs/data-contract.md §9 규격을 준수합니다:
  * 1. CHECK 항목은 사용자가 후보를 고르기 전까지 미선택(selectedPlaceId = null)으로 유지하며, 저장 시 확인 팝업 후 제외합니다.
- * 2. 자동 선택된 후보의 주소로 기존 [isCandidateAddressOutsideRoomRegion] 함수를 재사용하여 [regionMismatch] 및 초기 [checked] 상태를 재판정합니다.
+ * 2. CHECK 항목의 후보 선택과 지역 판정은 [ConfirmLocationViewModel]에서 처리하고, 결과를 [updateItemAt]으로 반영합니다.
  * 3. Firestore `rooms/{roomId}`에서 방 이름 및 대표 지역을 단건 조회합니다.
  * 4. 진입 시 지역 불일치([MatchResult.regionMismatch]) 항목이 존재하는 경우 1회성 팝업 이벤트를 발행합니다.
  * 5. 선택된 항목을 [Place] 객체로 변환하여 [PlaceRepository.addPlaces]를 호출해 Firestore에 저장합니다.

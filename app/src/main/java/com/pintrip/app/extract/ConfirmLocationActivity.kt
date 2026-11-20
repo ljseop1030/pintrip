@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -159,7 +158,6 @@ class ConfirmLocationActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val TAG = "ConfirmLocationActivity"
         private const val EXTRA_MATCH_RESULT = "EXTRA_MATCH_RESULT"
         private const val EXTRA_ROOM_REGION = "EXTRA_ROOM_REGION"
         private const val EXTRA_POSITION = "EXTRA_POSITION"

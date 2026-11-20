@@ -313,7 +313,6 @@ class ShareReceiveViewModel(
                             messageResId = R.string.share_receive_error_could_not_find_places,
                         ),
                     )
-                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
                     return@launch
                 }
 
