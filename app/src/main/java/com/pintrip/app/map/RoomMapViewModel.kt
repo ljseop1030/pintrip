@@ -9,7 +9,9 @@ import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.data.repository.PlaceDetailRepository
 import com.pintrip.app.data.repository.RoomRepository
+import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed class CameraCommand {
@@ -38,10 +40,19 @@ class RoomMapViewModel(
     private val _uiState = MutableLiveData<RoomMapUiState>()
     val uiState: LiveData<RoomMapUiState> = _uiState
 
+    private val _isInviteCodeDialogOpen = MutableLiveData<Boolean>(false)
+    val isInviteCodeDialogOpen: LiveData<Boolean> = _isInviteCodeDialogOpen
+
+    private val _inviteCodeUiState = MutableLiveData<InviteCodeUiState>(InviteCodeUiState.Idle)
+    val inviteCodeUiState: LiveData<InviteCodeUiState> = _inviteCodeUiState
+
     private var isDataLoaded = false
     private var allPlaceDetails: List<PlaceDetail> = emptyList()
     private var roomName: String = ""
     private var selectedCategory: PlaceCategory = PlaceCategory.ALL
+
+    private var cachedInviteCode: String? = null
+    private var fetchCodeJob: Job? = null
 
     fun loadRoomMap(roomId: String) {
         if (isDataLoaded) return
@@ -53,10 +64,18 @@ class RoomMapViewModel(
                 val room = roomRepository.getRoom(roomId)
                 if (room == null) {
                     _uiState.value = RoomMapUiState.Error(R.string.room_map_error_room_not_found)
+                    if (_isInviteCodeDialogOpen.value == true) {
+                        _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
+                    }
                     return@launch
                 }
 
                 roomName = room.name
+                cachedInviteCode = room.inviteCode.takeIf { it.isNotBlank() }
+                if (_isInviteCodeDialogOpen.value == true && !cachedInviteCode.isNullOrBlank()) {
+                    _inviteCodeUiState.value = InviteCodeUiState.Success(cachedInviteCode!!)
+                }
+
                 val roomRegion = room.region
                 val placeDetails = placeDetailRepository.getPlaceDetails(roomId, roomRegion)
                 allPlaceDetails = placeDetails
@@ -86,6 +105,9 @@ class RoomMapViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load room map data: ${e.message}", e)
                 _uiState.value = RoomMapUiState.Error(R.string.room_map_error_load_failed)
+                if (_isInviteCodeDialogOpen.value == true && cachedInviteCode.isNullOrBlank()) {
+                    _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
+                }
             }
         }
     }
@@ -106,6 +128,52 @@ class RoomMapViewModel(
                 selectedCategory = selectedCategory,
                 totalPlaceCount = allPlaceDetails.size,
             )
+        }
+    }
+
+    fun onInviteCodeClick() {
+        _isInviteCodeDialogOpen.value = true
+        updateInviteCodeUiState()
+    }
+
+    fun onInviteCodeDialogDismissed() {
+        _isInviteCodeDialogOpen.value = false
+    }
+
+    fun retryFetchInviteCode(roomId: String) {
+        val existing = cachedInviteCode
+        if (!existing.isNullOrBlank()) {
+            _inviteCodeUiState.value = InviteCodeUiState.Success(existing)
+            return
+        }
+
+        if (fetchCodeJob?.isActive == true) return
+        _inviteCodeUiState.value = InviteCodeUiState.Loading
+
+        fetchCodeJob = viewModelScope.launch {
+            try {
+                val room = roomRepository.getRoom(roomId)
+                if (room != null && room.inviteCode.isNotBlank()) {
+                    cachedInviteCode = room.inviteCode
+                    _inviteCodeUiState.value = InviteCodeUiState.Success(room.inviteCode)
+                } else {
+                    _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Retry fetch invite code failed: ${e.message}", e)
+                _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
+            }
+        }
+    }
+
+    private fun updateInviteCodeUiState() {
+        val code = cachedInviteCode
+        if (!code.isNullOrBlank()) {
+            _inviteCodeUiState.value = InviteCodeUiState.Success(code)
+        } else if (_uiState.value is RoomMapUiState.Loading) {
+            _inviteCodeUiState.value = InviteCodeUiState.Loading
+        } else {
+            _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
         }
     }
 
