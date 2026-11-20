@@ -271,9 +271,10 @@ One Kakao keyword search per Gemini place. Passed to the Select Places and Confi
 | extracted | GeminiPlace | The `places[]` item from §8 |
 | status | String | `MATCHED` / `CHECK` / `NOT_FOUND` |
 | candidates | Array | Max 5. Same fields as `PlaceDetail` |
-| selectedPlaceId | String? | Auto for MATCHED, user choice for CHECK |
+| selectedPlaceId | String? | Auto for MATCHED, user choice for CHECK, or the place picked in manual search |
 | regionMismatch | Boolean | Outside the room region |
-| checked | Boolean | Checkbox. NOT_FOUND: false and disabled. `regionMismatch`: starts false, user may check |
+| checked | Boolean | Checkbox. NOT_FOUND: false and disabled until a place is picked in manual search. `regionMismatch`: starts false, user may check |
+| manualQuery | String? | Set only when the place was picked in manual search. The user's query |
 
 ### Status rules
 
@@ -285,12 +286,19 @@ One Kakao keyword search per Gemini place. Passed to the Select Places and Confi
 | 2+ otherwise | `CHECK` (top 5 as candidates) |
 | No region hint at all and too many results | Ask the user for a region before searching |
 
+### Unconfirmed CHECK items
+
+An item is unconfirmed if `checked == true`, `status == CHECK` and `selectedPlaceId == null`.
+On save, if any exist, show a popup asking whether to continue without them.
+Continue → skip them and show "excluded n" in the result message with the duplicate count.
+Unchecked items and NOT_FOUND are not counted as excluded.
+
 ### Saving: MatchResult → Place
 
 | Place field | Value |
 |---|---|
 | kakaoPlaceId / kakaoPlaceUrl | From the selected candidate |
-| searchKeyword | `extracted.name` (never the Kakao name). For `manual`, the user's query |
+| searchKeyword | `extracted.name` (never the Kakao name). For `manual`, `manualQuery` |
 | searchRegion | `extracted.region` (never from the candidate address). If outside room region and null, use `regionHint` |
 | matchType | MATCHED → `auto`, chosen in CHECK → `confirmed`, manual search → `manual` |
 | sourceType | Screenshot → `screenshot`, text with a URL → `link`, text without a URL → `text` |
@@ -305,6 +313,12 @@ One Kakao keyword search per Gemini place. Passed to the Select Places and Confi
 UI: on entering Select Places, show a popup "n places are outside {room region}". Mark those items with a warning badge and start them unchecked. The user can still check and add them.
 
 Re-fetch after saving: search with the same query rule as §8 using `searchKeyword` and `searchRegion`, then pick the result whose `id == kakaoPlaceId`. So outside-region places must have `searchRegion` set.
+
+### Manual search
+
+- Opened from: Confirm Location (S08), a NOT_FOUND item, and the extraction-failure popup on the share screen.
+- Always searches within the room region: `KakaoSearchQueryBuilder` with name = user input and roomRegion = room region (the same rule as re-fetch). `searchRegion` stays null.
+- Picking a result sets `candidates = [picked]`, `selectedPlaceId`, `manualQuery` and `checked = true`.
 
 ### status vs matchType
 
