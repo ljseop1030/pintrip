@@ -9,13 +9,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pintrip.app.R
-import com.pintrip.app.data.TestConfig
 import com.pintrip.app.data.model.GeminiExtractionResponse
+import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.remote.GeminiExtractor
 import com.pintrip.app.data.remote.WebPageFetcher
+import com.pintrip.app.data.repository.RoomJoinException
+import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.ui.common.Event
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -54,11 +57,11 @@ sealed interface ShareNoticeEvent {
 }
 
 class ShareReceiveViewModel(
-    private val db: FirebaseFirestore? = null,
     private val geminiExtractorFactory: (Context) -> GeminiExtractor = { GeminiExtractor(it) },
     private val webPageFetcherFactory: () -> WebPageFetcher = { WebPageFetcher() },
     private val placeMatcherFactory: () -> PlaceMatcher = { PlaceMatcher() },
-    private val roomRegionFetcher: (suspend (String) -> String)? = null,
+    private val roomRepository: RoomRepository = RoomRepository(),
+    private val isOnline: () -> Boolean = { true },
 ) : ViewModel() {
 
     private val _shareInput = MutableLiveData<ShareInput>()
@@ -79,9 +82,18 @@ class ShareReceiveViewModel(
     private val _matchResults = MutableLiveData<List<MatchResult>>()
     val matchResults: LiveData<List<MatchResult>> = _matchResults
 
-    val selectedRoomId: String = TestConfig.TEST_ROOM_ID
+    private val _rooms = MutableLiveData<List<Room>>()
+    val rooms: LiveData<List<Room>> = _rooms
+
+    private val _selectedRoom = MutableLiveData<Room?>()
+    val selectedRoom: LiveData<Room?> = _selectedRoom
+
+    private val _roomLoadError = MutableLiveData<Int?>()
+    val roomLoadError: LiveData<Int?> = _roomLoadError
 
     private var isProceeded = false
+    private var isDataLoaded = false
+    private var loadJob: Job? = null
 
     fun processIntent(intent: Intent?) {
         if (_shareInput.value != null) return
@@ -93,12 +105,76 @@ class ShareReceiveViewModel(
         parseAndSetInput(intent)
     }
 
+    fun fetchRooms(forceRefresh: Boolean = false) {
+        if (loadJob?.isActive == true) {
+            if (!forceRefresh) return
+            loadJob?.cancel()
+        } else if (isDataLoaded && !forceRefresh) {
+            return
+        }
+
+        loadJob = viewModelScope.launch {
+            try {
+                if (!isOnline()) {
+                    _rooms.value = emptyList()
+                    _roomLoadError.value = R.string.error_network_unavailable
+                    return@launch
+                }
+
+                val myRooms = roomRepository.getMyRooms()
+
+                if (myRooms.isEmpty()) {
+                    if (!isOnline()) {
+                        _rooms.value = emptyList()
+                        _roomLoadError.value = R.string.error_network_unavailable
+                    } else {
+                        _rooms.value = emptyList()
+                        _roomLoadError.value = R.string.room_list_empty
+                        isDataLoaded = true
+                    }
+                } else {
+                    _rooms.value = myRooms
+                    _roomLoadError.value = null
+                    isDataLoaded = true
+
+                    if (myRooms.size == 1 && _selectedRoom.value == null) {
+                        _selectedRoom.value = myRooms.first()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _rooms.value = emptyList()
+                if (!isOnline()) {
+                    _roomLoadError.value = R.string.error_network_unavailable
+                } else if (e is RoomJoinException.NotLoggedIn || (e is IllegalStateException && e.message?.contains("currentUser") == true)) {
+                    _roomLoadError.value = R.string.error_not_logged_in
+                } else if (e is RoomJoinException.NetworkUnavailable) {
+                    _roomLoadError.value = R.string.error_network_unavailable
+                } else {
+                    _roomLoadError.value = R.string.error_room_list_default
+                }
+            }
+        }
+    }
+
+    fun selectRoom(room: Room) {
+        if (isProceeded) return
+        _selectedRoom.value = room
+    }
+
     fun onCheckPlacesClicked() {
         if (isProceeded) return
 
         val input = _shareInput.value ?: return
         if (input is ShareInput.Empty) return
         if ((input is ShareInput.LinkText) && input.text.isBlank()) return
+
+        val roomId = _selectedRoom.value?.id
+        if (roomId == null) {
+            _noticeEvent.value = Event(ShareNoticeEvent.ToastNotice(R.string.room_map_error_room_not_found))
+            return
+        }
 
         isProceeded = true
 
@@ -107,10 +183,10 @@ class ShareReceiveViewModel(
             step3Status = StepStatus.PENDING,
         )
 
-        Log.d(TAG, "onCheckPlacesClicked: Connecting to next step with roomId=$selectedRoomId, input=$input")
+        Log.d(TAG, "onCheckPlacesClicked: Connecting to next step with roomId=$roomId, input=$input")
         _navigateToExtract.value = Event(
             NavigateToExtractArgs(
-                roomId = selectedRoomId,
+                roomId = roomId,
                 shareInput = input,
             ),
         )
@@ -212,16 +288,11 @@ class ShareReceiveViewModel(
                 updateStep3Status(StepStatus.PENDING)
 
                 // 1. 방 정보(지역명) 조회
-                val roomRegion = if (roomRegionFetcher != null) {
-                    roomRegionFetcher.invoke(roomId)
+                val cachedRegion = _rooms.value?.find { it.id == roomId }?.region
+                val roomRegion = if (cachedRegion != null) {
+                    cachedRegion
                 } else {
-                    val firestore = db ?: FirebaseFirestore.getInstance()
-                    val roomSnapshot = firestore.collection("rooms")
-                        .document(roomId)
-                        .get()
-                        .await()
-
-                    roomSnapshot.getString("region")?.trim().orEmpty()
+                    roomRepository.getRoom(roomId)?.region?.trim().orEmpty()
                 }
                 Log.d(TAG, "Fetched room region for roomId=$roomId: '$roomRegion'")
 

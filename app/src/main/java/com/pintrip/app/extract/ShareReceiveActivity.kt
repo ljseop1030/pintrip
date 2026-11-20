@@ -1,6 +1,9 @@
 package com.pintrip.app.extract
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -9,16 +12,36 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.pintrip.app.R
 import com.pintrip.app.databinding.ActivityShareReceiveBinding
 
 class ShareReceiveActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityShareReceiveBinding
-    private val viewModel: ShareReceiveViewModel by viewModels()
+    private val viewModel: ShareReceiveViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return ShareReceiveViewModel(
+                    isOnline = { isNetworkAvailable(applicationContext) }
+                ) as T
+            }
+        }
+    }
+
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,10 +55,10 @@ class ShareReceiveActivity : AppCompatActivity() {
             insets
         }
 
-        setupRoomSelection()
         setupListeners()
         observeViewModel()
 
+        viewModel.fetchRooms()
         viewModel.processIntent(intent)
     }
 
@@ -45,13 +68,29 @@ class ShareReceiveActivity : AppCompatActivity() {
         viewModel.processNewIntent(intent)
     }
 
-    private fun setupRoomSelection() {
-        binding.tvRoomName.text = getString(R.string.share_receive_room_name_format, viewModel.selectedRoomId)
-    }
-
     private fun setupListeners() {
         binding.btnCheckPlaces.setOnClickListener {
             viewModel.onCheckPlacesClicked()
+        }
+        
+        binding.cardRoomSelect.setOnClickListener {
+            val error = viewModel.roomLoadError.value
+            if (error != null) {
+                // Retry loading rooms on error
+                viewModel.fetchRooms(forceRefresh = true)
+                return@setOnClickListener
+            }
+
+            val rooms = viewModel.rooms.value
+            if (rooms.isNullOrEmpty() || rooms.size == 1) return@setOnClickListener
+
+            val roomNames = rooms.map { it.name }.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle(R.string.share_receive_room_label)
+                .setItems(roomNames) { _, which ->
+                    viewModel.selectRoom(rooms[which])
+                }
+                .show()
         }
     }
 
@@ -59,6 +98,18 @@ class ShareReceiveActivity : AppCompatActivity() {
         viewModel.shareInput.observe(this) { input ->
             Log.d(TAG, "Activity observed ShareInput: $input")
             bindShareInput(input)
+        }
+
+        viewModel.selectedRoom.observe(this) {
+            updateRoomSelectUi()
+        }
+
+        viewModel.roomLoadError.observe(this) {
+            updateRoomSelectUi()
+        }
+        
+        viewModel.rooms.observe(this) {
+            updateRoomSelectUi()
         }
 
         viewModel.stepsState.observe(this) { stepsState ->
@@ -88,6 +139,38 @@ class ShareReceiveActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateRoomSelectUi() {
+        val selectedRoom = viewModel.selectedRoom.value
+        val rooms = viewModel.rooms.value
+        val errorResId = viewModel.roomLoadError.value
+
+        when {
+            selectedRoom != null -> {
+                binding.tvRoomName.text = selectedRoom.name
+                binding.ivRoomSelectArrow.visibility = View.GONE
+            }
+            errorResId != null -> {
+                binding.tvRoomName.text = getString(errorResId).split("\n")[0]
+                binding.ivRoomSelectArrow.visibility = View.GONE
+            }
+            !rooms.isNullOrEmpty() -> {
+                if (rooms.size == 1) {
+                    binding.tvRoomName.text = rooms.first().name
+                    binding.ivRoomSelectArrow.visibility = View.GONE
+                } else {
+                    binding.tvRoomName.text = getString(R.string.share_receive_room_label)
+                    binding.ivRoomSelectArrow.visibility = View.VISIBLE
+                }
+            }
+            else -> {
+                binding.tvRoomName.text = getString(R.string.share_receive_room_label)
+                binding.ivRoomSelectArrow.visibility = View.GONE
+            }
+        }
+
+        updateCheckButtonState()
+    }
+
     private fun startExtractStep(roomId: String, shareInput: ShareInput) {
         Log.d(TAG, "Connection point triggered: roomId=$roomId, shareInput=$shareInput")
         viewModel.startExtractStep(applicationContext, roomId, shareInput)
@@ -106,6 +189,18 @@ class ShareReceiveActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateCheckButtonState() {
+        val input = viewModel.shareInput.value
+        val isValidInput = when (input) {
+            is ShareInput.Screenshots -> true
+            is ShareInput.LinkText -> input.text.isNotBlank()
+            else -> false
+        }
+        val isWorking = (viewModel.stepsState.value?.step2Status == StepStatus.IN_PROGRESS || viewModel.stepsState.value?.step3Status == StepStatus.IN_PROGRESS)
+        val hasRoomSelected = (viewModel.selectedRoom.value != null)
+        binding.btnCheckPlaces.isEnabled = isValidInput && !isWorking && hasRoomSelected
+    }
+
     private fun bindShareInput(input: ShareInput) {
         val isValidInput = when (input) {
             is ShareInput.Screenshots -> true
@@ -115,7 +210,6 @@ class ShareReceiveActivity : AppCompatActivity() {
 
         if (!isValidInput) {
             binding.tvHeaderTitle.text = getString(R.string.share_receive_title_error)
-            binding.btnCheckPlaces.isEnabled = false
         } else {
             val isExtracting = (viewModel.stepsState.value?.step2Status == StepStatus.IN_PROGRESS)
             binding.tvHeaderTitle.text = if (isExtracting) {
@@ -123,8 +217,9 @@ class ShareReceiveActivity : AppCompatActivity() {
             } else {
                 getString(R.string.share_receive_title_initial)
             }
-            binding.btnCheckPlaces.isEnabled = !isExtracting
         }
+        
+        updateCheckButtonState()
 
         when (input) {
             is ShareInput.Screenshots -> {
@@ -170,8 +265,10 @@ class ShareReceiveActivity : AppCompatActivity() {
             } else {
                 getString(R.string.share_receive_title_initial)
             }
-            binding.btnCheckPlaces.isEnabled = !isWorking
         }
+        
+        updateCheckButtonState()
+        
         bindStepItem(
             status = stepsState.step1Status,
             ivStatus = binding.ivStep1Status,
