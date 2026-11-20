@@ -70,8 +70,8 @@ class ItemConfirmCandidateAdapter(
                 binding.rbCandidateSelect.isChecked = isSelected
 
                 if (isSelected) {
-                    binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.item_check_bg))
-                    binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.item_check_border)
+                    binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.badge_blue_bg))
+                    binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.pintrip_blue)
                 } else {
                     binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
                     binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)

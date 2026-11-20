@@ -5,11 +5,11 @@
     android:id="@+id/cardCandidateContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_marginBottom="12dp"
     android:clickable="true"
     android:focusable="true"
     app:cardBackgroundColor="@color/card_background"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/card_stroke"
     app:strokeWidth="1dp">
@@ -23,11 +23,13 @@
 
         <RadioButton
             android:id="@+id/rbCandidateSelect"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="24dp"
+            android:minHeight="24dp"
+            android:buttonTint="@color/pintrip_blue"
             android:clickable="false"
-            android:focusable="false"
-            app:useMaterialThemeColors="true" />
+            android:focusable="false" />
 
         <LinearLayout
             android:layout_width="0dp"
