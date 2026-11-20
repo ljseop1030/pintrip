@@ -133,6 +133,7 @@ Repository merges `Place` (Firestore) + live Kakao search result.
 **notFound:** show `searchKeyword` as the name, list only (no map pin), only "Open in KakaoMap" enabled.
 
 Category filter and shake-to-pick run on the in-memory `PlaceDetail` list, not Firestore queries.
+Shake-to-pick picks only `found` places at random; the same place may be picked again.
 
 ### Map camera (memory only)
 
