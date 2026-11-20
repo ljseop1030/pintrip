@@ -262,4 +262,36 @@ class SelectPlacesViewModelTest {
         assertEquals("link", results!![0].sourceType)
         assertEquals("https://naver.me/abc", results[0].sourceUrl)
     }
+
+    @Test
+    fun testSaveSelectedPlaces_manualSearchResult_setsMatchTypeManualAndNullSearchRegion() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val manualCand = MatchCandidate(kakaoPlaceId = "manual_100", name = "이재모피자 본점", address = "부산 중구 광복중앙로 31")
+        val manualItem = MatchResult(
+            localId = "1",
+            extracted = GeminiPlace(name = "추출명", region = "부산"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = listOf(manualCand),
+            selectedPlaceId = "manual_100",
+            checked = true,
+            manualQuery = "이재모피자",
+        )
+
+        fakePlaceRepo.resultToReturn = AddPlacesResult(addedCount = 1, skippedCount = 0)
+
+        viewModel.init("room_123", listOf(manualItem))
+        viewModel.saveSelectedPlaces(skipUnconfirmed = false)
+
+        assertEquals(1, fakePlaceRepo.addPlacesCallCount)
+        val savedPlace = fakePlaceRepo.lastPlacesSaved[0]
+        assertEquals("manual_100", savedPlace.kakaoPlaceId)
+        assertEquals("이재모피자", savedPlace.searchKeyword) // Uses manualQuery as searchKeyword
+        assertEquals(null, savedPlace.searchRegion) // Manual search sets searchRegion to null
+        assertEquals("manual", savedPlace.matchType) // matchType is "manual"
+    }
 }

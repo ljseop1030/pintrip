@@ -205,4 +205,34 @@ class ConfirmLocationViewModelTest {
         assertNull(excludedResult.updatedMatchResult.selectedPlaceId)
         assertFalse(excludedResult.updatedMatchResult.checked)
     }
+
+    @Test
+    fun testOnManualSearchResultPicked_updatesMatchResultWithManualQuery() {
+        val viewModel = ConfirmLocationViewModel()
+
+        val initialMatchResult = MatchResult(
+            localId = "img0_p0",
+            extracted = GeminiPlace(name = "모모스 커피"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = emptyList(),
+            selectedPlaceId = null,
+        )
+
+        val pickedCandidate = MatchCandidate(kakaoPlaceId = "manual_999", name = "이재모피자 본점", address = "부산 중구 광복중앙로 31")
+
+        viewModel.init(initialMatchResult, "부산", positionInput = 1)
+        viewModel.onManualSearchResultPicked(pickedCandidate, manualQuery = "이재모피자")
+
+        val eventResult = viewModel.resultEvent.value?.getContentIfNotHandled()
+        assertNotNull(eventResult)
+        assertTrue(eventResult is ConfirmLocationResult.Selected)
+
+        val selectedResult = (eventResult as ConfirmLocationResult.Selected)
+        assertEquals(1, selectedResult.position)
+        assertEquals("manual_999", selectedResult.updatedMatchResult.selectedPlaceId)
+        assertEquals("이재모피자", selectedResult.updatedMatchResult.manualQuery)
+        assertFalse(selectedResult.updatedMatchResult.regionMismatch)
+        assertTrue(selectedResult.updatedMatchResult.checked)
+        assertEquals(1, selectedResult.updatedMatchResult.candidates.size)
+    }
 }

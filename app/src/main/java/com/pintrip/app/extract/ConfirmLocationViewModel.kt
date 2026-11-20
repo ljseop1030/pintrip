@@ -86,6 +86,20 @@ class ConfirmLocationViewModel : ViewModel() {
         _resultEvent.value = Event(ConfirmLocationResult.Selected(position, updatedResult))
     }
 
+    fun onManualSearchResultPicked(candidate: MatchCandidate, manualQuery: String) {
+        val currentResult = _matchResult.value ?: return
+
+        val updatedResult = currentResult.copy(
+            candidates = listOf(candidate),
+            selectedPlaceId = candidate.kakaoPlaceId,
+            manualQuery = manualQuery,
+            regionMismatch = false,
+            checked = true,
+        )
+
+        _resultEvent.value = Event(ConfirmLocationResult.Selected(position, updatedResult))
+    }
+
     fun onExcludeClicked() {
         val currentResult = _matchResult.value ?: return
         val updatedResult = currentResult.copy(

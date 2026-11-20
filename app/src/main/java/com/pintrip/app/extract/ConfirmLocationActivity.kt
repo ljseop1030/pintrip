@@ -33,9 +33,28 @@ class ConfirmLocationActivity : AppCompatActivity() {
             insets
         }
 
+        setupFragmentResultListeners()
         parseIntentAndInitViewModel()
         setupViews()
         observeViewModel()
+    }
+
+    private fun setupFragmentResultListeners() {
+        supportFragmentManager.setFragmentResultListener(
+            ManualSearchBottomSheetFragment.REQUEST_KEY_MANUAL_SEARCH,
+            this,
+        ) { _, bundle ->
+            val candidate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bundle.getSerializable(ManualSearchBottomSheetFragment.EXTRA_PICKED_CANDIDATE, MatchCandidate::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                bundle.getSerializable(ManualSearchBottomSheetFragment.EXTRA_PICKED_CANDIDATE) as? MatchCandidate
+            }
+            val manualQuery = bundle.getString(ManualSearchBottomSheetFragment.EXTRA_MANUAL_QUERY).orEmpty()
+            if (candidate != null) {
+                viewModel.onManualSearchResultPicked(candidate, manualQuery)
+            }
+        }
     }
 
     private fun parseIntentAndInitViewModel() {
@@ -78,9 +97,15 @@ class ConfirmLocationActivity : AppCompatActivity() {
             viewModel.onSelectThisLocationClicked()
         }
 
-        // Placeholder for manual search connection in the next phase
         binding.cardManualSearch.setOnClickListener {
-            Log.d(TAG, "Manual search clicked (placeholder - to be connected in next phase)")
+            val roomRegion = viewModel.roomRegion.value.orEmpty()
+            val initialQuery = viewModel.matchResult.value?.extracted?.name.orEmpty()
+
+            val sheet = ManualSearchBottomSheetFragment.newInstance(
+                roomRegion = roomRegion,
+                initialQuery = initialQuery,
+            )
+            sheet.show(supportFragmentManager, ManualSearchBottomSheetFragment.TAG)
         }
     }
 

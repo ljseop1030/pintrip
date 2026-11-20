@@ -71,6 +71,7 @@ data class MatchResult(
     val checked: Boolean = true,
     val sourceType: String = "screenshot",
     val sourceUrl: String? = null,
+    val manualQuery: String? = null,
 ) : Serializable {
     /**
      * 현재 [selectedPlaceId]에 해당하는 [MatchCandidate] 객체를 반환합니다.

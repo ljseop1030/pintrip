@@ -75,6 +75,11 @@
     <string name="confirm_location_btn_select_this_location">이 위치 선택</string>
     <string name="confirm_location_candidate_outside_region">방 지역 밖입니다</string>
     <string name="confirm_location_all_candidates_outside_region">모든 후보가 방 지역 밖입니다</string>
+    <string name="manual_search_title">장소 직접 검색</string>
+    <string name="manual_search_room_region_notice">방 지역(%1$s) 안에서 검색합니다</string>
+    <string name="manual_search_input_hint">장소명 입력 (예: 이재모피자)</string>
+    <string name="manual_search_empty_result">검색 결과가 없습니다.</string>
+    <string name="manual_search_error">장소 검색 중 오류가 발생했습니다.</string>
     <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>

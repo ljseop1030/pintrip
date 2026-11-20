@@ -230,17 +230,31 @@ class SelectPlacesViewModel(
 
                 val placesToSave = confirmableItems.mapNotNull { item ->
                     val selectedCand = item.selectedCandidate ?: return@mapNotNull null
-                    val searchRegionVal = item.extracted.region?.trim()?.ifBlank { null }
 
-                    val matchTypeVal = when (item.status) {
-                        MatchResult.STATUS_MATCHED -> "auto"
+                    val isManual = !item.manualQuery.isNullOrBlank()
+
+                    val searchKeywordVal = if (isManual) {
+                        item.manualQuery
+                    } else {
+                        item.extracted.name
+                    }
+
+                    val searchRegionVal = if (isManual) {
+                        null
+                    } else {
+                        item.extracted.region?.trim()?.ifBlank { null }
+                    }
+
+                    val matchTypeVal = when {
+                        isManual -> "manual"
+                        item.status == MatchResult.STATUS_MATCHED -> "auto"
                         else -> "confirmed"
                     }
 
                     Place(
                         kakaoPlaceId = selectedCand.kakaoPlaceId,
                         kakaoPlaceUrl = selectedCand.kakaoPlaceUrl,
-                        searchKeyword = item.extracted.name,
+                        searchKeyword = searchKeywordVal,
                         searchRegion = searchRegionVal,
                         matchType = matchTypeVal,
                         sourceType = item.sourceType,
