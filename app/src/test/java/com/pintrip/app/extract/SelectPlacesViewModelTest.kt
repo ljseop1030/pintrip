@@ -343,4 +343,94 @@ class SelectPlacesViewModelTest {
         assertEquals(null, savedPlace.searchRegion)
         assertEquals("manual", savedPlace.matchType)
     }
+
+    @Test
+    fun testOnManualSearchResultPicked_indexMinusOne_appendsNewItemToEndOfList() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "c1", name = "기존 장소")
+        val initialItem = MatchResult(localId = "1", extracted = GeminiPlace(name = "기존 장소"), status = MatchResult.STATUS_MATCHED, candidates = listOf(cand1), selectedPlaceId = "c1", checked = true)
+
+        viewModel.init("room_123", listOf(initialItem))
+
+        val newCandidate = MatchCandidate(kakaoPlaceId = "manual_99", name = "추가 장소", address = "부산 해운대구")
+        viewModel.onManualSearchResultPicked(index = -1, candidate = newCandidate, manualQuery = "추가 키워드")
+
+        val results = viewModel.matchResults.value
+        assertNotNull(results)
+        assertEquals(2, results!!.size)
+
+        val appendedItem = results[1]
+        assertEquals(MatchResult.STATUS_MATCHED, appendedItem.status)
+        assertEquals("manual_99", appendedItem.selectedPlaceId)
+        assertEquals("추가 키워드", appendedItem.manualQuery)
+        assertTrue(appendedItem.checked)
+        assertTrue(appendedItem.isConfirmable)
+    }
+
+    @Test
+    fun testOnManualSearchResultPicked_duplicateKakaoPlaceId_blocksAdditionAndEmitsNotice() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val existingCand = MatchCandidate(kakaoPlaceId = "exist_100", name = "기존 장소")
+        val initialItem = MatchResult(localId = "1", extracted = GeminiPlace(name = "기존 장소"), status = MatchResult.STATUS_MATCHED, candidates = listOf(existingCand), selectedPlaceId = "exist_100", checked = true)
+
+        viewModel.init("room_123", listOf(initialItem))
+
+        // Attempt to add a candidate with duplicate kakaoPlaceId "exist_100" at index = -1
+        viewModel.onManualSearchResultPicked(index = -1, candidate = existingCand, manualQuery = "중복 시도")
+
+        val results = viewModel.matchResults.value
+        assertNotNull(results)
+        assertEquals(1, results!!.size) // Addition blocked
+
+        val notice = viewModel.noticeEvent.value?.getContentIfNotHandled()
+        assertNotNull(notice)
+        assertTrue(notice is ShareNoticeEvent.ToastNotice)
+        val toast = notice as ShareNoticeEvent.ToastNotice
+        assertEquals(com.pintrip.app.R.string.select_places_error_duplicate_place, toast.messageResId)
+    }
+
+    @Test
+    fun testOnManualSearchResultPicked_candidateInUnselectedCheckItem_allowsAddition() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        // An unselected CHECK item where candidates list has "cand_unselected", but selectedPlaceId is null
+        val checkCand = MatchCandidate(kakaoPlaceId = "cand_unselected", name = "후보 장소")
+        val checkItem = MatchResult(
+            localId = "1",
+            extracted = GeminiPlace(name = "후보 장소"),
+            status = MatchResult.STATUS_CHECK,
+            candidates = listOf(checkCand),
+            selectedPlaceId = null, // Not selected!
+            checked = true,
+        )
+
+        viewModel.init("room_123", listOf(checkItem))
+
+        // Adding "cand_unselected" via manual search (index = -1)
+        viewModel.onManualSearchResultPicked(index = -1, candidate = checkCand, manualQuery = "후보 장소 검색")
+
+        val results = viewModel.matchResults.value
+        assertNotNull(results)
+        assertEquals(2, results!!.size) // Addition allowed because selectedPlaceId was null!
+
+        val appendedItem = results[1]
+        assertEquals(MatchResult.STATUS_MATCHED, appendedItem.status)
+        assertEquals("cand_unselected", appendedItem.selectedPlaceId)
+        assertEquals("후보 장소 검색", appendedItem.manualQuery)
+        assertTrue(appendedItem.isConfirmable)
+    }
 }

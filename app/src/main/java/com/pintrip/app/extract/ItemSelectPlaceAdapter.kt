@@ -86,29 +86,37 @@ class ItemSelectPlaceAdapter(
             binding.tvPlaceSubtitle.text = finalSubtitle
 
             // 4. 상태 뱃지 표출
-            when (item.status) {
-                MatchResult.STATUS_MATCHED -> {
-                    binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_matched)
-                    binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(context, R.color.badge_blue_bg),
-                    )
-                    binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_blue_text))
-                }
+            if (!item.manualQuery.isNullOrBlank()) {
+                binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_manual)
+                binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(context, R.color.badge_blue_bg),
+                )
+                binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_blue_text))
+            } else {
+                when (item.status) {
+                    MatchResult.STATUS_MATCHED -> {
+                        binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_matched)
+                        binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                            ContextCompat.getColor(context, R.color.badge_blue_bg),
+                        )
+                        binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_blue_text))
+                    }
 
-                MatchResult.STATUS_CHECK -> {
-                    binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_check)
-                    binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(context, R.color.badge_check_bg),
-                    )
-                    binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_check_text))
-                }
+                    MatchResult.STATUS_CHECK -> {
+                        binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_check)
+                        binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                            ContextCompat.getColor(context, R.color.badge_check_bg),
+                        )
+                        binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_check_text))
+                    }
 
-                else -> {
-                    binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_exception)
-                    binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(context, R.color.badge_exception_bg),
-                    )
-                    binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_exception_text))
+                    else -> {
+                        binding.tvStatusBadge.text = context.getString(R.string.select_places_badge_exception)
+                        binding.tvStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                            ContextCompat.getColor(context, R.color.badge_exception_bg),
+                        )
+                        binding.tvStatusBadge.setTextColor(ContextCompat.getColor(context, R.color.badge_exception_text))
+                    }
                 }
             }
 

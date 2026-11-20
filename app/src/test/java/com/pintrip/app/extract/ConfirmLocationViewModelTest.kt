@@ -229,6 +229,7 @@ class ConfirmLocationViewModelTest {
 
         val selectedResult = (eventResult as ConfirmLocationResult.Selected)
         assertEquals(1, selectedResult.position)
+        assertEquals(MatchResult.STATUS_MATCHED, selectedResult.updatedMatchResult.status)
         assertEquals("manual_999", selectedResult.updatedMatchResult.selectedPlaceId)
         assertEquals("이재모피자", selectedResult.updatedMatchResult.manualQuery)
         assertFalse(selectedResult.updatedMatchResult.regionMismatch)

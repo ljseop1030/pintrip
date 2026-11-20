@@ -140,10 +140,43 @@ class SelectPlacesViewModel(
 
     fun onManualSearchResultPicked(index: Int, candidate: MatchCandidate, manualQuery: String) {
         val currentList = _matchResults.value?.toMutableList() ?: return
-        if (index in currentList.indices) {
+
+        // Check duplicate by selectedPlaceId across all list items
+        val isDuplicate = currentList.any { item ->
+            item.selectedPlaceId == candidate.kakaoPlaceId
+        }
+
+        if (isDuplicate) {
+            _noticeEvent.postValue(
+                Event(
+                    ShareNoticeEvent.ToastNotice(
+                        messageResId = R.string.select_places_error_duplicate_place,
+                    ),
+                ),
+            )
+            return
+        }
+
+        if (index == -1) {
+            // Append new item to the end of list
+            val newItem = MatchResult(
+                localId = "manual_append_${currentList.size}",
+                extracted = com.pintrip.app.data.model.GeminiPlace(name = manualQuery),
+                status = MatchResult.STATUS_MATCHED,
+                candidates = listOf(candidate),
+                selectedPlaceId = candidate.kakaoPlaceId,
+                manualQuery = manualQuery,
+                regionMismatch = false,
+                checked = true,
+                sourceType = currentList.firstOrNull()?.sourceType ?: "text",
+            )
+            currentList.add(newItem)
+            _matchResults.postValue(currentList)
+        } else if (index in currentList.indices) {
+            // Update existing item at index
             val targetItem = currentList[index]
             val updatedItem = targetItem.copy(
-                status = MatchResult.STATUS_CHECK,
+                status = MatchResult.STATUS_MATCHED,
                 candidates = listOf(candidate),
                 selectedPlaceId = candidate.kakaoPlaceId,
                 manualQuery = manualQuery,

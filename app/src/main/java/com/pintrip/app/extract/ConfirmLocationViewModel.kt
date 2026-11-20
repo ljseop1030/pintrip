@@ -90,6 +90,7 @@ class ConfirmLocationViewModel : ViewModel() {
         val currentResult = _matchResult.value ?: return
 
         val updatedResult = currentResult.copy(
+            status = MatchResult.STATUS_MATCHED,
             candidates = listOf(candidate),
             selectedPlaceId = candidate.kakaoPlaceId,
             manualQuery = manualQuery,

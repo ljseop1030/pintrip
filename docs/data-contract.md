@@ -317,9 +317,10 @@ Re-fetch after saving: search with the same query rule as §8 using `searchKeywo
 
 ### Manual search
 
-- Opened from: Confirm Location (S08), a NOT_FOUND item, and the extraction-failure popup on the share screen.
+- Opened from: Confirm Location (S08), a NOT_FOUND item, the extraction-failure popup/card on the share screen, and the "+ Add via direct search" button in Select Places.
 - Always searches within the room region: `KakaoSearchQueryBuilder` with name = user input and roomRegion = room region (the same rule as re-fetch). `searchRegion` stays null.
-- Picking a result sets `candidates = [picked]`, `selectedPlaceId`, `manualQuery` and `checked = true`.
+- Picking a result sets `candidates = [picked]`, `selectedPlaceId = picked.kakaoPlaceId`, `manualQuery = user query`, `status = MATCHED`, and `checked = true`. Shown as "직접 추가" badge (blue) in UI.
+- Adding to end of Select Places list (targetIndex = -1): if same `kakaoPlaceId` exists in list, addition is blocked and notice toast is shown; otherwise appended to end of list.
 
 ### status vs matchType
 

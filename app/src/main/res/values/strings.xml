@@ -35,7 +35,10 @@
     <string name="share_receive_error_no_url">공유된 텍스트에 웹 링크(URL)가 포함되어 있지 않습니다.</string>
     <string name="share_receive_error_could_not_find_places">장소를 찾을 수 없습니다.</string>
     <string name="share_receive_error_could_not_find_places_link">장소 추출에 실패했습니다. 스크린샷으로 공유해 보세요.</string>
+    <string name="share_receive_error_occurred">장소를 찾는 중 오류가 발생했어요. 다시 시도해 주세요.</string>
     <string name="share_receive_notice_exceed_max_screenshots">공유된 %1$d장의 스크린샷 중 최대 %2$d장만 처리됩니다.</string>
+    <string name="share_receive_btn_select_other_photos">다른 사진 선택</string>
+    <string name="share_receive_btn_retry">다시 시도</string>
 
     <!-- S07 Select Places -->
     <string name="select_places_title">장소 선택</string>
@@ -47,6 +50,9 @@
     <string name="select_places_badge_matched">매칭 완료</string>
     <string name="select_places_badge_check">후보 선택</string>
     <string name="select_places_badge_exception">예외</string>
+    <string name="select_places_badge_manual">직접 추가</string>
+    <string name="select_places_btn_add_manual">+ 직접 검색으로 추가</string>
+    <string name="select_places_error_duplicate_place">이미 목록에 있는 장소입니다.</string>
     <string name="select_places_item_check_subtitle">%1$d개 후보 · 터치하여 선택</string>
     <string name="select_places_item_not_found_subtitle">장소를 찾을 수 없음</string>
     <string name="select_places_item_region_mismatch_subtitle">방 지역 밖의 장소</string>
@@ -81,7 +87,6 @@
     <string name="manual_search_empty_result">검색 결과가 없습니다.</string>
     <string name="manual_search_error">장소 검색 중 오류가 발생했습니다.</string>
     <string name="btn_manual_search">직접 검색</string>
-    <string name="share_receive_dialog_no_places_title">장소 미발견 안내</string>
     <string name="common_confirm">확인</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>

@@ -334,7 +334,7 @@ class ShareReceiveViewModelTest {
     }
 
     @Test
-    fun testStartExtractStep_zeroExtractedPlaces_emitsExtractionFailedDialogNotice() = runTest {
+    fun testStartExtractStep_zeroExtractedPlaces_setsExtractFailureStateNoPlaces() = runTest {
         val fakeWebPageFetcher = FakeWebPageFetcher()
         val emptyGeminiExtractor = object : GeminiExtractor(DummyContext) {
             override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
@@ -359,13 +359,93 @@ class ShareReceiveViewModelTest {
         viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val noticeEvent = viewModel.noticeEvent.value?.getContentIfNotHandled()
-        assertNotNull(noticeEvent)
-        assertTrue(noticeEvent is ShareNoticeEvent.ExtractionFailedDialogNotice)
+        val failureState = viewModel.extractFailureState.value
+        assertNotNull(failureState)
+        assertTrue(failureState is ExtractFailureState.NoPlaces)
 
-        val dialogNotice = noticeEvent as ShareNoticeEvent.ExtractionFailedDialogNotice
-        assertEquals("testRoomId", dialogNotice.roomId)
-        assertEquals("부산", dialogNotice.roomRegion)
-        assertEquals(com.pintrip.app.R.string.share_receive_error_could_not_find_places, dialogNotice.messageResId)
+        val noPlacesState = failureState as ExtractFailureState.NoPlaces
+        assertEquals(com.pintrip.app.R.string.share_receive_error_could_not_find_places, noPlacesState.messageResId)
+    }
+
+    @Test
+    fun testStartExtractStep_exception_setsExtractFailureStateError() = runTest {
+        val fakeWebPageFetcher = FakeWebPageFetcher()
+        val errorGeminiExtractor = object : GeminiExtractor(DummyContext) {
+            override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
+                throw RuntimeException("Extraction error")
+            }
+        }
+        val fakePlaceMatcher = FakePlaceMatcher()
+
+        val viewModel = ShareReceiveViewModel(
+            geminiExtractorFactory = { errorGeminiExtractor },
+            webPageFetcherFactory = { fakeWebPageFetcher },
+            placeMatcherFactory = { fakePlaceMatcher },
+            roomRepository = FakeRoomRepository("부산"),
+        )
+        viewModel.fetchRooms()
+
+        val shareInput = ShareInput.LinkText(
+            text = "오류 발생 텍스트",
+            url = null,
+        )
+
+        viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val failureState = viewModel.extractFailureState.value
+        assertNotNull(failureState)
+        assertTrue(failureState is ExtractFailureState.Error)
+    }
+
+    @Test
+    fun testRetryCurrentExtraction_clearsExtractFailureStateAndNavigates() = runTest {
+        val fakeWebPageFetcher = FakeWebPageFetcher()
+        val fakePlaceMatcher = FakePlaceMatcher()
+
+        var returnEmpty = true
+        val configurableGeminiExtractor = object : GeminiExtractor(DummyContext) {
+            override suspend fun extractFromText(text: String, roomRegion: String?): GeminiExtractionResponse {
+                return if (returnEmpty) {
+                    GeminiExtractionResponse(places = emptyList())
+                } else {
+                    GeminiExtractionResponse(places = listOf(GeminiPlace(name = "모모스 커피", region = "금정구")))
+                }
+            }
+        }
+
+        val viewModel = ShareReceiveViewModel(
+            geminiExtractorFactory = { configurableGeminiExtractor },
+            webPageFetcherFactory = { fakeWebPageFetcher },
+            placeMatcherFactory = { fakePlaceMatcher },
+            roomRepository = FakeRoomRepository("부산"),
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val shareInput = ShareInput.LinkText(text = "모모스 커피", url = null)
+
+        // 1. First attempt -> returns empty places -> triggers NoPlaces state
+        viewModel.startExtractStep(DummyContext, "testRoomId", shareInput)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val failureState = viewModel.extractFailureState.value
+        assertNotNull(failureState)
+        assertTrue(failureState is ExtractFailureState.NoPlaces)
+
+        // 2. Change Gemini extractor to succeed
+        returnEmpty = false
+
+        // 3. Retry current extraction
+        viewModel.retryCurrentExtraction(DummyContext)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // 4. Assert failure state is null and navigateToSelectPlaces is emitted
+        assertEquals(null, viewModel.extractFailureState.value)
+
+        val navigateEvent = viewModel.navigateToSelectPlaces.value?.getContentIfNotHandled()
+        assertNotNull(navigateEvent)
+        assertEquals("testRoomId", navigateEvent!!.roomId)
+        assertEquals(1, navigateEvent.matchResults.size)
     }
 }

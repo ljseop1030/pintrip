@@ -80,7 +80,7 @@ class SelectPlacesActivity : AppCompatActivity() {
             val manualQuery = bundle.getString(ManualSearchBottomSheetFragment.EXTRA_MANUAL_QUERY).orEmpty()
             val targetIndex = bundle.getInt(ManualSearchBottomSheetFragment.EXTRA_TARGET_INDEX, -1)
 
-            if (candidate != null && targetIndex != -1) {
+            if (candidate != null) {
                 viewModel.onManualSearchResultPicked(targetIndex, candidate, manualQuery)
             }
         }
@@ -132,6 +132,15 @@ class SelectPlacesActivity : AppCompatActivity() {
 
         binding.rvPlaces.layoutManager = LinearLayoutManager(this)
         binding.rvPlaces.adapter = adapter
+
+        binding.btnAddManualPlace.setOnClickListener {
+            val sheet = ManualSearchBottomSheetFragment.newInstance(
+                roomRegion = viewModel.roomRegion.value.orEmpty(),
+                initialQuery = null,
+                targetIndex = -1,
+            )
+            sheet.show(supportFragmentManager, ManualSearchBottomSheetFragment.TAG)
+        }
 
         binding.btnAddPlaces.setOnClickListener {
             val selectedCount = viewModel.getConfirmableCheckedCount()
@@ -254,10 +263,6 @@ class SelectPlacesActivity : AppCompatActivity() {
                 } else {
                     getString(event.messageResId)
                 }
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-            }
-            is ShareNoticeEvent.ExtractionFailedDialogNotice -> {
-                val message = getString(event.messageResId)
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }

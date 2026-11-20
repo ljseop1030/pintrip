@@ -3,6 +3,7 @@ package com.pintrip.app.extract
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -54,12 +55,11 @@ sealed interface ShareNoticeEvent {
         val messageResId: Int,
         val formatArgs: List<Any> = emptyList(),
     ) : ShareNoticeEvent
+}
 
-    data class ExtractionFailedDialogNotice(
-        val messageResId: Int,
-        val roomId: String,
-        val roomRegion: String,
-    ) : ShareNoticeEvent
+sealed interface ExtractFailureState {
+    data class NoPlaces(@StringRes val messageResId: Int) : ExtractFailureState
+    object Error : ExtractFailureState
 }
 
 class ShareReceiveViewModel(
@@ -78,6 +78,9 @@ class ShareReceiveViewModel(
 
     private val _noticeEvent = MutableLiveData<Event<ShareNoticeEvent>>()
     val noticeEvent: LiveData<Event<ShareNoticeEvent>> = _noticeEvent
+
+    private val _extractFailureState = MutableLiveData<ExtractFailureState?>(null)
+    val extractFailureState: LiveData<ExtractFailureState?> = _extractFailureState
 
     private val _navigateToExtract = MutableLiveData<Event<NavigateToExtractArgs>>()
     val navigateToExtract: LiveData<Event<NavigateToExtractArgs>> = _navigateToExtract
@@ -272,22 +275,23 @@ class ShareReceiveViewModel(
     fun startExtractStep(context: Context, roomId: String, shareInput: ShareInput) {
         Log.d(TAG, "startExtractStep called: roomId=$roomId, shareInput=$shareInput")
 
+        if (_shareInput.value == null) {
+            _shareInput.value = shareInput
+        }
+
         if (shareInput is ShareInput.Empty) {
             Log.w(TAG, "ShareInput is Empty for extraction")
             isProceeded = false
             updateStep2Status(StepStatus.ERROR)
             updateStep3Status(StepStatus.ERROR)
-            _noticeEvent.value = Event(
-                ShareNoticeEvent.ToastNotice(
-                    messageResId = R.string.share_receive_error_could_not_find_places,
-                ),
-            )
+            _extractFailureState.value = ExtractFailureState.NoPlaces(R.string.share_receive_error_could_not_find_places)
             return
         }
 
         val appContext = context.applicationContext
 
         viewModelScope.launch {
+            _extractFailureState.value = null
             var roomRegion = ""
             try {
                 // Step 2 시작: 텍스트 추출 진행 중, Step 3 대기
@@ -308,11 +312,7 @@ class ShareReceiveViewModel(
                     isProceeded = false
                     updateStep2Status(StepStatus.ERROR)
                     updateStep3Status(StepStatus.ERROR)
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
-                        ),
-                    )
+                    _extractFailureState.value = ExtractFailureState.Error
                     return@launch
                 }
 
@@ -401,13 +401,7 @@ class ShareReceiveViewModel(
                     // Gemini가 추출한 장소가 0개인 경우 (docs/data-contract.md §8)
                     isProceeded = false
                     updateStep3Status(StepStatus.ERROR)
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ExtractionFailedDialogNotice(
-                            messageResId = getNoPlacesErrorResId(shareInput),
-                            roomId = roomId,
-                            roomRegion = roomRegion,
-                        ),
-                    )
+                    _extractFailureState.value = ExtractFailureState.NoPlaces(getNoPlacesErrorResId(shareInput))
                     return@launch
                 }
 
@@ -442,13 +436,7 @@ class ShareReceiveViewModel(
                     // 카카오 매칭 유효 결과가 0개인 경우 (docs/data-contract.md §8)
                     isProceeded = false
                     updateStep3Status(StepStatus.ERROR)
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ExtractionFailedDialogNotice(
-                            messageResId = getNoPlacesErrorResId(shareInput),
-                            roomId = roomId,
-                            roomRegion = roomRegion,
-                        ),
-                    )
+                    _extractFailureState.value = ExtractFailureState.NoPlaces(getNoPlacesErrorResId(shareInput))
                     return@launch
                 }
 
@@ -480,15 +468,38 @@ class ShareReceiveViewModel(
                 isProceeded = false
                 updateStep2Status(StepStatus.ERROR)
                 updateStep3Status(StepStatus.ERROR)
-                _noticeEvent.value = Event(
-                    ShareNoticeEvent.ExtractionFailedDialogNotice(
-                        messageResId = R.string.share_receive_error_could_not_find_places,
-                        roomId = roomId,
-                        roomRegion = roomRegion,
-                    ),
-                )
+                _extractFailureState.value = ExtractFailureState.Error
             }
         }
+    }
+
+    fun retryWithNewScreenshots(context: Context, uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        isProceeded = true
+        _extractFailureState.value = null
+        val newShareInput = ShareInput.Screenshots(uris = uris, originalCount = uris.size)
+        _shareInput.value = newShareInput
+        _stepsState.value = ProgressStepsState(
+            step1Status = StepStatus.COMPLETED,
+            step2Status = StepStatus.PENDING,
+            step3Status = StepStatus.PENDING,
+        )
+
+        val roomId = selectedRoom.value?.id ?: return
+        startExtractStep(context, roomId, newShareInput)
+    }
+
+    fun retryCurrentExtraction(context: Context) {
+        val input = _shareInput.value ?: return
+        val roomId = selectedRoom.value?.id ?: return
+        isProceeded = true
+        _extractFailureState.value = null
+        _stepsState.value = ProgressStepsState(
+            step1Status = StepStatus.COMPLETED,
+            step2Status = StepStatus.PENDING,
+            step3Status = StepStatus.PENDING,
+        )
+        startExtractStep(context, roomId, input)
     }
 
     private fun getNoPlacesErrorResId(shareInput: ShareInput): Int {

@@ -12,6 +12,8 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -33,6 +35,14 @@ class ShareReceiveActivity : AppCompatActivity() {
                     isOnline = { isNetworkAvailable(applicationContext) }
                 ) as T
             }
+        }
+    }
+
+    private val pickMultiplePhotosLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ShareReceiveViewModel.MAX_SCREENSHOTS),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            viewModel.retryWithNewScreenshots(applicationContext, uris)
         }
     }
 
@@ -90,7 +100,7 @@ class ShareReceiveActivity : AppCompatActivity() {
                 val manualMatchResult = MatchResult(
                     localId = "manual_p0",
                     extracted = com.pintrip.app.data.model.GeminiPlace(name = manualQuery),
-                    status = MatchResult.STATUS_CHECK,
+                    status = MatchResult.STATUS_MATCHED,
                     candidates = listOf(candidate),
                     selectedPlaceId = candidate.kakaoPlaceId,
                     manualQuery = manualQuery,
@@ -140,6 +150,22 @@ class ShareReceiveActivity : AppCompatActivity() {
                 }
                 .show()
         }
+
+        binding.btnSelectOtherPhotos.setOnClickListener {
+            pickMultiplePhotosLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+            )
+        }
+
+        binding.btnFailureManualSearch.setOnClickListener {
+            val roomRegion = viewModel.selectedRoom.value?.region.orEmpty()
+            val sheet = ManualSearchBottomSheetFragment.newInstance(roomRegion = roomRegion)
+            sheet.show(supportFragmentManager, ManualSearchBottomSheetFragment.TAG)
+        }
+
+        binding.btnRetryExtraction.setOnClickListener {
+            viewModel.retryCurrentExtraction(applicationContext)
+        }
     }
 
     private fun observeViewModel() {
@@ -162,6 +188,28 @@ class ShareReceiveActivity : AppCompatActivity() {
 
         viewModel.stepsState.observe(this) { stepsState ->
             bindStepsState(stepsState)
+        }
+
+        viewModel.extractFailureState.observe(this) { failureState ->
+            if (failureState == null) {
+                binding.cardExtractFailure.visibility = View.GONE
+            } else {
+                binding.cardExtractFailure.visibility = View.VISIBLE
+                when (failureState) {
+                    is ExtractFailureState.NoPlaces -> {
+                        binding.tvFailureMessage.text = getString(failureState.messageResId)
+                        binding.btnSelectOtherPhotos.visibility = View.VISIBLE
+                        binding.btnFailureManualSearch.visibility = View.VISIBLE
+                        binding.btnRetryExtraction.visibility = View.GONE
+                    }
+                    is ExtractFailureState.Error -> {
+                        binding.tvFailureMessage.text = getString(R.string.share_receive_error_occurred)
+                        binding.btnSelectOtherPhotos.visibility = View.GONE
+                        binding.btnFailureManualSearch.visibility = View.GONE
+                        binding.btnRetryExtraction.visibility = View.VISIBLE
+                    }
+                }
+            }
         }
 
         viewModel.noticeEvent.observe(this) { event ->
@@ -233,18 +281,6 @@ class ShareReceiveActivity : AppCompatActivity() {
                     getString(event.messageResId)
                 }
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-            }
-            is ShareNoticeEvent.ExtractionFailedDialogNotice -> {
-                val message = getString(event.messageResId)
-                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.share_receive_dialog_no_places_title)
-                    .setMessage(message)
-                    .setPositiveButton(R.string.btn_manual_search) { _, _ ->
-                        val sheet = ManualSearchBottomSheetFragment.newInstance(roomRegion = event.roomRegion)
-                        sheet.show(supportFragmentManager, ManualSearchBottomSheetFragment.TAG)
-                    }
-                    .setNegativeButton(R.string.common_confirm, null)
-                    .show()
             }
         }
     }
