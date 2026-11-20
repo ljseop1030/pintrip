@@ -214,6 +214,52 @@ class SelectPlacesViewModelTest {
         assertEquals(1, resultState!!.addedCount)
         assertEquals(1, resultState.skippedCount)
         assertEquals(0, resultState.excludedCount)
+        assertEquals(0, resultState.notFoundCount)
         assertEquals(1, fakePlaceRepo.addPlacesCallCount)
+    }
+
+    @Test
+    fun testSaveSelectedPlaces_calculatesNotFoundCountCorrectly() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "c1", name = "장소 1")
+        val matchedItem = MatchResult(localId = "1", extracted = GeminiPlace(name = "장소 1"), status = MatchResult.STATUS_MATCHED, candidates = listOf(cand1), selectedPlaceId = "c1", checked = true)
+        val notFoundItem = MatchResult(localId = "2", extracted = GeminiPlace(name = "찾지 못한 장소"), status = MatchResult.STATUS_NOT_FOUND, candidates = emptyList(), selectedPlaceId = null, checked = false)
+        val checkItem = MatchResult(localId = "3", extracted = GeminiPlace(name = "미선택 장소"), status = MatchResult.STATUS_CHECK, candidates = listOf(cand1), selectedPlaceId = null, checked = true)
+
+        fakePlaceRepo.resultToReturn = AddPlacesResult(addedCount = 1, skippedCount = 0)
+
+        viewModel.init("room_123", listOf(matchedItem, notFoundItem, checkItem))
+        assertEquals(1, viewModel.getNotFoundCount())
+
+        viewModel.saveSelectedPlaces(skipUnconfirmed = true)
+
+        val resultState = viewModel.saveResultEvent.value?.getContentIfNotHandled()
+        assertNotNull(resultState)
+        assertEquals(1, resultState!!.addedCount)
+        assertEquals(0, resultState.skippedCount)
+        assertEquals(1, resultState.excludedCount)
+        assertEquals(1, resultState.notFoundCount)
+    }
+
+    @Test
+    fun testInit_preservesSourceTypeForHeadline() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val linkItem = MatchResult(localId = "1", extracted = GeminiPlace(name = "링크 장소"), status = MatchResult.STATUS_MATCHED, sourceType = "link", sourceUrl = "https://naver.me/abc")
+        viewModel.init("room_123", listOf(linkItem))
+
+        val results = viewModel.matchResults.value
+        assertNotNull(results)
+        assertEquals("link", results!![0].sourceType)
+        assertEquals("https://naver.me/abc", results[0].sourceUrl)
     }
 }

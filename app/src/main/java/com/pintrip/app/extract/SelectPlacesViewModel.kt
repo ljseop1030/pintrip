@@ -24,6 +24,7 @@ data class SavePlacesResultState(
     val addedCount: Int,
     val skippedCount: Int,
     val excludedCount: Int = 0,
+    val notFoundCount: Int = 0,
 )
 
 /**
@@ -147,6 +148,11 @@ class SelectPlacesViewModel(
         return currentList.count { it.checked && it.status == MatchResult.STATUS_CHECK && it.selectedPlaceId == null }
     }
 
+    fun getNotFoundCount(): Int {
+        val currentList = _matchResults.value ?: return 0
+        return currentList.count { it.status == MatchResult.STATUS_NOT_FOUND }
+    }
+
     fun hasAnyCheckedItems(): Boolean {
         val currentList = _matchResults.value ?: return false
         return currentList.any { it.checked && it.status != MatchResult.STATUS_NOT_FOUND }
@@ -160,6 +166,7 @@ class SelectPlacesViewModel(
         val currentRoomId = _roomId.value.orEmpty()
         if (currentRoomId.isBlank()) return
 
+        val notFoundCount = getNotFoundCount()
         val unconfirmedCount = getUnconfirmedCheckedCount()
         if (unconfirmedCount > 0 && !skipUnconfirmed) {
             _unconfirmedCheckNotice.postValue(Event(unconfirmedCount))
@@ -170,7 +177,16 @@ class SelectPlacesViewModel(
         val confirmableItems = _matchResults.value?.filter { it.isConfirmable } ?: emptyList()
 
         if (confirmableItems.isEmpty()) {
-            _saveResultEvent.postValue(Event(SavePlacesResultState(addedCount = 0, skippedCount = 0, excludedCount = excludedCount)))
+            _saveResultEvent.postValue(
+                Event(
+                    SavePlacesResultState(
+                        addedCount = 0,
+                        skippedCount = 0,
+                        excludedCount = excludedCount,
+                        notFoundCount = notFoundCount,
+                    ),
+                ),
+            )
             return
         }
 
@@ -238,10 +254,19 @@ class SelectPlacesViewModel(
                 }
 
                 val result = placeRepository.addPlaces(currentRoomId, placesToSave)
-                Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=$excludedCount")
+                Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=$excludedCount, notFound=$notFoundCount")
 
                 _isSaving.postValue(false)
-                _saveResultEvent.postValue(Event(SavePlacesResultState(result.addedCount, result.skippedCount, excludedCount)))
+                _saveResultEvent.postValue(
+                    Event(
+                        SavePlacesResultState(
+                            addedCount = result.addedCount,
+                            skippedCount = result.skippedCount,
+                            excludedCount = excludedCount,
+                            notFoundCount = notFoundCount,
+                        ),
+                    ),
+                )
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save selected places: ${e.message}", e)

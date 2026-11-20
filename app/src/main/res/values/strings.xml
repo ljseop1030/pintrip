@@ -40,7 +40,9 @@
     <!-- S07 Select Places -->
     <string name="select_places_title">장소 선택</string>
     <string name="select_places_count_format">%1$d개 장소</string>
-    <string name="select_places_headline_format">스크린샷에서 %1$d개 장소 발견</string>
+    <string name="select_places_headline_screenshot_format">스크린샷에서 %1$d개 장소 발견</string>
+    <string name="select_places_headline_link_format">링크에서 %1$d개 장소 발견</string>
+    <string name="select_places_headline_text_format">공유한 텍스트에서 %1$d개 장소 발견</string>
     <string name="select_places_subtitle">추가할 장소를 확인해 주세요</string>
     <string name="select_places_badge_matched">매칭 완료</string>
     <string name="select_places_badge_check">후보 선택</string>
@@ -59,6 +61,7 @@
     <string name="select_places_save_none_with_details_format">추가된 장소가 없습니다 (%1$s).</string>
     <string name="select_places_detail_duplicate">중복 %1$d개</string>
     <string name="select_places_detail_excluded">제외 %1$d개</string>
+    <string name="select_places_detail_not_found">찾지 못함 %1$d개</string>
     <string name="select_places_unconfirmed_dialog_title">미선택 장소 안내</string>
     <string name="select_places_unconfirmed_dialog_message">선택하지 않은 후보 장소 %1$d개가 있습니다. 제외하고 그대로 진행하시겠습니까?</string>
     <string name="select_places_unconfirmed_continue">그대로 진행</string>

@@ -118,7 +118,14 @@ class SelectPlacesActivity : AppCompatActivity() {
 
             val totalCount = results.size
             binding.tvCountBadge.text = getString(R.string.select_places_count_format, totalCount)
-            binding.tvHeadline.text = getString(R.string.select_places_headline_format, totalCount)
+
+            val sourceType = results.firstOrNull()?.sourceType.orEmpty()
+            val headlineFormatRes = when (sourceType) {
+                "link" -> R.string.select_places_headline_link_format
+                "text" -> R.string.select_places_headline_text_format
+                else -> R.string.select_places_headline_screenshot_format
+            }
+            binding.tvHeadline.text = getString(headlineFormatRes, totalCount)
 
             updateBottomBar()
         }
@@ -177,6 +184,9 @@ class SelectPlacesActivity : AppCompatActivity() {
         }
         if (result.excludedCount > 0) {
             detailsList.add(getString(R.string.select_places_detail_excluded, result.excludedCount))
+        }
+        if (result.notFoundCount > 0) {
+            detailsList.add(getString(R.string.select_places_detail_not_found, result.notFoundCount))
         }
         val detailsStr = detailsList.joinToString(", ")
 
