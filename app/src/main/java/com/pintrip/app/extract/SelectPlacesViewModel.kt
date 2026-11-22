@@ -80,7 +80,8 @@ class SelectPlacesViewModel(
         if (isInitialized) return
         isInitialized = true
 
-        _roomId.postValue(roomIdInput)
+        _roomId.value = roomIdInput
+        _matchResults.value = initialResults
 
         // Firestore rooms/{roomId} 단건 읽기 (방 이름, 대표 지역 조회)
         viewModelScope.launch {
@@ -92,29 +93,24 @@ class SelectPlacesViewModel(
                     if (snapshot.exists()) {
                         val name = snapshot.getString("name").orEmpty()
                         val region = snapshot.getString("region").orEmpty()
-                        _roomName.postValue(name)
-                        _roomRegion.postValue(region)
+                        _roomName.value = name
+                        _roomRegion.value = region
                         roomRegionStr = region
                     }
                 }
 
-                _matchResults.postValue(initialResults)
-
                 // 지역 불일치 안내 (docs/data-contract.md §9): 진입 시 n개 장소가 방 지역 밖임을 팝업 이벤트로 전달
                 val mismatchCount = initialResults.count { it.regionMismatch }
                 if (mismatchCount > 0 && roomRegionStr.isNotBlank()) {
-                    _regionMismatchNotice.postValue(
-                        Event(
-                            RegionMismatchNotice(
-                                mismatchCount = mismatchCount,
-                                roomRegion = roomRegionStr,
-                            ),
+                    _regionMismatchNotice.value = Event(
+                        RegionMismatchNotice(
+                            mismatchCount = mismatchCount,
+                            roomRegion = roomRegionStr,
                         ),
                     )
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to load room details for roomId=$roomIdInput: ${e.message}", e)
-                _matchResults.postValue(initialResults)
             }
         }
     }
@@ -125,7 +121,7 @@ class SelectPlacesViewModel(
             val item = currentList[index]
             if (item.status != MatchResult.STATUS_NOT_FOUND) {
                 currentList[index] = item.copy(checked = isChecked)
-                _matchResults.postValue(currentList)
+                _matchResults.value = currentList
             }
         }
     }
@@ -134,7 +130,7 @@ class SelectPlacesViewModel(
         val currentList = _matchResults.value?.toMutableList() ?: return
         if (index in currentList.indices) {
             currentList[index] = updatedMatchResult
-            _matchResults.postValue(currentList)
+            _matchResults.value = currentList
         }
     }
 
@@ -147,11 +143,9 @@ class SelectPlacesViewModel(
         }
 
         if (isDuplicate) {
-            _noticeEvent.postValue(
-                Event(
-                    ShareNoticeEvent.ToastNotice(
-                        messageResId = R.string.select_places_error_duplicate_place,
-                    ),
+            _noticeEvent.value = Event(
+                ShareNoticeEvent.ToastNotice(
+                    messageResId = R.string.select_places_error_duplicate_place,
                 ),
             )
             return
@@ -171,7 +165,7 @@ class SelectPlacesViewModel(
                 sourceType = currentList.firstOrNull()?.sourceType ?: "text",
             )
             currentList.add(newItem)
-            _matchResults.postValue(currentList)
+            _matchResults.value = currentList
         } else if (index in currentList.indices) {
             // Update existing item at index
             val targetItem = currentList[index]
@@ -184,7 +178,7 @@ class SelectPlacesViewModel(
                 checked = true,
             )
             currentList[index] = updatedItem
-            _matchResults.postValue(currentList)
+            _matchResults.value = currentList
         }
     }
 
@@ -213,13 +207,19 @@ class SelectPlacesViewModel(
      */
     fun saveSelectedPlaces(skipUnconfirmed: Boolean = false) {
         if (_isSaving.value == true) return
+        _isSaving.value = true
+
         val currentRoomId = _roomId.value.orEmpty()
-        if (currentRoomId.isBlank()) return
+        if (currentRoomId.isBlank()) {
+            _isSaving.value = false
+            return
+        }
 
         val notFoundCount = getNotFoundCount()
         val unconfirmedCount = getUnconfirmedCheckedCount()
         if (unconfirmedCount > 0 && !skipUnconfirmed) {
-            _unconfirmedCheckNotice.postValue(Event(unconfirmedCount))
+            _isSaving.value = false
+            _unconfirmedCheckNotice.value = Event(unconfirmedCount)
             return
         }
 
@@ -227,32 +227,27 @@ class SelectPlacesViewModel(
         val confirmableItems = _matchResults.value?.filter { it.isConfirmable } ?: emptyList()
 
         if (confirmableItems.isEmpty()) {
-            _saveResultEvent.postValue(
-                Event(
-                    SavePlacesResultState(
-                        addedCount = 0,
-                        skippedCount = 0,
-                        excludedCount = excludedCount,
-                        notFoundCount = notFoundCount,
-                    ),
+            _isSaving.value = false
+            _saveResultEvent.value = Event(
+                SavePlacesResultState(
+                    addedCount = 0,
+                    skippedCount = 0,
+                    excludedCount = excludedCount,
+                    notFoundCount = notFoundCount,
                 ),
             )
             return
         }
-
-        _isSaving.postValue(true)
 
         viewModelScope.launch {
             try {
                 val uid = currentUidProvider()
                 if (uid == null) {
                     Log.w(TAG, "Auth currentUser is null, stopping save")
-                    _isSaving.postValue(false)
-                    _noticeEvent.postValue(
-                        Event(
-                            ShareNoticeEvent.ToastNotice(
-                                messageResId = R.string.error_not_logged_in,
-                            ),
+                    _isSaving.value = false
+                    _noticeEvent.value = Event(
+                        ShareNoticeEvent.ToastNotice(
+                            messageResId = R.string.error_not_logged_in,
                         ),
                     )
                     return@launch
@@ -267,12 +262,10 @@ class SelectPlacesViewModel(
                 val nickname = userProfile?.nickname?.trim().orEmpty()
                 if (nickname.isBlank()) {
                     Log.w(TAG, "Nickname is blank for uid=$uid, stopping save")
-                    _isSaving.postValue(false)
-                    _noticeEvent.postValue(
-                        Event(
-                            ShareNoticeEvent.ToastNotice(
-                                messageResId = R.string.error_profile_load_failed,
-                            ),
+                    _isSaving.value = false
+                    _noticeEvent.value = Event(
+                        ShareNoticeEvent.ToastNotice(
+                            messageResId = R.string.error_profile_load_failed,
                         ),
                     )
                     return@launch
@@ -292,7 +285,12 @@ class SelectPlacesViewModel(
                     val searchRegionVal = if (isManual) {
                         null
                     } else {
-                        item.extracted.region?.trim()?.ifBlank { null }
+                        val extractedRegion = item.extracted.region?.trim()?.ifBlank { null }
+                        if (item.regionMismatch && extractedRegion == null) {
+                            item.regionHint?.trim()?.ifBlank { null }
+                        } else {
+                            extractedRegion
+                        }
                     }
 
                     val matchTypeVal = when {
@@ -320,26 +318,22 @@ class SelectPlacesViewModel(
                 val result = placeRepository.addPlaces(currentRoomId, placesToSave)
                 Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=$excludedCount, notFound=$notFoundCount")
 
-                _isSaving.postValue(false)
-                _saveResultEvent.postValue(
-                    Event(
-                        SavePlacesResultState(
-                            addedCount = result.addedCount,
-                            skippedCount = result.skippedCount,
-                            excludedCount = excludedCount,
-                            notFoundCount = notFoundCount,
-                        ),
+                _isSaving.value = false
+                _saveResultEvent.value = Event(
+                    SavePlacesResultState(
+                        addedCount = result.addedCount,
+                        skippedCount = result.skippedCount,
+                        excludedCount = excludedCount,
+                        notFoundCount = notFoundCount,
                     ),
                 )
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to save selected places: ${e.message}", e)
-                _isSaving.postValue(false)
-                _noticeEvent.postValue(
-                    Event(
-                        ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.select_places_save_error,
-                        ),
+                _isSaving.value = false
+                _noticeEvent.value = Event(
+                    ShareNoticeEvent.ToastNotice(
+                        messageResId = R.string.select_places_save_error,
                     ),
                 )
             }

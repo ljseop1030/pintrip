@@ -44,29 +44,12 @@ class ConfirmLocationViewModel : ViewModel() {
         _areAllCandidatesOutsideRegion.value = allOutside
 
         val initialSelectedId = matchResultInput.selectedPlaceId
-        val initialCandidate = matchResultInput.candidates.find { it.kakaoPlaceId == initialSelectedId }
-        val isInitialSelectedOutside = initialCandidate != null && isCandidateAddressOutsideRoomRegion(
-            candidateAddress = initialCandidate.address,
-            roomRegion = roomRegionInput,
-            geminiOutsideRoomRegion = false,
-        )
-
-        _selectedCandidateId.value = if (isInitialSelectedOutside) null else initialSelectedId
-    }
-
-    fun isCandidateDisabled(candidate: MatchCandidate): Boolean {
-        val region = _roomRegion.value
-        return isCandidateAddressOutsideRoomRegion(
-            candidateAddress = candidate.address,
-            roomRegion = region,
-            geminiOutsideRoomRegion = false,
-        )
+        _selectedCandidateId.value = initialSelectedId
     }
 
     fun selectCandidate(candidateId: String) {
         val currentResult = _matchResult.value ?: return
-        val cand = currentResult.candidates.find { it.kakaoPlaceId == candidateId } ?: return
-        if (isCandidateDisabled(cand)) return
+        currentResult.candidates.find { it.kakaoPlaceId == candidateId } ?: return
 
         _selectedCandidateId.value = candidateId
     }
@@ -75,11 +58,16 @@ class ConfirmLocationViewModel : ViewModel() {
         val currentResult = _matchResult.value ?: return
         val currentCandidateId = _selectedCandidateId.value ?: return
         val selectedCand = currentResult.candidates.find { it.kakaoPlaceId == currentCandidateId } ?: return
-        if (isCandidateDisabled(selectedCand)) return
+
+        val isOutside = isCandidateAddressOutsideRoomRegion(
+            candidateAddress = selectedCand.address,
+            roomRegion = _roomRegion.value,
+            geminiOutsideRoomRegion = currentResult.extracted.outsideRoomRegion,
+        )
 
         val updatedResult = currentResult.copy(
             selectedPlaceId = selectedCand.kakaoPlaceId,
-            regionMismatch = false,
+            regionMismatch = isOutside,
             checked = true,
         )
 

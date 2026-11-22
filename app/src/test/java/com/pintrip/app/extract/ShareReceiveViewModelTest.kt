@@ -257,7 +257,7 @@ class ShareReceiveViewModelTest {
 
     @Test
     fun testFetchRooms_emptyList_offline_showsNetworkUnavailable() = runTest {
-        val repo = ConfigurableFakeRoomRepository(roomsToReturn = emptyList())
+        val repo = ConfigurableFakeRoomRepository(exceptionToThrow = RuntimeException("Network error"))
         val viewModel = ShareReceiveViewModel(
             roomRepository = repo,
             isOnline = { false }
@@ -268,6 +268,22 @@ class ShareReceiveViewModelTest {
         assertEquals(0, viewModel.rooms.value?.size)
         assertEquals(com.pintrip.app.R.string.error_network_unavailable, viewModel.roomLoadError.value)
         assertEquals(null, viewModel.selectedRoom.value)
+    }
+
+    @Test
+    fun testFetchRooms_offlineCache_succeedsEvenIfOffline() = runTest {
+        val room1 = Room(id = "r1", name = "Room 1", region = "부산", icon = "sea", inviteCode = "ABC123", ownerId = "o1", memberIds = listOf("o1"), members = emptyMap(), placeCount = 0)
+        val repo = ConfigurableFakeRoomRepository(roomsToReturn = listOf(room1))
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = repo,
+            isOnline = { false } // OS network state is false, but offline cache returns room
+        )
+        viewModel.fetchRooms()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, viewModel.rooms.value?.size)
+        assertEquals(null, viewModel.roomLoadError.value)
+        assertEquals("r1", viewModel.selectedRoom.value?.id)
     }
 
     @Test
@@ -447,5 +463,22 @@ class ShareReceiveViewModelTest {
         assertNotNull(navigateEvent)
         assertEquals("testRoomId", navigateEvent!!.roomId)
         assertEquals(1, navigateEvent.matchResults.size)
+    }
+
+    @Test
+    fun testRetryWithNewScreenshots_selectedRoomNull_returnsWithoutSettingIsProceededTrue() {
+        val viewModel = ShareReceiveViewModel(
+            roomRepository = FakeRoomRepository("부산"),
+        )
+
+        // selectedRoom is null
+        assertEquals(null, viewModel.selectedRoom.value)
+        assertEquals(false, viewModel.isProceeded)
+
+        val mockUri = android.net.Uri.parse("content://media/external/images/media/1")
+        viewModel.retryWithNewScreenshots(DummyContext, listOf(mockUri))
+
+        // isProceeded should remain false because selectedRoom is null
+        assertEquals(false, viewModel.isProceeded)
     }
 }

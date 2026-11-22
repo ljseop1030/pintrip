@@ -51,35 +51,24 @@ class ItemConfirmCandidateAdapter(
             binding.tvCandidateName.text = candidate.name
             binding.tvCandidateAddress.text = candidate.address.ifBlank { context.getString(R.string.select_places_item_not_found_subtitle) }
 
-            if (isOutsideRegion) {
-                binding.tvCandidateOutsideNotice.visibility = View.VISIBLE
-                binding.rbCandidateSelect.isEnabled = false
-                binding.rbCandidateSelect.isChecked = false
-                binding.cardCandidateContainer.isEnabled = false
-                binding.cardCandidateContainer.alpha = 0.5f
+            binding.tvCandidateOutsideNotice.visibility = if (isOutsideRegion) View.VISIBLE else View.GONE
+            binding.rbCandidateSelect.isEnabled = true
+            binding.cardCandidateContainer.isEnabled = true
+            binding.cardCandidateContainer.alpha = 1.0f
+
+            val isSelected = (candidate.kakaoPlaceId == selectedCandidateId)
+            binding.rbCandidateSelect.isChecked = isSelected
+
+            if (isSelected) {
+                binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.badge_blue_bg))
+                binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.pintrip_blue)
+            } else {
                 binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
                 binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)
-                binding.cardCandidateContainer.setOnClickListener(null)
-            } else {
-                binding.tvCandidateOutsideNotice.visibility = View.GONE
-                binding.rbCandidateSelect.isEnabled = true
-                binding.cardCandidateContainer.isEnabled = true
-                binding.cardCandidateContainer.alpha = 1.0f
+            }
 
-                val isSelected = (candidate.kakaoPlaceId == selectedCandidateId)
-                binding.rbCandidateSelect.isChecked = isSelected
-
-                if (isSelected) {
-                    binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.badge_blue_bg))
-                    binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.pintrip_blue)
-                } else {
-                    binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
-                    binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)
-                }
-
-                binding.cardCandidateContainer.setOnClickListener {
-                    onCandidateSelected(candidate)
-                }
+            binding.cardCandidateContainer.setOnClickListener {
+                onCandidateSelected(candidate)
             }
         }
     }

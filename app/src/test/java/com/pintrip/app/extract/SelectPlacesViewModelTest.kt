@@ -433,4 +433,99 @@ class SelectPlacesViewModelTest {
         assertEquals("후보 장소 검색", appendedItem.manualQuery)
         assertTrue(appendedItem.isConfirmable)
     }
+
+    @Test
+    fun testSaveSelectedPlaces_doubleTap_executesOnlyOnce() {
+        lateinit var viewModel: SelectPlacesViewModel
+
+        val fakePlaceRepoWithConcurrentTap = object : FakePlaceRepositoryForSelect() {
+            override suspend fun addPlaces(roomId: String, places: List<Place>): AddPlacesResult {
+                addPlacesCallCount++
+                lastPlacesSaved = places
+                // Concurrent tap while saving is in progress
+                viewModel.saveSelectedPlaces(skipUnconfirmed = false)
+                return resultToReturn
+            }
+        }
+
+        viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepoWithConcurrentTap,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val cand1 = MatchCandidate(kakaoPlaceId = "c1", name = "기존 장소")
+        val item = MatchResult(localId = "1", extracted = GeminiPlace(name = "기존 장소"), status = MatchResult.STATUS_MATCHED, candidates = listOf(cand1), selectedPlaceId = "c1", checked = true)
+
+        fakePlaceRepoWithConcurrentTap.resultToReturn = AddPlacesResult(addedCount = 1, skippedCount = 0)
+        viewModel.init("room_123", listOf(item))
+
+        // First call starts saving
+        viewModel.saveSelectedPlaces(skipUnconfirmed = false)
+
+        // addPlacesCallCount must be 1 because concurrent call inside addPlaces was blocked
+        assertEquals(1, fakePlaceRepoWithConcurrentTap.addPlacesCallCount)
+    }
+
+    @Test
+    fun testSaveSelectedPlaces_outsideRegionNullExtractedRegionWithRegionHint_usesRegionHint() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val outsideCand = MatchCandidate(kakaoPlaceId = "jeju_100", name = "오설록", address = "제주 서귀포시 안덕면")
+        val outsideItem = MatchResult(
+            localId = "1",
+            extracted = GeminiPlace(name = "오설록", region = null),
+            status = MatchResult.STATUS_MATCHED,
+            candidates = listOf(outsideCand),
+            selectedPlaceId = "jeju_100",
+            regionMismatch = true,
+            checked = true,
+            regionHint = "제주",
+        )
+
+        fakePlaceRepo.resultToReturn = AddPlacesResult(addedCount = 1, skippedCount = 0)
+        viewModel.init("room_123", listOf(outsideItem))
+
+        viewModel.saveSelectedPlaces(skipUnconfirmed = false)
+
+        val savedPlace = fakePlaceRepo.lastPlacesSaved[0]
+        assertEquals("jeju_100", savedPlace.kakaoPlaceId)
+        assertEquals("오설록", savedPlace.searchKeyword)
+        assertEquals("제주", savedPlace.searchRegion) // Uses regionHint
+    }
+
+    @Test
+    fun testSaveSelectedPlaces_outsideRegionNullExtractedRegionWithoutRegionHint_returnsNull() {
+        val viewModel = SelectPlacesViewModel(
+            placeRepository = fakePlaceRepo,
+            userRepository = fakeUserRepo,
+            currentUidProvider = { "test_uid" },
+        )
+
+        val outsideCand = MatchCandidate(kakaoPlaceId = "jeju_100", name = "오설록", address = "제주 서귀포시 안덕면")
+        val outsideItem = MatchResult(
+            localId = "1",
+            extracted = GeminiPlace(name = "오설록", region = null),
+            status = MatchResult.STATUS_MATCHED,
+            candidates = listOf(outsideCand),
+            selectedPlaceId = "jeju_100",
+            regionMismatch = true,
+            checked = true,
+            regionHint = null,
+        )
+
+        fakePlaceRepo.resultToReturn = AddPlacesResult(addedCount = 1, skippedCount = 0)
+        viewModel.init("room_123", listOf(outsideItem))
+
+        viewModel.saveSelectedPlaces(skipUnconfirmed = false)
+
+        val savedPlace = fakePlaceRepo.lastPlacesSaved[0]
+        assertEquals("jeju_100", savedPlace.kakaoPlaceId)
+        assertEquals("오설록", savedPlace.searchKeyword)
+        assertNull(savedPlace.searchRegion) // Returns null when regionHint is null
+    }
 }

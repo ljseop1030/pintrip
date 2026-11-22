@@ -72,6 +72,7 @@ data class MatchResult(
     val sourceType: String = "screenshot",
     val sourceUrl: String? = null,
     val manualQuery: String? = null,
+    val regionHint: String? = null,
 ) : Serializable {
     /**
      * 현재 [selectedPlaceId]에 해당하는 [MatchCandidate] 객체를 반환합니다.
@@ -113,6 +114,7 @@ data class MatchResult(
             regionMismatch: Boolean = false,
             sourceType: String = "screenshot",
             sourceUrl: String? = null,
+            regionHint: String? = null,
         ): MatchResult {
             val cleanExtractedName = normalizePlaceName(extracted.name)
 
@@ -164,6 +166,7 @@ data class MatchResult(
                 checked = initialChecked,
                 sourceType = sourceType,
                 sourceUrl = sourceUrl,
+                regionHint = regionHint,
             )
         }
 

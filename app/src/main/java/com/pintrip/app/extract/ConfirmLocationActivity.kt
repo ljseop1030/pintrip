@@ -122,19 +122,11 @@ class ConfirmLocationActivity : AppCompatActivity() {
         viewModel.selectedCandidateId.observe(this) { selectedId ->
             val candidates = viewModel.matchResult.value?.candidates ?: emptyList()
             adapter.updateData(candidates, selectedId, viewModel.roomRegion.value)
-            val allOutside = viewModel.areAllCandidatesOutsideRegion.value == true
-            binding.btnSelectThisLocation.isEnabled = (selectedId != null && !allOutside)
+            binding.btnSelectThisLocation.isEnabled = (selectedId != null)
         }
 
         viewModel.areAllCandidatesOutsideRegion.observe(this) { allOutside ->
-            if (allOutside) {
-                binding.tvAllCandidatesOutsideNotice.visibility = View.VISIBLE
-                binding.btnSelectThisLocation.isEnabled = false
-            } else {
-                binding.tvAllCandidatesOutsideNotice.visibility = View.GONE
-                val selectedId = viewModel.selectedCandidateId.value
-                binding.btnSelectThisLocation.isEnabled = (selectedId != null)
-            }
+            binding.tvAllCandidatesOutsideNotice.visibility = if (allOutside) View.VISIBLE else View.GONE
         }
 
         viewModel.resultEvent.observe(this) { event ->

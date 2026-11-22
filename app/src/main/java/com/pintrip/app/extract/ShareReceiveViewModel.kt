@@ -100,7 +100,7 @@ class ShareReceiveViewModel(
     private val _roomLoadError = MutableLiveData<Int?>()
     val roomLoadError: LiveData<Int?> = _roomLoadError
 
-    private var isProceeded = false
+    var isProceeded = false
     private var isDataLoaded = false
     private var loadJob: Job? = null
 
@@ -124,23 +124,12 @@ class ShareReceiveViewModel(
 
         loadJob = viewModelScope.launch {
             try {
-                if (!isOnline()) {
-                    _rooms.value = emptyList()
-                    _roomLoadError.value = R.string.error_network_unavailable
-                    return@launch
-                }
-
                 val myRooms = roomRepository.getMyRooms()
 
                 if (myRooms.isEmpty()) {
-                    if (!isOnline()) {
-                        _rooms.value = emptyList()
-                        _roomLoadError.value = R.string.error_network_unavailable
-                    } else {
-                        _rooms.value = emptyList()
-                        _roomLoadError.value = R.string.room_list_empty
-                        isDataLoaded = true
-                    }
+                    _rooms.value = emptyList()
+                    _roomLoadError.value = R.string.room_list_empty
+                    isDataLoaded = true
                 } else {
                     _rooms.value = myRooms
                     _roomLoadError.value = null
@@ -475,6 +464,8 @@ class ShareReceiveViewModel(
 
     fun retryWithNewScreenshots(context: Context, uris: List<android.net.Uri>) {
         if (uris.isEmpty()) return
+        val roomId = selectedRoom.value?.id?.ifBlank { null } ?: return
+
         isProceeded = true
         _extractFailureState.value = null
         val newShareInput = ShareInput.Screenshots(uris = uris, originalCount = uris.size)
@@ -485,13 +476,13 @@ class ShareReceiveViewModel(
             step3Status = StepStatus.PENDING,
         )
 
-        val roomId = selectedRoom.value?.id ?: return
         startExtractStep(context, roomId, newShareInput)
     }
 
     fun retryCurrentExtraction(context: Context) {
         val input = _shareInput.value ?: return
-        val roomId = selectedRoom.value?.id ?: return
+        val roomId = selectedRoom.value?.id?.ifBlank { null } ?: return
+
         isProceeded = true
         _extractFailureState.value = null
         _stepsState.value = ProgressStepsState(

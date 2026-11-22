@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.pintrip.app.R
 import com.pintrip.app.databinding.ActivitySelectPlacesBinding
-import com.pintrip.app.place.PlaceListActivity
+import com.pintrip.app.map.RoomMapActivity
 
 /**
  * 장소 매칭 결과 목록을 확인하고 저장할 장소를 선택하는 화면.
@@ -190,7 +190,7 @@ class SelectPlacesActivity : AppCompatActivity() {
                 Log.d(TAG, "Saved places: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=${result.excludedCount}")
 
                 val roomId = viewModel.roomId.value.orEmpty()
-                startActivity(PlaceListActivity.newIntent(this, roomId))
+                startActivity(RoomMapActivity.newIntent(this, roomId))
                 finish()
             }
         }
