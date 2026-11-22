@@ -56,11 +56,11 @@ class ManualSearchBottomSheetFragment : BottomSheetDialogFragment() {
 
         adapter = ItemConfirmCandidateAdapter(
             onCandidateSelected = { pickedCandidate ->
-                val currentTypedQuery = viewModel.currentQuery.value?.trim().orEmpty().ifBlank { pickedCandidate.name }
+                val searchedQuery = viewModel.getPickedManualQuery(pickedCandidate)
                 val targetIndex = arguments?.getInt(ARG_TARGET_INDEX, -1) ?: -1
                 val resultBundle = bundleOf(
                     EXTRA_PICKED_CANDIDATE to pickedCandidate,
-                    EXTRA_MANUAL_QUERY to currentTypedQuery,
+                    EXTRA_MANUAL_QUERY to searchedQuery,
                     EXTRA_TARGET_INDEX to targetIndex,
                 )
                 parentFragmentManager.setFragmentResult(REQUEST_KEY_MANUAL_SEARCH, resultBundle)

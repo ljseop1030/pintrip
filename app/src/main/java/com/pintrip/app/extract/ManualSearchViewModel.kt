@@ -18,7 +18,10 @@ import kotlinx.coroutines.launch
 sealed class ManualSearchUiState {
     object Idle : ManualSearchUiState()
     object Loading : ManualSearchUiState()
-    data class Success(val candidates: List<MatchCandidate>) : ManualSearchUiState()
+    data class Success(
+        val candidates: List<MatchCandidate>,
+        val searchedQuery: String,
+    ) : ManualSearchUiState()
     object Empty : ManualSearchUiState()
     data class Error(@StringRes val messageResId: Int) : ManualSearchUiState()
 }
@@ -56,6 +59,15 @@ class ManualSearchViewModel(
         }
     }
 
+    fun getPickedManualQuery(candidate: MatchCandidate): String {
+        val state = _uiState.value
+        return if (state is ManualSearchUiState.Success && state.searchedQuery.isNotBlank()) {
+            state.searchedQuery
+        } else {
+            _currentQuery.value?.trim().orEmpty().ifBlank { candidate.name }
+        }
+    }
+
     fun onQueryChanged(newQuery: String, immediate: Boolean = false) {
         val trimmedQuery = newQuery.trim()
         if (_currentQuery.value != newQuery) {
@@ -69,12 +81,12 @@ class ManualSearchViewModel(
         }
 
         searchJob?.cancel()
+        _uiState.value = ManualSearchUiState.Loading
+
         searchJob = viewModelScope.launch {
             if (!immediate) {
                 delay(DEBOUNCE_DELAY_MS)
             }
-
-            _uiState.value = ManualSearchUiState.Loading
 
             try {
                 val region = _roomRegion.value.orEmpty()
@@ -93,7 +105,10 @@ class ManualSearchViewModel(
                 if (candidates.isEmpty()) {
                     _uiState.value = ManualSearchUiState.Empty
                 } else {
-                    _uiState.value = ManualSearchUiState.Success(candidates)
+                    _uiState.value = ManualSearchUiState.Success(
+                        candidates = candidates,
+                        searchedQuery = trimmedQuery,
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e

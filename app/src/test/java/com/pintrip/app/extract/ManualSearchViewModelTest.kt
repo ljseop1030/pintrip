@@ -143,4 +143,39 @@ class ManualSearchViewModelTest {
         assertTrue(state is ManualSearchUiState.Idle)
         assertEquals(0, fakeClient.searchCount)
     }
+
+    @Test
+    fun testGetPickedManualQuery_returnsSearchedQueryUsedForResults() = runTest {
+        val fakeDoc = KakaoPlaceDocument(id = "100", placeName = "이재모피자 본점", roadAddressName = "부산 광복중앙로 31")
+        val fakeClient = FakeKakaoLocalApiClient(documentsToReturn = listOf(fakeDoc))
+        val viewModel = ManualSearchViewModel(clientFactory = { fakeClient })
+
+        viewModel.init(roomRegionInput = "부산", initialQueryInput = null)
+        viewModel.onQueryChanged("이재모피자", immediate = true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ManualSearchUiState.Success
+        assertEquals("이재모피자", state.searchedQuery)
+
+        val candidate = state.candidates[0]
+        val pickedQuery = viewModel.getPickedManualQuery(candidate)
+        assertEquals("이재모피자", pickedQuery)
+    }
+
+    @Test
+    fun testOnQueryChanged_immediatelySetsLoadingStateWhenNewTextTyped() = runTest {
+        val fakeDoc = KakaoPlaceDocument(id = "100", placeName = "이재모피자 본점", roadAddressName = "부산 광복중앙로 31")
+        val fakeClient = FakeKakaoLocalApiClient(documentsToReturn = listOf(fakeDoc))
+        val viewModel = ManualSearchViewModel(clientFactory = { fakeClient })
+
+        viewModel.init(roomRegionInput = "부산", initialQueryInput = null)
+        viewModel.onQueryChanged("이재모피자", immediate = true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is ManualSearchUiState.Success)
+
+        // Type new letter -> UI state immediately becomes Loading before debounce completes
+        viewModel.onQueryChanged("이재모피자본", immediate = false)
+        assertTrue(viewModel.uiState.value is ManualSearchUiState.Loading)
+    }
 }

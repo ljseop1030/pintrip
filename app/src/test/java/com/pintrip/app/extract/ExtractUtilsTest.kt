@@ -31,6 +31,61 @@ class ExtractUtilsTest {
     }
 
     @Test
+    fun testNormalizeRegionName_preservesShortNames() {
+        assertEquals("영도", normalizeRegionName("영도"))
+        assertEquals("영도", normalizeRegionName("영도구"))
+        assertEquals("진도", normalizeRegionName("진도"))
+        assertEquals("진도", normalizeRegionName("진도군"))
+        assertEquals("완도", normalizeRegionName("완도"))
+        assertEquals("완도", normalizeRegionName("완도군"))
+    }
+
+    @Test
+    fun testIsCandidateAddressOutsideRoomRegion_counterExamplesFromCodeReview() {
+        // 1. "영도" 방 vs "서울 영등포구" -> 영등포구에 "영"이 들어가더라도 영도 방 밖으로 판정되어야 함
+        assertTrue(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "서울 영등포구 여의도동 1",
+                roomRegion = "영도",
+            ),
+        )
+        assertFalse(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "부산 영도구 태종로 1",
+                roomRegion = "영도",
+            ),
+        )
+
+        // 2. "세종" 방 vs "서울 중구 세종대로" -> 도로명에 "세종"이 있더라도 서울 주소이므로 방 밖으로 판정되어야 함
+        assertTrue(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "서울 중구 세종대로 110",
+                roomRegion = "세종특별자치시",
+            ),
+        )
+        assertFalse(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "세종 도움8로 11",
+                roomRegion = "세종",
+            ),
+        )
+
+        // 3. "광주광역시" 방 vs "경기 광주시" -> 경기도 광주는 광주광역시 방 밖으로 판정되어야 함
+        assertTrue(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "경기 광주시 경안로 1",
+                roomRegion = "광주광역시",
+            ),
+        )
+        assertFalse(
+            isCandidateAddressOutsideRoomRegion(
+                candidateAddress = "광주 동구 서석로 56",
+                roomRegion = "광주광역시",
+            ),
+        )
+    }
+
+    @Test
     fun testIsCandidateAddressOutsideRoomRegion_normalizedMatches() {
         // 1. 부산광역시 ↔ 부산
         assertFalse(
