@@ -46,6 +46,7 @@ class RoomMapViewModel(
     private val _inviteCodeUiState = MutableLiveData<InviteCodeUiState>(InviteCodeUiState.Idle)
     val inviteCodeUiState: LiveData<InviteCodeUiState> = _inviteCodeUiState
 
+    private var isLoading = false
     private var isDataLoaded = false
     private var allPlaceDetails: List<PlaceDetail> = emptyList()
     private var roomName: String = ""
@@ -55,14 +56,15 @@ class RoomMapViewModel(
     private var fetchCodeJob: Job? = null
 
     fun loadRoomMap(roomId: String) {
-        if (isDataLoaded) return
-        isDataLoaded = true
+        if (isDataLoaded || isLoading) return
+        isLoading = true
 
         _uiState.value = RoomMapUiState.Loading
         viewModelScope.launch {
             try {
                 val room = roomRepository.getRoom(roomId)
                 if (room == null) {
+                    isLoading = false
                     _uiState.value = RoomMapUiState.Error(R.string.room_map_error_room_not_found)
                     if (_isInviteCodeDialogOpen.value == true) {
                         _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
@@ -79,6 +81,8 @@ class RoomMapViewModel(
                 val roomRegion = room.region
                 val placeDetails = placeDetailRepository.getPlaceDetails(roomId, roomRegion)
                 allPlaceDetails = placeDetails
+                isDataLoaded = true
+                isLoading = false
 
                 val foundPlaces = placeDetails.filter { it.status == PlaceDetail.STATUS_FOUND && it.lat != null && it.lng != null }
 
@@ -104,6 +108,8 @@ class RoomMapViewModel(
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load room map data: ${e.message}", e)
+                isLoading = false
+                isDataLoaded = false
                 _uiState.value = RoomMapUiState.Error(R.string.room_map_error_load_failed)
                 if (_isInviteCodeDialogOpen.value == true && cachedInviteCode.isNullOrBlank()) {
                     _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
@@ -113,13 +119,13 @@ class RoomMapViewModel(
     }
 
     fun selectCategory(category: PlaceCategory) {
-        if (selectedCategory == category && (_uiState.value is RoomMapUiState.Success)) {
-            val currentSuccess = _uiState.value as RoomMapUiState.Success
-            if (currentSuccess.selectedCategory == category) return
+        val currentUiState = _uiState.value
+        if (selectedCategory == category && currentUiState is RoomMapUiState.Success && currentUiState.selectedCategory == category) {
+            return
         }
         selectedCategory = category
 
-        if (isDataLoaded) {
+        if (currentUiState is RoomMapUiState.Success) {
             val filteredList = filterPlaces(allPlaceDetails, selectedCategory)
             _uiState.value = RoomMapUiState.Success(
                 placeDetails = filteredList,
@@ -170,7 +176,7 @@ class RoomMapViewModel(
         val code = cachedInviteCode
         if (!code.isNullOrBlank()) {
             _inviteCodeUiState.value = InviteCodeUiState.Success(code)
-        } else if (_uiState.value is RoomMapUiState.Loading) {
+        } else if (isLoading || _uiState.value is RoomMapUiState.Loading) {
             _inviteCodeUiState.value = InviteCodeUiState.Loading
         } else {
             _inviteCodeUiState.value = InviteCodeUiState.Error(R.string.error_load_invite_code_failed)
@@ -183,6 +189,7 @@ class RoomMapViewModel(
 
     fun retry(roomId: String) {
         isDataLoaded = false
+        isLoading = false
         loadRoomMap(roomId)
     }
 
