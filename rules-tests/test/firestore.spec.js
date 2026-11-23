@@ -70,6 +70,13 @@ describe("Firestore Security Rules Tests", () => {
     });
   }
 
+  async function seedPlace(roomId, placeId, placeData) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await db.collection("rooms").doc(roomId).collection("places").doc(placeId).set(placeData);
+    });
+  }
+
   // -------------------------------------------------------------------
   // 1. Atomic Room & InviteCode Creation
   // -------------------------------------------------------------------
@@ -1421,6 +1428,513 @@ describe("Firestore Security Rules Tests", () => {
       await assertFails(
         db.collection("rooms").doc(roomId).update({ placeCount: 1, updatedAt: serverTimestamp() })
       );
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // 6. Place Likes Update Security Rules
+  // -------------------------------------------------------------------
+  describe("Place Likes Update Security Rules", () => {
+    const roomId = "room_like_test";
+    const placeId = "123456";
+    const ownerUid = "user_a";
+    const memberUid = "user_b";
+    const nonMemberUid = "user_c";
+    const now = new Date();
+
+    async function setupLikeTestEnvironment() {
+      await seedUserProfile(ownerUid, "민지", "minji@test.com", "#FF5722");
+      await seedUserProfile(memberUid, "철수", "chulsoo@test.com", "#00BCD4");
+
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [ownerUid, memberUid],
+        ownerId: ownerUid,
+        members: {
+          user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null },
+          user_b: { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+        },
+        placeCount: 1,
+      });
+
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [],
+        likeCount: 0,
+        createdAt: now,
+      });
+    }
+
+    beforeEach(async () => {
+      await setupLikeTestEnvironment();
+    });
+
+    it("allows place creator (room member) to add own UID to likedBy and increment likeCount", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+        })
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, [ownerUid]);
+      assert.strictEqual(snap.data().likeCount, 1);
+    });
+
+    it("allows non-creator room member to add own UID to likedBy and increment likeCount", async () => {
+      const db = getDb({ uid: memberUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: [memberUid],
+          likeCount: 1,
+        })
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, [memberUid]);
+      assert.strictEqual(snap.data().likeCount, 1);
+    });
+
+    it("allows room member to remove own UID from likedBy and decrement likeCount", async () => {
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [memberUid],
+        likeCount: 1,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: memberUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: [],
+          likeCount: 0,
+        })
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, []);
+      assert.strictEqual(snap.data().likeCount, 0);
+    });
+
+    it("allows multiple room members to sequentially like/unlike while preserving other members UIDs", async () => {
+      const dbA = getDb({ uid: ownerUid });
+      const dbB = getDb({ uid: memberUid });
+      const placeRefA = dbA.collection("rooms").doc(roomId).collection("places").doc(placeId);
+      const placeRefB = dbB.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // 1. user_a likes
+      await assertSucceeds(
+        placeRefA.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+        })
+      );
+
+      // 2. user_b likes (preserving user_a)
+      await assertSucceeds(
+        placeRefB.update({
+          likedBy: [ownerUid, memberUid],
+          likeCount: 2,
+        })
+      );
+
+      let snap = await placeRefA.get();
+      assert.deepStrictEqual(snap.data().likedBy, [ownerUid, memberUid]);
+      assert.strictEqual(snap.data().likeCount, 2);
+
+      // 3. user_a unlikes (preserving user_b)
+      await assertSucceeds(
+        placeRefA.update({
+          likedBy: [memberUid],
+          likeCount: 1,
+        })
+      );
+
+      snap = await placeRefA.get();
+      assert.deepStrictEqual(snap.data().likedBy, [memberUid]);
+      assert.strictEqual(snap.data().likeCount, 1);
+    });
+
+    it("rejects unauthenticated user from updating place like state", async () => {
+      const db = getDb(null);
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects non-room member from updating place like state", async () => {
+      const db = getDb({ uid: nonMemberUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [nonMemberUid],
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects adding another user UID to likedBy", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // user_a tries to add user_b's UID
+      await assertFails(
+        placeRef.update({
+          likedBy: [memberUid],
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects removing another user UID from likedBy", async () => {
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [memberUid],
+        likeCount: 1,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // user_a tries to remove user_b's UID
+      await assertFails(
+        placeRef.update({
+          likedBy: [],
+          likeCount: 0,
+        })
+      );
+    });
+
+    it("rejects simultaneous UID swapping or replacing another user UID", async () => {
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [memberUid],
+        likeCount: 1,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // user_a tries to swap user_b with user_a
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects duplicate UID addition in likedBy", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // user_a tries to add duplicate ownerUid
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid, ownerUid],
+          likeCount: 2,
+        })
+      );
+    });
+
+    it("rejects updating likeCount without updating likedBy list", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects updating likedBy list without updating likeCount", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+        })
+      );
+    });
+
+    it("rejects mismatch between likeCount and likedBy size", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 5,
+        })
+      );
+    });
+
+    it("rejects negative likeCount or invalid type", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: -1,
+        })
+      );
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: "1",
+        })
+      );
+
+      await assertFails(
+        placeRef.update({
+          likedBy: ownerUid,
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects modifying protected place fields during like update", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+          searchKeyword: "해커피",
+        })
+      );
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+          addedBy: memberUid,
+        })
+      );
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+          matchType: "manual",
+        })
+      );
+    });
+
+    it("rejects deleting protected place fields during like update", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+          searchKeyword: deleteField(),
+        })
+      );
+    });
+
+    it("rejects place document deletion", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertFails(placeRef.delete());
+    });
+
+    it("rejects no-change update (sending same likedBy and likeCount)", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // Currently likedBy: [], likeCount: 0 -> sending same values
+      await assertFails(
+        placeRef.update({
+          likedBy: [],
+          likeCount: 0,
+        })
+      );
+
+      // Now set likedBy: [ownerUid], likeCount: 1
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [ownerUid],
+        likeCount: 1,
+        createdAt: now,
+      });
+
+      // Sending same likedBy: [ownerUid], likeCount: 1
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid],
+          likeCount: 1,
+        })
+      );
+    });
+
+    it("rejects removing another user UID and inserting duplicate UIDs (e.g. [A,B,C] to [B,B])", async () => {
+      const userC = "user_c_member";
+      // Seed room with user_a, user_b, user_c_member
+      await seedUserProfile(userC, "영희", "younghee@test.com", "#4CAF50");
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [ownerUid, memberUid, userC],
+        ownerId: ownerUid,
+        members: {
+          user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null },
+          user_b: { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+          user_c_member: { nickname: "영희", avatarColor: "#4CAF50", lastSeenAt: null },
+        },
+        placeCount: 1,
+      });
+
+      // Seed place with likedBy: [user_a, user_b, user_c_member], likeCount: 3
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [ownerUid, memberUid, userC],
+        likeCount: 3,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // user_a attempts to change [user_a, user_b, user_c_member] -> [user_b, user_b] with likeCount: 2
+      // This removes user_c_member (other user) and duplicates user_b
+      await assertFails(
+        placeRef.update({
+          likedBy: [memberUid, memberUid],
+          likeCount: 2,
+        })
+      );
+    });
+
+    it("allows normal cancellation from [A,B,C] to [B,C] by user A", async () => {
+      const userC = "user_c_member";
+      await seedUserProfile(userC, "영희", "younghee@test.com", "#4CAF50");
+      await seedRoom(roomId, {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "K7P2QX",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [ownerUid, memberUid, userC],
+        ownerId: ownerUid,
+        members: {
+          user_a: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null },
+          user_b: { nickname: "철수", avatarColor: "#00BCD4", lastSeenAt: null },
+          user_c_member: { nickname: "영희", avatarColor: "#4CAF50", lastSeenAt: null },
+        },
+        placeCount: 1,
+      });
+
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [ownerUid, memberUid, userC],
+        likeCount: 3,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // user_a cancels own like: [user_a, user_b, user_c_member] -> [user_b, user_c_member] with likeCount: 2
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: [memberUid, userC],
+          likeCount: 2,
+        })
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, [memberUid, userC]);
+      assert.strictEqual(snap.data().likeCount, 2);
     });
   });
 });

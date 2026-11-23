@@ -185,7 +185,10 @@ Shake-to-pick picks only `found` places at random; the same place may be picked 
     - Both modes require existing room member and prohibit modifying any other room fields.
     - Known transition limitation: Old app place additions succeed but don't update `updatedAt`, so sorting order on `updatedAt` won't update until team rebuilds/updates the app.
     - Application order: 1. Deploy backward-compatible rules -> 2. Build & install new app -> 3. Verify. Keep count-only rule until team updates.
-- `rooms/{roomId}/places/{placeId}`: parent room members read/create (with parent `placeCount` increment check). Delete/update blocked in current phase.
+- `rooms/{roomId}/places/{placeId}`:
+  - Read/Create: parent room members read/create (with parent `placeCount` increment check).
+  - Update: permitted ONLY for room members to toggle their own UID in `likedBy` (add or remove exactly `request.auth.uid`, preserving all other UIDs) with corresponding `likeCount` ±1, maintaining `likeCount == likedBy.size()` (non-negative integer). All other fields (`kakaoPlaceId`, `kakaoPlaceUrl`, `searchKeyword`, `searchRegion`, `matchType`, `sourceType`, `sourceUrl`, `addedBy`, `addedByNickname`, `createdAt`) are protected and immutable.
+  - Delete: blocked in current phase.
 - `inviteCodes/{code}`: signed-in users `get` (single document) only. `list`/`update`/`delete` blocked.
 - `inviteCodes/{code}/joinProofs/{uid}`: signed-in users `create` only if `uid == request.auth.uid`, `joinedAt == request.time`, and target room is atomically updated with user in `memberIds` (`getAfter`). Read/update/delete/list blocked.
 
