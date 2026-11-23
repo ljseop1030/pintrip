@@ -10,8 +10,7 @@ import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.databinding.ItemPlaceBinding
 
 class RoomPlaceAdapter(
-    private val onFoundClick: (kakaoPlaceId: String) -> Unit,
-    private val onNotFoundClick: (kakaoPlaceUrl: String) -> Unit,
+    private val onPlaceClick: (kakaoPlaceId: String) -> Unit,
 ) : ListAdapter<PlaceDetail, RoomPlaceAdapter.RoomPlaceViewHolder>(PlaceDetailDiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RoomPlaceViewHolder {
@@ -20,7 +19,7 @@ class RoomPlaceAdapter(
             parent,
             false
         )
-        return RoomPlaceViewHolder(binding, onFoundClick, onNotFoundClick)
+        return RoomPlaceViewHolder(binding, onPlaceClick)
     }
 
     override fun onBindViewHolder(holder: RoomPlaceViewHolder, position: Int) {
@@ -29,8 +28,7 @@ class RoomPlaceAdapter(
 
     class RoomPlaceViewHolder(
         private val binding: ItemPlaceBinding,
-        private val onFoundClick: (kakaoPlaceId: String) -> Unit,
-        private val onNotFoundClick: (kakaoPlaceUrl: String) -> Unit,
+        private val onPlaceClick: (kakaoPlaceId: String) -> Unit,
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(detail: PlaceDetail) {
@@ -47,11 +45,7 @@ class RoomPlaceAdapter(
             binding.tvLikeCount.text = detail.place.likeCount.toString()
 
             binding.root.setOnClickListener {
-                if (detail.status == PlaceDetail.STATUS_FOUND) {
-                    onFoundClick(detail.place.kakaoPlaceId)
-                } else {
-                    onNotFoundClick(detail.place.kakaoPlaceUrl)
-                }
+                onPlaceClick(detail.place.kakaoPlaceId)
             }
         }
     }

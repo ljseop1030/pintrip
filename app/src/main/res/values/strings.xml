@@ -264,4 +264,20 @@
     <string name="room_map_empty_no_places">아직 저장한 장소가 없어요</string>
     <string name="room_map_empty_category">이 카테고리에 저장한 장소가 없어요</string>
     <string name="cd_random_pick">랜덤으로 장소 고르기</string>
+
+    <!-- Place Detail Screen -->
+    <string name="title_activity_place_detail">장소 상세</string>
+    <string name="place_detail_likes_count_format">좋아요 %1$d개</string>
+    <string name="place_detail_no_likes">아직 좋아요가 없어요</string>
+    <string name="place_detail_source_title">출처</string>
+    <string name="place_detail_source_screenshot">스크린샷</string>
+    <string name="place_detail_source_text">텍스트</string>
+    <string name="place_detail_source_link_format">링크 · %1$s</string>
+    <string name="place_detail_source_open">열기</string>
+    <string name="place_detail_added_by_title">추가한 사람</string>
+    <string name="place_detail_find_directions">카카오맵에서 길찾기</string>
+    <string name="place_detail_open_kakao_map">카카오맵에서 열기</string>
+    <string name="place_detail_not_found_notice">카카오맵에서 장소를 찾을 수 없어요</string>
+    <string name="place_detail_deleted_toast">삭제되었거나 존재하지 않는 장소입니다.</string>
+    <string name="place_detail_error_cannot_dial">전화 연결을 열 수 있는 앱이 없습니다.</string>
 </resources>
