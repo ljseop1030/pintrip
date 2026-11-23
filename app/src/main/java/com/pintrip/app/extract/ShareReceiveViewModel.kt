@@ -3,19 +3,23 @@ package com.pintrip.app.extract
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pintrip.app.R
-import com.pintrip.app.data.TestConfig
 import com.pintrip.app.data.model.GeminiExtractionResponse
+import com.pintrip.app.data.model.Room
 import com.pintrip.app.data.remote.GeminiExtractor
 import com.pintrip.app.data.remote.WebPageFetcher
+import com.pintrip.app.data.repository.RoomJoinException
+import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.ui.common.Event
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -53,12 +57,17 @@ sealed interface ShareNoticeEvent {
     ) : ShareNoticeEvent
 }
 
+sealed interface ExtractFailureState {
+    data class NoPlaces(@StringRes val messageResId: Int) : ExtractFailureState
+    object Error : ExtractFailureState
+}
+
 class ShareReceiveViewModel(
-    private val db: FirebaseFirestore? = null,
     private val geminiExtractorFactory: (Context) -> GeminiExtractor = { GeminiExtractor(it) },
     private val webPageFetcherFactory: () -> WebPageFetcher = { WebPageFetcher() },
     private val placeMatcherFactory: () -> PlaceMatcher = { PlaceMatcher() },
-    private val roomRegionFetcher: (suspend (String) -> String)? = null,
+    private val roomRepository: RoomRepository = RoomRepository(),
+    private val isOnline: () -> Boolean = { true },
 ) : ViewModel() {
 
     private val _shareInput = MutableLiveData<ShareInput>()
@@ -70,6 +79,9 @@ class ShareReceiveViewModel(
     private val _noticeEvent = MutableLiveData<Event<ShareNoticeEvent>>()
     val noticeEvent: LiveData<Event<ShareNoticeEvent>> = _noticeEvent
 
+    private val _extractFailureState = MutableLiveData<ExtractFailureState?>(null)
+    val extractFailureState: LiveData<ExtractFailureState?> = _extractFailureState
+
     private val _navigateToExtract = MutableLiveData<Event<NavigateToExtractArgs>>()
     val navigateToExtract: LiveData<Event<NavigateToExtractArgs>> = _navigateToExtract
 
@@ -79,9 +91,18 @@ class ShareReceiveViewModel(
     private val _matchResults = MutableLiveData<List<MatchResult>>()
     val matchResults: LiveData<List<MatchResult>> = _matchResults
 
-    val selectedRoomId: String = TestConfig.TEST_ROOM_ID
+    private val _rooms = MutableLiveData<List<Room>>()
+    val rooms: LiveData<List<Room>> = _rooms
 
-    private var isProceeded = false
+    private val _selectedRoom = MutableLiveData<Room?>()
+    val selectedRoom: LiveData<Room?> = _selectedRoom
+
+    private val _roomLoadError = MutableLiveData<Int?>()
+    val roomLoadError: LiveData<Int?> = _roomLoadError
+
+    var isProceeded = false
+    private var isDataLoaded = false
+    private var loadJob: Job? = null
 
     fun processIntent(intent: Intent?) {
         if (_shareInput.value != null) return
@@ -93,12 +114,65 @@ class ShareReceiveViewModel(
         parseAndSetInput(intent)
     }
 
+    fun fetchRooms(forceRefresh: Boolean = false) {
+        if (loadJob?.isActive == true) {
+            if (!forceRefresh) return
+            loadJob?.cancel()
+        } else if (isDataLoaded && !forceRefresh) {
+            return
+        }
+
+        loadJob = viewModelScope.launch {
+            try {
+                val myRooms = roomRepository.getMyRooms()
+
+                if (myRooms.isEmpty()) {
+                    _rooms.value = emptyList()
+                    _roomLoadError.value = R.string.room_list_empty
+                    isDataLoaded = true
+                } else {
+                    _rooms.value = myRooms
+                    _roomLoadError.value = null
+                    isDataLoaded = true
+
+                    if (myRooms.size == 1 && _selectedRoom.value == null) {
+                        _selectedRoom.value = myRooms.first()
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _rooms.value = emptyList()
+                if (!isOnline()) {
+                    _roomLoadError.value = R.string.error_network_unavailable
+                } else if (e is RoomJoinException.NotLoggedIn || (e is IllegalStateException && e.message?.contains("currentUser") == true)) {
+                    _roomLoadError.value = R.string.error_not_logged_in
+                } else if (e is RoomJoinException.NetworkUnavailable) {
+                    _roomLoadError.value = R.string.error_network_unavailable
+                } else {
+                    _roomLoadError.value = R.string.error_room_list_default
+                }
+            }
+        }
+    }
+
+    fun selectRoom(room: Room) {
+        if (isProceeded) return
+        _selectedRoom.value = room
+    }
+
     fun onCheckPlacesClicked() {
         if (isProceeded) return
 
         val input = _shareInput.value ?: return
         if (input is ShareInput.Empty) return
         if ((input is ShareInput.LinkText) && input.text.isBlank()) return
+
+        val roomId = _selectedRoom.value?.id
+        if (roomId == null) {
+            _noticeEvent.value = Event(ShareNoticeEvent.ToastNotice(R.string.room_map_error_room_not_found))
+            return
+        }
 
         isProceeded = true
 
@@ -107,10 +181,10 @@ class ShareReceiveViewModel(
             step3Status = StepStatus.PENDING,
         )
 
-        Log.d(TAG, "onCheckPlacesClicked: Connecting to next step with roomId=$selectedRoomId, input=$input")
+        Log.d(TAG, "onCheckPlacesClicked: Connecting to next step with roomId=$roomId, input=$input")
         _navigateToExtract.value = Event(
             NavigateToExtractArgs(
-                roomId = selectedRoomId,
+                roomId = roomId,
                 shareInput = input,
             ),
         )
@@ -190,38 +264,35 @@ class ShareReceiveViewModel(
     fun startExtractStep(context: Context, roomId: String, shareInput: ShareInput) {
         Log.d(TAG, "startExtractStep called: roomId=$roomId, shareInput=$shareInput")
 
+        if (_shareInput.value == null) {
+            _shareInput.value = shareInput
+        }
+
         if (shareInput is ShareInput.Empty) {
             Log.w(TAG, "ShareInput is Empty for extraction")
             isProceeded = false
             updateStep2Status(StepStatus.ERROR)
             updateStep3Status(StepStatus.ERROR)
-            _noticeEvent.value = Event(
-                ShareNoticeEvent.ToastNotice(
-                    messageResId = R.string.share_receive_error_could_not_find_places,
-                ),
-            )
+            _extractFailureState.value = ExtractFailureState.NoPlaces(R.string.share_receive_error_could_not_find_places)
             return
         }
 
         val appContext = context.applicationContext
 
         viewModelScope.launch {
+            _extractFailureState.value = null
+            var roomRegion = ""
             try {
                 // Step 2 시작: 텍스트 추출 진행 중, Step 3 대기
                 updateStep2Status(StepStatus.IN_PROGRESS)
                 updateStep3Status(StepStatus.PENDING)
 
                 // 1. 방 정보(지역명) 조회
-                val roomRegion = if (roomRegionFetcher != null) {
-                    roomRegionFetcher.invoke(roomId)
+                val cachedRegion = _rooms.value?.find { it.id == roomId }?.region
+                roomRegion = if (cachedRegion != null) {
+                    cachedRegion
                 } else {
-                    val firestore = db ?: FirebaseFirestore.getInstance()
-                    val roomSnapshot = firestore.collection("rooms")
-                        .document(roomId)
-                        .get()
-                        .await()
-
-                    roomSnapshot.getString("region")?.trim().orEmpty()
+                    roomRepository.getRoom(roomId)?.region?.trim().orEmpty()
                 }
                 Log.d(TAG, "Fetched room region for roomId=$roomId: '$roomRegion'")
 
@@ -230,12 +301,7 @@ class ShareReceiveViewModel(
                     isProceeded = false
                     updateStep2Status(StepStatus.ERROR)
                     updateStep3Status(StepStatus.ERROR)
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
-                            messageResId = R.string.share_receive_error_could_not_find_places,
-                        ),
-                    )
-                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                    _extractFailureState.value = ExtractFailureState.Error
                     return@launch
                 }
 
@@ -324,12 +390,7 @@ class ShareReceiveViewModel(
                     // Gemini가 추출한 장소가 0개인 경우 (docs/data-contract.md §8)
                     isProceeded = false
                     updateStep3Status(StepStatus.ERROR)
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
-                            messageResId = getNoPlacesErrorResId(shareInput),
-                        ),
-                    )
-                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                    _extractFailureState.value = ExtractFailureState.NoPlaces(getNoPlacesErrorResId(shareInput))
                     return@launch
                 }
 
@@ -364,12 +425,7 @@ class ShareReceiveViewModel(
                     // 카카오 매칭 유효 결과가 0개인 경우 (docs/data-contract.md §8)
                     isProceeded = false
                     updateStep3Status(StepStatus.ERROR)
-                    _noticeEvent.value = Event(
-                        ShareNoticeEvent.ToastNotice(
-                            messageResId = getNoPlacesErrorResId(shareInput),
-                        ),
-                    )
-                    // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                    _extractFailureState.value = ExtractFailureState.NoPlaces(getNoPlacesErrorResId(shareInput))
                     return@launch
                 }
 
@@ -401,14 +457,40 @@ class ShareReceiveViewModel(
                 isProceeded = false
                 updateStep2Status(StepStatus.ERROR)
                 updateStep3Status(StepStatus.ERROR)
-                _noticeEvent.value = Event(
-                    ShareNoticeEvent.ToastNotice(
-                        messageResId = R.string.share_receive_error_could_not_find_places,
-                    ),
-                )
-                // TODO: Temporary handling - manual search button to be added later (docs/data-contract.md §8)
+                _extractFailureState.value = ExtractFailureState.Error
             }
         }
+    }
+
+    fun retryWithNewScreenshots(context: Context, uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        val roomId = selectedRoom.value?.id?.ifBlank { null } ?: return
+
+        isProceeded = true
+        _extractFailureState.value = null
+        val newShareInput = ShareInput.Screenshots(uris = uris, originalCount = uris.size)
+        _shareInput.value = newShareInput
+        _stepsState.value = ProgressStepsState(
+            step1Status = StepStatus.COMPLETED,
+            step2Status = StepStatus.PENDING,
+            step3Status = StepStatus.PENDING,
+        )
+
+        startExtractStep(context, roomId, newShareInput)
+    }
+
+    fun retryCurrentExtraction(context: Context) {
+        val input = _shareInput.value ?: return
+        val roomId = selectedRoom.value?.id?.ifBlank { null } ?: return
+
+        isProceeded = true
+        _extractFailureState.value = null
+        _stepsState.value = ProgressStepsState(
+            step1Status = StepStatus.COMPLETED,
+            step2Status = StepStatus.PENDING,
+            step3Status = StepStatus.PENDING,
+        )
+        startExtractStep(context, roomId, input)
     }
 
     private fun getNoPlacesErrorResId(shareInput: ShareInput): Int {

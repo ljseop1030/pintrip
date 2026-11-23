@@ -138,4 +138,67 @@ class MatchResultTest {
         assertEquals(5, result.candidates.size)
         assertEquals(exact, result.selectedCandidate)
     }
+
+    @Test
+    fun testCreate_matchedWhenSingleCandidateAddressInRawText() {
+        val extracted = GeminiPlace(
+            name = "명인콩국수",
+            rawText = "명인콩국수 인천광역시 연수구 앵고개로246번길 39-8 백마빌딩 2층",
+        )
+        val cand1 = MatchCandidate(kakaoPlaceId = "cand1", name = "명인콩국수", address = "인천 연수구 앵고개로246번길 39-8")
+        val cand2 = MatchCandidate(kakaoPlaceId = "cand2", name = "명인콩국수", address = "인천 남동구 미래로 42")
+
+        val result = MatchResult.create(
+            localId = "img0_p0",
+            extracted = extracted,
+            candidates = listOf(cand1, cand2),
+        )
+
+        assertEquals(MatchResult.STATUS_MATCHED, result.status)
+        assertEquals("cand1", result.selectedPlaceId)
+        assertTrue(result.checked)
+        assertTrue(result.isConfirmable)
+    }
+
+    @Test
+    fun testCreate_checkWhenNoCandidateAddressInRawText() {
+        val extracted = GeminiPlace(
+            name = "명인콩국수",
+            rawText = "명인콩국수 맛집 추천",
+        )
+        val cand1 = MatchCandidate(kakaoPlaceId = "cand1", name = "명인콩국수", address = "인천 연수구 앵고개로246번길 39-8")
+        val cand2 = MatchCandidate(kakaoPlaceId = "cand2", name = "명인콩국수", address = "인천 남동구 미래로 42")
+
+        val result = MatchResult.create(
+            localId = "img0_p0",
+            extracted = extracted,
+            candidates = listOf(cand1, cand2),
+        )
+
+        assertEquals(MatchResult.STATUS_CHECK, result.status)
+        assertNull(result.selectedPlaceId)
+        assertTrue(result.checked)
+        assertFalse(result.isConfirmable)
+    }
+
+    @Test
+    fun testCreate_checkWhenMultipleCandidateAddressesInRawText() {
+        val extracted = GeminiPlace(
+            name = "명인콩국수",
+            rawText = "명인콩국수 인천광역시 연수구 앵고개로246번길 39-8 남동구 미래로 42",
+        )
+        val cand1 = MatchCandidate(kakaoPlaceId = "cand1", name = "명인콩국수", address = "인천 연수구 앵고개로246번길 39-8")
+        val cand2 = MatchCandidate(kakaoPlaceId = "cand2", name = "명인콩국수", address = "인천 남동구 미래로 42")
+
+        val result = MatchResult.create(
+            localId = "img0_p0",
+            extracted = extracted,
+            candidates = listOf(cand1, cand2),
+        )
+
+        assertEquals(MatchResult.STATUS_CHECK, result.status)
+        assertNull(result.selectedPlaceId)
+        assertTrue(result.checked)
+        assertFalse(result.isConfirmable)
+    }
 }
