@@ -106,7 +106,7 @@
                 android:id="@+id/tv_ready_heading"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/shake_ready_heading"
+                android:text="@string/shake_ready_heading_sensor"
                 android:textAppearance="?attr/textAppearanceTitleLarge"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
@@ -133,6 +133,16 @@
                 android:textColor="?attr/colorPrimary"
                 android:textStyle="bold"
                 tools:text="전체" />
+
+            <TextView
+                android:id="@+id/tv_ready_guide"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/shake_ready_guide_sensor"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_touch_pick"

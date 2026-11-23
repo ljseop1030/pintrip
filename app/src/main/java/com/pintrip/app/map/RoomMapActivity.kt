@@ -458,10 +458,6 @@ class RoomMapActivity : AppCompatActivity() {
             }
             updateSensorState()
         }
-
-        shakeViewModel.shakeEvent.observe(this) { _ ->
-            // Shake event received; result UI is updated directly on screen
-        }
     }
 
     private fun updateSensorState() {
@@ -470,8 +466,19 @@ class RoomMapActivity : AppCompatActivity() {
         val currentState = shakeViewModel.uiState.value
         val isAwaitingWithCandidates = currentState is com.pintrip.app.place.ShakeToPickUiState.Ready && currentState.filteredCount > 0
 
+        val dialogBinding = shakeDialogBinding
+
         if (isDialogOpen && isResumedState && isAwaitingWithCandidates) {
-            shakeDetector?.start()
+            val isSensorStarted = shakeDetector?.start() == true
+            if (dialogBinding != null) {
+                if (isSensorStarted) {
+                    dialogBinding.tvReadyHeading.setText(R.string.shake_ready_heading_sensor)
+                    dialogBinding.tvReadyGuide.setText(R.string.shake_ready_guide_sensor)
+                } else {
+                    dialogBinding.tvReadyHeading.setText(R.string.shake_ready_heading_touch)
+                    dialogBinding.tvReadyGuide.setText(R.string.shake_ready_guide_touch)
+                }
+            }
         } else {
             shakeDetector?.stop()
         }
@@ -562,7 +569,6 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.layoutEmpty.isVisible = false
 
                 val categoryName = getString(getCategoryNameResId(state.category))
-                dialogBinding.tvReadyHeading.text = getString(R.string.shake_ready_heading)
                 dialogBinding.tvReadySubtitle.text = getString(
                     R.string.shake_ready_subtitle_format,
                     categoryName,
