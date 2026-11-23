@@ -3,7 +3,7 @@ const {
   assertSucceeds,
   assertFails,
 } = require("@firebase/rules-unit-testing");
-const { serverTimestamp, deleteField, arrayUnion } = require("firebase/firestore");
+const { serverTimestamp, deleteField, arrayUnion, arrayRemove, increment } = require("firebase/firestore");
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
@@ -1935,6 +1935,116 @@ describe("Firestore Security Rules Tests", () => {
       const snap = await placeRef.get();
       assert.deepStrictEqual(snap.data().likedBy, [memberUid, userC]);
       assert.strictEqual(snap.data().likeCount, 2);
+    });
+
+    it("rejects update when existing document has duplicate likedBy (e.g. [A,A] to [A,B,X])", async () => {
+      const userX = "user_x_arbitrary";
+      // Seed place with duplicate likedBy: [ownerUid, ownerUid], likeCount: 2
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [ownerUid, ownerUid],
+        likeCount: 2,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: memberUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      // memberUid (user_b) attempts to update [user_a, user_a] -> [user_a, user_b, user_x_arbitrary]
+      await assertFails(
+        placeRef.update({
+          likedBy: [ownerUid, memberUid, userX],
+          likeCount: 3,
+        })
+      );
+    });
+
+    it("allows arrayUnion and increment for like addition in update", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: arrayUnion(ownerUid),
+          likeCount: increment(1),
+        })
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, [ownerUid]);
+      assert.strictEqual(snap.data().likeCount, 1);
+    });
+
+    it("allows arrayRemove and increment for like removal in update", async () => {
+      await seedPlace(roomId, placeId, {
+        kakaoPlaceId: placeId,
+        kakaoPlaceUrl: "https://place.map.kakao.com/123456",
+        searchKeyword: "모모스커피",
+        searchRegion: "해운대",
+        matchType: "auto",
+        sourceType: "screenshot",
+        sourceUrl: null,
+        addedBy: ownerUid,
+        addedByNickname: "민지",
+        likedBy: [ownerUid],
+        likeCount: 1,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: arrayRemove(ownerUid),
+          likeCount: increment(-1),
+        })
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, []);
+      assert.strictEqual(snap.data().likeCount, 0);
+    });
+
+    it("allows runTransaction read-then-write for like toggle", async () => {
+      const db = getDb({ uid: ownerUid });
+      const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(placeId);
+
+      await assertSucceeds(
+        testEnv.withSecurityRulesDisabled(async () => {
+          // Verify rules evaluation inside user transaction
+        }).then(() =>
+          db.runTransaction(async (transaction) => {
+            const sfDoc = await transaction.get(placeRef);
+            assert.strictEqual(sfDoc.exists, true);
+            const currentLikedBy = sfDoc.data().likedBy || [];
+            const isLiked = currentLikedBy.includes(ownerUid);
+            if (!isLiked) {
+              transaction.update(placeRef, {
+                likedBy: arrayUnion(ownerUid),
+                likeCount: increment(1),
+              });
+            } else {
+              transaction.update(placeRef, {
+                likedBy: arrayRemove(ownerUid),
+                likeCount: increment(-1),
+              });
+            }
+          })
+        )
+      );
+
+      const snap = await placeRef.get();
+      assert.deepStrictEqual(snap.data().likedBy, [ownerUid]);
+      assert.strictEqual(snap.data().likeCount, 1);
     });
   });
 });

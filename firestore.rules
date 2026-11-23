@@ -301,7 +301,9 @@ service cloud.firestore {
           && request.resource.data.addedBy == resource.data.addedBy
           && request.resource.data.addedByNickname == resource.data.addedByNickname
           && request.resource.data.createdAt == resource.data.createdAt
-          // 4. likedBy, likeCount 타입 및 최종 일치성 검증 (likedBy 중복 금지 포함)
+          // 4. likedBy, likeCount 타입 및 기존/신규 likedBy 중복 금지 검증
+          && resource.data.likedBy is list
+          && resource.data.likedBy.toSet().size() == resource.data.likedBy.size()
           && request.resource.data.likedBy is list
           && request.resource.data.likeCount is int
           && request.resource.data.likeCount >= 0
