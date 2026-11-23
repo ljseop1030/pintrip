@@ -157,6 +157,7 @@ open class PlaceMatcher(
             regionMismatch = place.outsideRoomRegion,
             sourceType = sourceType,
             sourceUrl = sourceUrl,
+            regionHint = regionHint,
         )
 
         // 7. 선택된 후보(selectedCandidate)가 존재하는 경우 그 주소로 regionMismatch 최종 판정 (docs/data-contract.md §9)

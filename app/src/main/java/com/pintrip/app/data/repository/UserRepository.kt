@@ -63,7 +63,7 @@ open class UserRepository(
      *
      * 프로필이 존재하면 [User], 없으면 null을 반환합니다. (계약에 따른 다른 사용자의 프로필 조회 유지)
      */
-    suspend fun getUserProfile(uid: String, source: Source = Source.DEFAULT): User? {
+    open suspend fun getUserProfile(uid: String, source: Source = Source.DEFAULT): User? {
         require(uid.isNotBlank()) { "uid는 비어 있을 수 없습니다." }
 
         val snapshot = db.collection("users").document(uid).get(source).await()
