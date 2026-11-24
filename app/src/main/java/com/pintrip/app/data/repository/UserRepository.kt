@@ -28,7 +28,7 @@ open class UserRepository(
      * - 현재 로그인된 사용자의 UID 및 이메일과 일치하는지 검증합니다.
      * - Transaction을 사용해 문서가 존재하지 않는 경우에만 생성하고, 이미 존재하는 경우 덮어쓰지 않고 기존 정보를 보존합니다.
      */
-    suspend fun createUserProfile(
+    open suspend fun createUserProfile(
         uid: String,
         nickname: String,
         email: String,
