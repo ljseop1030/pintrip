@@ -92,9 +92,19 @@ class PlaceDetailActivity : AppCompatActivity() {
             val kakaoPlaceId = intent.getStringExtra(EXTRA_KAKAO_PLACE_ID).orEmpty()
             viewModel.retry(roomId, kakaoPlaceId)
         }
+
+        binding.btnLike.setOnClickListener {
+            viewModel.toggleLike()
+        }
     }
 
     private fun observeViewModel() {
+        viewModel.toastEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { resId ->
+                Toast.makeText(this, getString(resId), Toast.LENGTH_SHORT).show()
+            }
+        }
+
         viewModel.uiState.observe(this) { state ->
             when (state) {
                 is PlaceDetailUiState.Loading -> {
@@ -125,6 +135,18 @@ class PlaceDetailActivity : AppCompatActivity() {
     private fun renderSuccess(state: PlaceDetailUiState.Success) {
         val detail = state.placeDetail
         val isFound = detail.status == PlaceDetail.STATUS_FOUND
+
+        // 좋아요 버튼 상태
+        binding.btnLike.isEnabled = !state.isLikeInProgress
+        if (state.isLikedByMe) {
+            binding.btnLike.setIconResource(R.drawable.ic_heart_filled)
+            binding.btnLike.setIconTintResource(R.color.place_heart_tint)
+            binding.btnLike.contentDescription = getString(R.string.place_detail_unlike)
+        } else {
+            binding.btnLike.setIconResource(R.drawable.ic_heart_outline)
+            binding.btnLike.setIconTintResource(R.color.place_heart_unliked_tint)
+            binding.btnLike.contentDescription = getString(R.string.place_detail_like)
+        }
 
         // overflow menu 설정
         binding.btnMenu.setOnClickListener {
