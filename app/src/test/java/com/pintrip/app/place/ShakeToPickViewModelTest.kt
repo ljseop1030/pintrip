@@ -15,7 +15,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import org.junit.After
@@ -52,6 +55,22 @@ open class FakeShakePlaceDetailRepository : PlaceDetailRepository() {
             delay(delayMs)
         }
         exceptionToThrow?.let { throw it }
+        return detailsToReturn
+    }
+}
+
+open class NonCancellableFakePlaceDetailRepository : PlaceDetailRepository() {
+    var detailsToReturn: List<PlaceDetail> = emptyList()
+    var delayMs: Long = 0L
+    var completedCount: Int = 0
+
+    override suspend fun getPlaceDetails(roomId: String, roomRegion: String): List<PlaceDetail> {
+        if (delayMs > 0) {
+            withContext(NonCancellable) {
+                delay(delayMs)
+            }
+        }
+        completedCount++
         return detailsToReturn
     }
 }
@@ -472,5 +491,176 @@ class ShakeToPickViewModelTest {
         viewModel.pickRandomPlace()
         assertTrue("Error 상태에서는 추첨이 진행되지 않고 Error가 유지되어야 함", viewModel.uiState.value is ShakeToPickUiState.Error)
         assertNull("Error 상태에서는 추첨 이벤트가 발생하지 않아야 함", viewModel.shakeEvent.value?.getContentIfNotHandled())
+    }
+
+    @Test
+    fun setPlacesInMemory_doesNotCallRepositoriesAndSetsReadyState() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe), PlaceCategory.ALL)
+
+        assertEquals("setPlacesInMemory 호출 시 RoomRepository 조회가 추가 발생하지 않아야 함", 0, fakeRoomRepo.getRoomCallCount)
+        assertEquals("setPlacesInMemory 호출 시 PlaceDetailRepository 조회가 추가 발생하지 않아야 함", 0, fakeDetailRepo.getPlaceDetailsCallCount)
+
+        val state = viewModel.uiState.value
+        assertTrue(state is ShakeToPickUiState.Ready)
+        val ready = state as ShakeToPickUiState.Ready
+        assertEquals(PlaceCategory.ALL, ready.category)
+        assertEquals(2, ready.totalCount)
+        assertEquals(2, ready.availableCount)
+        assertEquals(2, ready.filteredCount)
+    }
+
+    @Test
+    fun setPlacesInMemory_threeEmptyStates() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        // 1. NO_SAVED_PLACES: 저장 장소가 0개
+        viewModel.setPlacesInMemory("room_1", emptyList(), PlaceCategory.ALL)
+        var state = viewModel.uiState.value
+        assertTrue(state is ShakeToPickUiState.Empty)
+        assertEquals(EmptyReason.NO_SAVED_PLACES, (state as ShakeToPickUiState.Empty).reason)
+
+        // 2. NO_AVAILABLE_PLACES: 저장 장소는 있으나 found 장소가 0개
+        viewModel.setPlacesInMemory("room_1", listOf(notFoundPlace), PlaceCategory.ALL)
+        state = viewModel.uiState.value
+        assertTrue(state is ShakeToPickUiState.Empty)
+        assertEquals(EmptyReason.NO_AVAILABLE_PLACES, (state as ShakeToPickUiState.Empty).reason)
+
+        // 3. NO_FILTER_MATCHES: found 장소는 있으나 카테고리 일치 장소가 0개
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining), PlaceCategory.CAFE)
+        state = viewModel.uiState.value
+        assertTrue(state is ShakeToPickUiState.Empty)
+        assertEquals(EmptyReason.NO_FILTER_MATCHES, (state as ShakeToPickUiState.Empty).reason)
+    }
+
+    @Test
+    fun setPlacesInMemory_filtersFoundAndCategoryCorrectly() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe, notFoundPlace), PlaceCategory.ALL)
+
+        val ready = viewModel.uiState.value as ShakeToPickUiState.Ready
+        assertEquals(3, ready.totalCount)
+        assertEquals(2, ready.availableCount)
+        assertEquals(2, ready.filteredCount)
+
+        viewModel.pickRandomPlace()
+        val result = viewModel.uiState.value as ShakeToPickUiState.Result
+        assertTrue("status == found 인 장소만 추첨되어야 함", result.selectedPlace.status == PlaceDetail.STATUS_FOUND)
+
+        viewModel.selectCategory(PlaceCategory.DINING)
+        val diningReady = viewModel.uiState.value as ShakeToPickUiState.Ready
+        assertEquals(1, diningReady.filteredCount)
+
+        viewModel.pickRandomPlace()
+        val diningResult = viewModel.uiState.value as ShakeToPickUiState.Result
+        assertEquals("이재모피자 본점", diningResult.selectedPlace.name)
+    }
+
+    @Test
+    fun setPlacesInMemory_identicalInput_preservesResultState() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe), PlaceCategory.ALL)
+        viewModel.pickRandomPlace()
+
+        val previousResult = viewModel.uiState.value
+        assertTrue(previousResult is ShakeToPickUiState.Result)
+
+        // 동일 데이터 전달 시 기존 Result 상태가 유지되어야 함
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe), PlaceCategory.ALL)
+
+        assertEquals("동일 데이터 전달 시 기존 Result 상태가 유지되어야 함", previousResult, viewModel.uiState.value)
+    }
+
+    @Test
+    fun setPlacesInMemory_changedInput_resetsResultState() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe), PlaceCategory.ALL)
+        viewModel.pickRandomPlace()
+
+        assertTrue(viewModel.uiState.value is ShakeToPickUiState.Result)
+
+        // 새로운 장소 목록으로 변경 시 결과가 초기화되어 새 Ready 상태로 이동해야 함
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining), PlaceCategory.ALL)
+
+        val newState = viewModel.uiState.value
+        assertTrue(newState is ShakeToPickUiState.Ready)
+        val ready = newState as ShakeToPickUiState.Ready
+        assertEquals(1, ready.totalCount)
+        assertEquals(1, ready.filteredCount)
+    }
+
+    @Test
+    fun setPlacesInMemory_cancelsActiveLoadPlaces_andInvalidatesLateResponse() = runTest {
+        val nonCancellableRepo = NonCancellableFakePlaceDetailRepository().apply {
+            delayMs = 1000L
+            detailsToReturn = listOf(foundCafe, notFoundPlace)
+        }
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, nonCancellableRepo)
+
+        // 1. 비동기 loadPlaces 실행
+        viewModel.loadPlaces("room_1")
+        assertTrue(viewModel.uiState.value is ShakeToPickUiState.Loading)
+
+        // 2. 비동기 로딩 도중 즉시 메모리 데이터 주입 (loadJob 취소 + currentRequestId 증가)
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining), PlaceCategory.ALL)
+
+        val stateAfterMemoryInput = viewModel.uiState.value
+        assertTrue(stateAfterMemoryInput is ShakeToPickUiState.Ready)
+        val ready = stateAfterMemoryInput as ShakeToPickUiState.Ready
+        assertEquals(1, ready.totalCount)
+
+        // 3. 2000ms 가상 시간 진행으로 취소를 무시하는 NonCancellable fake 지연을 실제로 통과 및 완료시킴
+        advanceTimeBy(2000L)
+        runCurrent()
+
+        // 4. fake repository 조회가 실제로 취소를 무시하고 끝까지 완료되었음을 검증
+        assertEquals("fake repository 조회가 실제로 취소를 무시하고 완료되었어야 함", 1, nonCancellableRepo.completedCount)
+
+        // 5. 늦게 완료된 loadPlaces 결과가 세대 가드(currentRequestId)에 의해 차단되어 메모리 데이터가 유지되었음을 검증
+        val stateAfterDelay = viewModel.uiState.value
+        assertTrue(stateAfterDelay is ShakeToPickUiState.Ready)
+        val readyFinal = stateAfterDelay as ShakeToPickUiState.Ready
+        assertEquals("늦게 도착한 비동기 응답은 세대 가드에 의해 차단되고 메모리 주입 데이터가 유지되어야 함", 1, readyFinal.totalCount)
+    }
+
+    @Test
+    fun openDialogFresh_resetsResultToReady_whereasRotationReobservationPreservesResult() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe), PlaceCategory.ALL)
+        viewModel.pickRandomPlace()
+
+        assertTrue(viewModel.uiState.value is ShakeToPickUiState.Result)
+
+        // 회전 시: 동일 인메모리 데이터 주입 -> Result 상태가 보존됨
+        viewModel.setPlacesInMemory("room_1", listOf(foundDining, foundCafe), PlaceCategory.ALL)
+        assertTrue("회전 재관찰 시 기존 Result 상태가 유지되어야 함", viewModel.uiState.value is ShakeToPickUiState.Result)
+
+        // 새로 열 때: openDialogFresh() -> Result 상태가 Ready로 초기화되어 새 추첨 대기로 시작함
+        viewModel.openDialogFresh()
+        assertTrue("새로 열 때는 Result 상태가 Ready 상태로 리셋되어야 함", viewModel.uiState.value is ShakeToPickUiState.Ready)
+    }
+
+    @Test
+    fun setHomeLoadingAndSetHomeError_blocksPickingAndReflectsState() {
+        val viewModel = ShakeToPickViewModel(fakeRoomRepo, fakeDetailRepo)
+
+        // 홈 로딩 중 반영
+        viewModel.setHomeLoading()
+        assertTrue(viewModel.uiState.value is ShakeToPickUiState.Loading)
+        viewModel.pickRandomPlace()
+        assertTrue("Loading 상태에서는 추첨이 차단되어야 함", viewModel.uiState.value is ShakeToPickUiState.Loading)
+
+        // 홈 에러 반영
+        viewModel.setHomeError(R.string.room_map_error_load_failed)
+        val state = viewModel.uiState.value
+        assertTrue(state is ShakeToPickUiState.Error)
+        assertEquals(R.string.room_map_error_load_failed, (state as ShakeToPickUiState.Error).messageResId)
+        viewModel.pickRandomPlace()
+        assertTrue("Error 상태에서는 추첨이 차단되어야 함", viewModel.uiState.value is ShakeToPickUiState.Error)
     }
 }

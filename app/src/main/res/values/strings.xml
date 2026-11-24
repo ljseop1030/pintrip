@@ -295,6 +295,24 @@
     <string name="room_map_empty_category">이 카테고리에 저장한 장소가 없어요</string>
     <string name="cd_random_pick">랜덤으로 장소 고르기</string>
 
+    <!-- Shake to Pick UI Strings -->
+    <string name="title_shake_to_pick">흔들어서 장소 고르기</string>
+    <string name="shake_ready_heading_sensor">폰을 흔들어 보세요!</string>
+    <string name="shake_ready_heading_touch">버튼을 눌러 골라 보세요</string>
+    <string name="shake_ready_subtitle_format">%1$s %2$d곳 중에서 하나를 골라 드려요</string>
+    <string name="shake_ready_guide_sensor">스마트폰을 흔들거나 아래 버튼을 눌러\n오늘 방문할 장소를 무작위로 추천받아 보세요!</string>
+    <string name="shake_ready_guide_touch">기기 센서를 사용할 수 없어요.\n아래 버튼을 눌러 장소를 골라 보세요!</string>
+    <string name="btn_touch_pick">흔들지 않고 고르기</string>
+    <string name="shake_result_headline">오늘은 여기 어때요?</string>
+    <string name="btn_pick_again">다시 뽑기</string>
+    <string name="btn_view_on_map">지도에서 보기</string>
+    <string name="shake_empty_no_saved_places">아직 저장한 장소가 없어요.\n장소를 먼저 추가해 보세요!</string>
+    <string name="shake_empty_no_available_places">지금 고를 수 있는 장소가 없어요.\n(카카오 지도에서 검색된 장소만 추첨할 수 있습니다)</string>
+    <string name="shake_empty_no_filter_matches">‘%1$s’ 카테고리에 저장한 장소가 없어요.\n다른 카테고리를 선택해 보세요.</string>
+    <string name="shake_loading_places">장소 목록 확인 중…</string>
+    <string name="shake_place_info_format">%1$s · %2$s</string>
+    <string name="shake_place_info_with_added_by_format">%1$s · %2$s · %3$s</string>
+
     <!-- Place Detail Screen -->
     <string name="title_activity_place_detail">장소 상세</string>
     <string name="place_detail_likes_count_format">좋아요 %1$d개</string>

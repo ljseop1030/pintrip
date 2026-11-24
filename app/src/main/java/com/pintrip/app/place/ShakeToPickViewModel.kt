@@ -40,11 +40,88 @@ class ShakeToPickViewModel(
     private val _shakeEvent = MutableLiveData<Event<Unit>>()
     val shakeEvent: LiveData<Event<Unit>> = _shakeEvent
 
+    private val _isShakeDialogOpen = MutableLiveData<Boolean>(false)
+    val isShakeDialogOpen: LiveData<Boolean> = _isShakeDialogOpen
+
     private var currentRoomId: String? = null
     private var currentRequestId: Long = 0L
     private var currentCategory: PlaceCategory = PlaceCategory.ALL
     private var loadedPlaces: List<PlaceDetail> = emptyList()
     private var loadJob: Job? = null
+
+    fun openDialog() {
+        _isShakeDialogOpen.value = true
+    }
+
+    fun openDialogFresh() {
+        _isShakeDialogOpen.value = true
+        if (_uiState.value is ShakeToPickUiState.Result) {
+            resetToReady()
+        }
+    }
+
+    fun closeDialog() {
+        _isShakeDialogOpen.value = false
+    }
+
+    fun setHomeLoading() {
+        loadJob?.cancel()
+        loadJob = null
+        currentRequestId++
+        _uiState.value = ShakeToPickUiState.Loading(currentCategory)
+    }
+
+    fun setHomeError(@StringRes messageResId: Int) {
+        loadJob?.cancel()
+        loadJob = null
+        currentRequestId++
+        _uiState.value = ShakeToPickUiState.Error(messageResId)
+    }
+
+    /**
+     * 방 홈(RoomMapViewModel)이 이미 메모리에 갖고 있는 전체 장소 목록과 카테고리를 전달받습니다.
+     *
+     * 네트워크 / Firestore / Kakao 재요청 없이 메모리에서만 후보 목록을 구성하며,
+     * 기존 비동기 로딩이 진행 중인 경우 취소 및 세대 번호 증가로 늦은 응답을 차단합니다.
+     */
+    fun setPlacesInMemory(
+        roomId: String,
+        places: List<PlaceDetail>,
+        category: PlaceCategory = currentCategory,
+    ) {
+        loadJob?.cancel()
+        loadJob = null
+        currentRequestId++
+
+        val roomIdChanged = currentRoomId != roomId
+        val placesChanged = loadedPlaces != places
+        val categoryChanged = currentCategory != category
+
+        currentRoomId = roomId
+
+        if (roomIdChanged || placesChanged) {
+            loadedPlaces = places
+            currentCategory = category
+            updateUiStateAfterLoad()
+        } else if (categoryChanged) {
+            currentCategory = category
+            updateUiStateAfterLoad()
+        } else if (!isSuccessfullyLoadedState()) {
+            loadedPlaces = places
+            currentCategory = category
+            updateUiStateAfterLoad()
+        }
+    }
+
+    /**
+     * 추첨 결과 화면에서 다시 뽑기를 클릭했을 때,
+     * 기존 로드된 장소 데이터를 바탕으로 대기(Ready) 상태로 복귀합니다.
+     */
+    fun resetToReady() {
+        if (isSuccessfullyLoadedState()) {
+            updateUiStateAfterLoad()
+        }
+    }
 
     /**
      * 지정한 방(roomId)의 장소 목록을 로드하고 카카오 재조회를 수행합니다.

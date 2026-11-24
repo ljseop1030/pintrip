@@ -52,6 +52,9 @@ class RoomMapViewModel(
     private var roomName: String = ""
     private var selectedCategory: PlaceCategory = PlaceCategory.ALL
 
+    fun getAllPlaceDetails(): List<PlaceDetail> = allPlaceDetails
+    fun getSelectedCategory(): PlaceCategory = selectedCategory
+
     private var cachedInviteCode: String? = null
     private var fetchCodeJob: Job? = null
 
