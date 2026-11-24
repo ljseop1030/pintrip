@@ -1,18 +1,14 @@
 package com.pintrip.app.map
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.util.TypedValue
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -20,36 +16,26 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
-import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.camera.CameraUpdateFactory
+import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
-import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
-import com.kakao.vectormap.label.LabelTextStyle
-import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.databinding.ActivityRoomMapBinding
 import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
+import com.pintrip.app.place.PlaceDetailActivity
 import com.pintrip.app.room.DeepLinkUtils
-import java.util.concurrent.atomic.AtomicReference
 
 class RoomMapActivity : AppCompatActivity() {
-
-    enum class SdkInitState {
-        NOT_INITIALIZED,
-        SUCCESS,
-        FAILED
-    }
 
     companion object {
         private const val TAG = "RoomMapActivity"
         const val EXTRA_ROOM_ID = "extra_room_id"
-        private val sdkInitState = AtomicReference(SdkInitState.NOT_INITIALIZED)
 
         fun newIntent(context: Context, roomId: String): Intent {
             return Intent(context, RoomMapActivity::class.java).apply {
@@ -63,6 +49,7 @@ class RoomMapActivity : AppCompatActivity() {
 
     private var kakaoMapInstance: KakaoMap? = null
     private var labelStyles: LabelStyles? = null
+    private val labelPlaceMap = mutableMapOf<Label, String>()
     private var currentSuccessState: RoomMapUiState.Success? = null
     private var bottomSheetBehavior: BottomSheetBehavior<*>? = null
     private lateinit var roomPlaceAdapter: RoomPlaceAdapter
@@ -93,12 +80,12 @@ class RoomMapActivity : AppCompatActivity() {
 
         setupToolbar()
         setupBottomSheet()
-        setupRecyclerView()
+        setupRecyclerView(roomId)
         setupCategoryChips()
         setupDiceButton()
 
-        val currentState = sdkInitState.get()
-        if (currentState == SdkInitState.FAILED) {
+        val currentState = KakaoMapHelper.getSdkInitState()
+        if (currentState == KakaoMapHelper.SdkInitState.FAILED) {
             binding.mapView.isVisible = false
             binding.pbLoading.isVisible = false
             binding.layoutError.isVisible = false
@@ -110,9 +97,11 @@ class RoomMapActivity : AppCompatActivity() {
         }
 
         try {
-            if (currentState == SdkInitState.NOT_INITIALIZED) {
-                KakaoMapSdk.init(applicationContext, BuildConfig.KAKAO_NATIVE_APP_KEY)
-                sdkInitState.set(SdkInitState.SUCCESS)
+            if (currentState == KakaoMapHelper.SdkInitState.NOT_INITIALIZED) {
+                KakaoMapHelper.initSdk(applicationContext)
+            }
+            if (KakaoMapHelper.getSdkInitState() == KakaoMapHelper.SdkInitState.FAILED) {
+                throw IllegalStateException("KakaoMapSdk init failed")
             }
             binding.tvMapUnavailable.isVisible = false
             setupMapView()
@@ -122,7 +111,6 @@ class RoomMapActivity : AppCompatActivity() {
             viewModel.loadRoomMap(roomId)
         } catch (e: Throwable) {
             Log.e(TAG, "KakaoMapSdk init failed on this device: ${e.message}", e)
-            sdkInitState.set(SdkInitState.FAILED)
             binding.mapView.isVisible = false
             binding.pbLoading.isVisible = false
             binding.layoutError.isVisible = false
@@ -163,15 +151,10 @@ class RoomMapActivity : AppCompatActivity() {
         bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
     }
 
-    private fun setupRecyclerView() {
-        roomPlaceAdapter = RoomPlaceAdapter(
-            onFoundClick = { kakaoPlaceId ->
-                focusPlace(kakaoPlaceId)
-            },
-            onNotFoundClick = { kakaoPlaceUrl ->
-                openKakaoPlaceUrl(kakaoPlaceUrl)
-            }
-        )
+    private fun setupRecyclerView(roomId: String) {
+        roomPlaceAdapter = RoomPlaceAdapter { kakaoPlaceId ->
+            startActivity(PlaceDetailActivity.newIntent(this, roomId, kakaoPlaceId))
+        }
         binding.rvPlaces.apply {
             layoutManager = LinearLayoutManager(this@RoomMapActivity)
             adapter = roomPlaceAdapter
@@ -214,19 +197,6 @@ class RoomMapActivity : AppCompatActivity() {
         bottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
     }
 
-    private fun openKakaoPlaceUrl(url: String) {
-        if (url.isBlank()) {
-            Toast.makeText(this, R.string.place_list_error_cannot_open_url, Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.place_list_error_cannot_open_url, Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun setupMapView() {
         binding.mapView.start(object : MapLifeCycleCallback() {
             override fun onMapError(error: Exception) {
@@ -254,40 +224,26 @@ class RoomMapActivity : AppCompatActivity() {
             override fun onMapReady(kakaoMap: KakaoMap) {
                 kakaoMapInstance = kakaoMap
                 initLabelStyles(kakaoMap)
+                setupLabelClickListener(kakaoMap)
                 applyMapData()
             }
         })
     }
 
+    private fun setupLabelClickListener(kakaoMap: KakaoMap) {
+        kakaoMap.setOnLabelClickListener { _, _, label ->
+            val kakaoPlaceId = labelPlaceMap[label]
+            if (!kakaoPlaceId.isNullOrBlank()) {
+                val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+                startActivity(PlaceDetailActivity.newIntent(this@RoomMapActivity, roomId, kakaoPlaceId))
+            }
+            true
+        }
+    }
+
     private fun initLabelStyles(kakaoMap: KakaoMap) {
         if (labelStyles != null) return
-
-        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_map_marker)
-        val bitmap = drawable?.toBitmap()
-        if (bitmap == null) {
-            Log.e(TAG, "Failed to convert ic_map_marker to bitmap")
-            return
-        }
-
-        val textColor = ContextCompat.getColor(this, R.color.map_label_text)
-        val strokeColor = ContextCompat.getColor(this, R.color.map_label_stroke)
-
-        val textSizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_SP,
-            13f,
-            resources.displayMetrics
-        ).toInt()
-        val strokeWidthPx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            2f,
-            resources.displayMetrics
-        ).toInt()
-
-        val labelStyle = LabelStyle.from(bitmap)
-            .setAnchorPoint(0.5f, 1.0f)
-            .setTextStyles(LabelTextStyle.from(textSizePx, textColor, strokeWidthPx, strokeColor))
-
-        labelStyles = kakaoMap.labelManager?.addLabelStyles(LabelStyles.from(labelStyle))
+        labelStyles = KakaoMapHelper.createLabelStyles(this, kakaoMap)
     }
 
     override fun onResume() {
@@ -542,6 +498,7 @@ class RoomMapActivity : AppCompatActivity() {
         val labelManager = map.labelManager
         val layer = labelManager?.layer
         layer?.removeAll()
+        labelPlaceMap.clear()
 
         val foundPlaces = success.placeDetails.filter { it.status == PlaceDetail.STATUS_FOUND && it.lat != null && it.lng != null }
         var addedLabelCount = 0
@@ -555,6 +512,7 @@ class RoomMapActivity : AppCompatActivity() {
                     .setTexts(textBuilder)
                 val label = layer?.addLabel(options)
                 if (label != null) {
+                    labelPlaceMap[label] = place.place.kakaoPlaceId
                     addedLabelCount++
                 }
             }

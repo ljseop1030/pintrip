@@ -328,4 +328,75 @@ class PlaceDetailRepositoryTest {
             repository.getPlaceDetails("invalid_room", "부산")
         }
     }
+
+    @Test
+    fun testGetPlaceDetail_found() = runBlocking {
+        val fakeKakao = FakeKakaoLocalApiClient()
+        val place = Place(
+            kakaoPlaceId = "101",
+            searchKeyword = "해운대 블루라인파크",
+            searchRegion = "해운대",
+        )
+        val loadPlaces: suspend (String) -> List<Place> = { listOf(place) }
+        val repository = PlaceDetailRepository(loadPlaces = loadPlaces, kakaoLocalApiClient = fakeKakao)
+
+        val doc = KakaoPlaceDocument(
+            id = "101",
+            placeName = "해운대 블루라인파크",
+            roadAddressName = "부산 해운대구 달맞이길62번길 13",
+            x = "129.17",
+            y = "35.16",
+            categoryGroupCode = "AT4",
+            phone = "051-701-5548",
+        )
+        fakeKakao.responses[SearchKey("부산 해운대 해운대 블루라인파크", 1)] = KakaoKeywordSearchResponse(
+            documents = listOf(doc),
+        )
+
+        val detail = repository.getPlaceDetail("room1", "부산", "101")
+
+        assertNotNull(detail)
+        assertEquals(PlaceDetail.STATUS_FOUND, detail!!.status)
+        assertEquals("해운대 블루라인파크", detail.name)
+        assertEquals("부산 해운대구 달맞이길62번길 13", detail.address)
+        assertEquals("051-701-5548", detail.phone)
+    }
+
+    @Test
+    fun testGetPlaceDetail_notInFirestore_returnsNull() = runBlocking {
+        val fakeKakao = FakeKakaoLocalApiClient()
+        val place = Place(
+            kakaoPlaceId = "101",
+            searchKeyword = "해운대 블루라인파크",
+        )
+        val loadPlaces: suspend (String) -> List<Place> = { listOf(place) }
+        val repository = PlaceDetailRepository(loadPlaces = loadPlaces, kakaoLocalApiClient = fakeKakao)
+
+        val detail = repository.getPlaceDetail("room1", "부산", "999")
+
+        assertNull(detail)
+    }
+
+    @Test
+    fun testGetPlaceDetail_notInKakao_returnsNotFound() = runBlocking {
+        val fakeKakao = FakeKakaoLocalApiClient()
+        val place = Place(
+            kakaoPlaceId = "777",
+            searchKeyword = "폐업된장소",
+            searchRegion = "해운대",
+        )
+        val loadPlaces: suspend (String) -> List<Place> = { listOf(place) }
+        val repository = PlaceDetailRepository(loadPlaces = loadPlaces, kakaoLocalApiClient = fakeKakao)
+
+        fakeKakao.responses[SearchKey("부산 해운대 폐업된장소", 1)] = KakaoKeywordSearchResponse()
+        fakeKakao.responses[SearchKey("해운대 폐업된장소", 1)] = KakaoKeywordSearchResponse()
+        fakeKakao.responses[SearchKey("부산 해운대 폐업된장소", 2)] = KakaoKeywordSearchResponse()
+
+        val detail = repository.getPlaceDetail("room1", "부산", "777")
+
+        assertNotNull(detail)
+        assertEquals(PlaceDetail.STATUS_NOT_FOUND, detail!!.status)
+        assertNull(detail.name)
+        assertNull(detail.address)
+    }
 }
