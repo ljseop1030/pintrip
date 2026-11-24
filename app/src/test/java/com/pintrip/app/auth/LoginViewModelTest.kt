@@ -183,6 +183,50 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `checkProfileAndNavigate with valid nickname emits Success`() {
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "Minji", email = "user@example.com"))
+        val viewModel = LoginViewModel(userRepository = fakeRepo)
+
+        viewModel.checkProfileAndNavigate(user = null, uidOverride = "u123")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(LoginUiState.Success, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `checkProfileAndNavigate with blank nickname emits ProfileCorrupted`() {
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "   ", email = "user@example.com"))
+        val viewModel = LoginViewModel(userRepository = fakeRepo)
+
+        viewModel.checkProfileAndNavigate(user = null, uidOverride = "u123")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is LoginUiState.ProfileCorrupted)
+    }
+
+    @Test
+    fun `checkProfileAndNavigate with null profile emits ProfileMissing`() {
+        val fakeRepo = FakeUserRepository(profileToReturn = null)
+        val viewModel = LoginViewModel(userRepository = fakeRepo)
+
+        viewModel.checkProfileAndNavigate(user = null, uidOverride = "u123")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is LoginUiState.ProfileMissing)
+    }
+
+    @Test
+    fun `checkProfileAndNavigate with Firestore exception emits ProfileLoadError`() {
+        val fakeRepo = FakeUserRepository(shouldThrow = true)
+        val viewModel = LoginViewModel(userRepository = fakeRepo)
+
+        viewModel.checkProfileAndNavigate(user = null, uidOverride = "u123")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is LoginUiState.ProfileLoadError)
+    }
+
+    @Test
     fun `signOut invalidates in-flight login response`() {
         val viewModel = LoginViewModel(
             signInAction = { _, _ ->

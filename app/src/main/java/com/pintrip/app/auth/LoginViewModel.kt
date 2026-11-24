@@ -17,8 +17,8 @@ import kotlinx.coroutines.tasks.await
 /**
  * 로그인 화면 ViewModel.
  *
- * 이메일/비밀번호 로그인, 프로필 조회 및 복구 비동기 로직을 처리하며
- * 예외를 감싸 단순화된 UI 상태([LoginUiState])로 노출합니다.
+ * 이메일/비밀번호 로그인 처리 및 로그인 후 Firestore 프로필(`users/{uid}`) 상태
+ * (정상, 누락, 손상, 조회 실패)에 따른 navigation 방향을 관동합니다.
  */
 class LoginViewModel(
     private val auth: FirebaseAuth? = null,
@@ -39,29 +39,28 @@ class LoginViewModel(
     private var sessionToken = 0L
 
     /**
-     * 사용자가 이미 로그인되어 있는지 체크하고 프로필 검증 진행
+     * 앱 시작 시 기존 Auth 세션 자동 확인
      */
     fun checkExistingSession() {
         if (isSessionChecked) return
-        isSessionChecked = true
-
-        val currentUser = try { firebaseAuth.currentUser } catch (_: Exception) { null }
-        if (currentUser != null) {
-            checkProfileAndNavigate(currentUser)
-        } else {
-            _uiState.value = LoginUiState.Idle
+        val current = try { firebaseAuth.currentUser } catch (_: Exception) { null }
+        if (current != null) {
+            isSessionChecked = true
+            checkProfileAndNavigate(current)
         }
     }
 
     /**
-     * 이메일/비밀번호 정식 로그인 수행
+     * 이메일/비밀번호 로그인 수행
      */
     fun performLogin(emailRaw: String, passwordRaw: String) {
         if (_uiState.value is LoginUiState.Loading) return
 
         val email = emailRaw.trim()
+        val password = passwordRaw
+
         val isEmailEmpty = email.isEmpty()
-        val isPasswordEmpty = passwordRaw.isEmpty()
+        val isPasswordEmpty = password.isEmpty()
 
         if (isEmailEmpty || isPasswordEmpty) {
             _uiState.value = LoginUiState.InputError(
@@ -76,18 +75,20 @@ class LoginViewModel(
 
         viewModelScope.launch {
             try {
-                val user = if (signInAction != null) {
-                    signInAction.invoke(email, passwordRaw)
+                val user: FirebaseUser? = if (signInAction != null) {
+                    signInAction.invoke(email, password)
                 } else {
-                    val authResult = firebaseAuth.signInWithEmailAndPassword(email, passwordRaw).await()
+                    val authResult = firebaseAuth.signInWithEmailAndPassword(email, password).await()
                     authResult.user
                 }
+
                 if (token != sessionToken) return@launch
 
                 if (user != null) {
-                    checkProfileAndNavigateInternal(user, token)
+                    isSessionChecked = true
+                    checkProfileAndNavigateInternal(user, user.uid, token)
                 } else {
-                    _uiState.value = LoginUiState.FormError(R.string.login_error_generic)
+                    _uiState.value = LoginUiState.FormError(R.string.login_error_check_credentials)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -105,24 +106,26 @@ class LoginViewModel(
     /**
      * 로그인 성공 후 Firestore 프로필 확인 및 이동 경로 결정 (공개 API / 재시도용)
      */
-    fun checkProfileAndNavigate(user: FirebaseUser) {
+    fun checkProfileAndNavigate(user: FirebaseUser?, uidOverride: String? = null) {
         if (_uiState.value is LoginUiState.Loading && isSessionChecked) return
+        val uid = uidOverride ?: user?.uid.orEmpty()
+        if (uid.isBlank()) return
         val token = sessionToken
         _uiState.value = LoginUiState.Loading
-        checkProfileAndNavigateInternal(user, token)
+        checkProfileAndNavigateInternal(user, uid, token)
     }
 
-    private fun checkProfileAndNavigateInternal(user: FirebaseUser, token: Long) {
+    private fun checkProfileAndNavigateInternal(user: FirebaseUser?, uid: String, token: Long) {
         viewModelScope.launch {
             try {
-                val profile = userRepo.getUserProfile(user.uid, source = Source.SERVER)
+                val profile = userRepo.getUserProfile(uid, source = Source.SERVER)
                 if (token != sessionToken) return@launch
 
                 if (profile != null) {
                     if (profile.nickname.isNotBlank()) {
                         _uiState.value = LoginUiState.Success
                     } else {
-                        _uiState.value = LoginUiState.ProfileLoadError(user)
+                        _uiState.value = LoginUiState.ProfileCorrupted(user)
                     }
                 } else {
                     _uiState.value = LoginUiState.ProfileMissing(user)
@@ -139,8 +142,11 @@ class LoginViewModel(
     /**
      * 누락된 프로필 닉네임 설정 및 생성
      */
-    fun saveProfileNickname(user: FirebaseUser, nicknameRaw: String) {
+    fun saveProfileNickname(user: FirebaseUser?, nicknameRaw: String, uidOverride: String? = null) {
         if (_uiState.value is LoginUiState.Loading) return
+
+        val uid = uidOverride ?: user?.uid.orEmpty()
+        if (uid.isBlank()) return
 
         val nickname = nicknameRaw.trim()
         if (nickname.isBlank()) {
@@ -154,16 +160,15 @@ class LoginViewModel(
         viewModelScope.launch {
             try {
                 userRepo.createUserProfile(
-                    uid = user.uid,
+                    uid = uid,
                     nickname = nickname,
-                    email = user.email.orEmpty(),
+                    email = user?.email.orEmpty(),
                 )
                 if (token != sessionToken) return@launch
-
                 _uiState.value = LoginUiState.Success
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 if (token != sessionToken) return@launch
                 _uiState.value = LoginUiState.ProfileSaveError(user)
             }
@@ -171,51 +176,37 @@ class LoginViewModel(
     }
 
     /**
-     * 로그아웃 (이전 수신 응답을 무효화함)
+     * 로그아웃 처리 및 세션 토큰 무효화
      */
     fun signOut() {
         sessionToken++
+        isSessionChecked = false
         try { firebaseAuth.signOut() } catch (_: Exception) {}
         _uiState.value = LoginUiState.Idle
     }
 
-    /**
-     * 이메일 입력 필드 수정 시 이메일 에러 및 폼 에러 제거
-     */
     fun clearEmailError() {
-        val current = _uiState.value
-        if (current is LoginUiState.InputError) {
-            val newPasswordError = current.passwordErrorResId
-            if (newPasswordError == null) {
-                _uiState.value = LoginUiState.Idle
-            } else {
-                _uiState.value = LoginUiState.InputError(emailErrorResId = null, passwordErrorResId = newPasswordError)
-            }
-        } else if (current is LoginUiState.FormError) {
-            _uiState.value = LoginUiState.Idle
-        }
+        clearFieldErrors { it.copy(emailErrorResId = null) }
     }
 
-    /**
-     * 비밀번호 입력 필드 수정 시 비밀번호 에러 및 폼 에러 제거
-     */
     fun clearPasswordError() {
+        clearFieldErrors { it.copy(passwordErrorResId = null) }
+    }
+
+    private inline fun clearFieldErrors(update: (LoginUiState.InputError) -> LoginUiState.InputError) {
         val current = _uiState.value
         if (current is LoginUiState.InputError) {
-            val newEmailError = current.emailErrorResId
-            if (newEmailError == null) {
+            val updated = update(current)
+            if (updated.emailErrorResId == null && updated.passwordErrorResId == null) {
                 _uiState.value = LoginUiState.Idle
             } else {
-                _uiState.value = LoginUiState.InputError(emailErrorResId = newEmailError, passwordErrorResId = null)
+                _uiState.value = updated
             }
         } else if (current is LoginUiState.FormError) {
             _uiState.value = LoginUiState.Idle
         }
     }
 
-    /**
-     * 전체 에러 초기화
-     */
     fun clearError() {
         if (_uiState.value is LoginUiState.InputError || _uiState.value is LoginUiState.FormError) {
             _uiState.value = LoginUiState.Idle

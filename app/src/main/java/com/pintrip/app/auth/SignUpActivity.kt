@@ -3,7 +3,9 @@ package com.pintrip.app.auth
 import android.content.Intent
 import android.graphics.Rect
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
+import android.widget.ScrollView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -141,8 +143,6 @@ class SignUpActivity : AppCompatActivity() {
                     binding.tvFormError.visibility = View.GONE
 
                     binding.scrollView.post {
-                        val hitRect = Rect()
-                        binding.scrollView.getHitRect(hitRect)
                         val targetView = when {
                             state.nicknameErrorResId != null -> binding.tilNickname
                             state.emailErrorResId != null -> binding.tilEmail
@@ -152,10 +152,7 @@ class SignUpActivity : AppCompatActivity() {
                             else -> null
                         }
                         targetView?.let { view ->
-                            if (!view.getLocalVisibleRect(hitRect)) {
-                                val targetY = maxOf(0, view.top - 16)
-                                binding.scrollView.smoothScrollTo(0, targetY)
-                            }
+                            scrollToEnsureViewFullyVisible(binding.scrollView, view)
                         }
                     }
                 }
@@ -173,12 +170,7 @@ class SignUpActivity : AppCompatActivity() {
                     binding.tvFormError.visibility = View.VISIBLE
 
                     binding.scrollView.post {
-                        val hitRect = Rect()
-                        binding.scrollView.getHitRect(hitRect)
-                        if (!binding.tvFormError.getLocalVisibleRect(hitRect)) {
-                            val targetY = maxOf(0, binding.btnSignUp.top - 16)
-                            binding.scrollView.smoothScrollTo(0, targetY)
-                        }
+                        scrollToEnsureViewFullyVisible(binding.scrollView, binding.tvFormError)
                     }
                 }
 
@@ -222,6 +214,29 @@ class SignUpActivity : AppCompatActivity() {
         binding.tvFormError.visibility = View.GONE
     }
 
+    private fun scrollToEnsureViewFullyVisible(scrollView: ScrollView, targetView: View) {
+        if (targetView.visibility != View.VISIBLE) return
+
+        val scrollRect = Rect()
+        scrollView.getHitRect(scrollRect)
+        scrollRect.top += scrollView.paddingTop
+        scrollRect.bottom -= scrollView.paddingBottom
+
+        val targetRect = Rect()
+        targetView.getDrawingRect(targetRect)
+        scrollView.offsetDescendantRectToMyCoords(targetView, targetRect)
+
+        if (!scrollRect.contains(targetRect)) {
+            val marginPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                16f,
+                scrollView.resources.displayMetrics,
+            ).toInt()
+            val targetY = maxOf(0, targetRect.top - marginPx)
+            scrollView.smoothScrollTo(0, targetY)
+        }
+    }
+
     private fun showProfileLoadErrorDialog(
         user: FirebaseUser?,
         uid: String,
@@ -230,7 +245,7 @@ class SignUpActivity : AppCompatActivity() {
         isExistingAuthAccount: Boolean,
     ) {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.signup_error_profile_load))
+            .setTitle(getString(R.string.signup_error_profile_title))
             .setMessage(getString(R.string.signup_error_profile_load))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.signup_btn_retry)) { _, _ ->
@@ -250,7 +265,7 @@ class SignUpActivity : AppCompatActivity() {
         isExistingAuthAccount: Boolean,
     ) {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.signup_error_profile_save))
+            .setTitle(getString(R.string.signup_error_profile_title))
             .setMessage(getString(R.string.signup_error_profile_save))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.signup_btn_retry)) { _, _ ->

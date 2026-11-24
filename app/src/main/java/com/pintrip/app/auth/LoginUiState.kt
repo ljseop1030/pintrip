@@ -25,17 +25,22 @@ sealed interface LoginUiState {
 
     /** 로그인 성공 후 프로필 문서 누락 (닉네임 설정 필요) */
     data class ProfileMissing(
-        val user: FirebaseUser,
+        val user: FirebaseUser?,
     ) : LoginUiState
 
     /** 프로필 조회 실패 */
     data class ProfileLoadError(
-        val user: FirebaseUser,
+        val user: FirebaseUser?,
     ) : LoginUiState
 
     /** 프로필 저장 실패 */
     data class ProfileSaveError(
-        val user: FirebaseUser,
+        val user: FirebaseUser?,
+    ) : LoginUiState
+
+    /** 프로필 문서가 존재하나 닉네임 정보가 올바르지 않음 (로그아웃 필요) */
+    data class ProfileCorrupted(
+        val user: FirebaseUser?,
     ) : LoginUiState
 
     /** 로그인 및 프로필 확인 완료 (RoomListActivity 이동) */

@@ -3,8 +3,10 @@ package com.pintrip.app.auth
 import android.content.Intent
 import android.graphics.Rect
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.widget.EditText
+import android.widget.ScrollView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -116,12 +118,7 @@ class TestLoginActivity : AppCompatActivity() {
                     binding.tvFormError.visibility = View.VISIBLE
 
                     binding.scrollView.post {
-                        val hitRect = Rect()
-                        binding.scrollView.getHitRect(hitRect)
-                        if (!binding.tvFormError.getLocalVisibleRect(hitRect)) {
-                            val targetY = maxOf(0, binding.tilPassword.top - 16)
-                            binding.scrollView.smoothScrollTo(0, targetY)
-                        }
+                        scrollToEnsureViewFullyVisible(binding.scrollView, binding.tvFormError)
                     }
                 }
 
@@ -130,6 +127,13 @@ class TestLoginActivity : AppCompatActivity() {
                     binding.btnLogin.text = getString(R.string.btn_login)
                     clearAllErrorsFromUi()
                     promptProfileNickname(state.user)
+                }
+
+                is LoginUiState.ProfileCorrupted -> {
+                    binding.btnLogin.isEnabled = true
+                    binding.btnLogin.text = getString(R.string.btn_login)
+                    clearAllErrorsFromUi()
+                    showCorruptedProfileDialog()
                 }
 
                 is LoginUiState.ProfileLoadError -> {
@@ -159,13 +163,40 @@ class TestLoginActivity : AppCompatActivity() {
         binding.tvFormError.visibility = View.GONE
     }
 
-    private fun showProfileLoadErrorDialog(user: FirebaseUser) {
+    private fun scrollToEnsureViewFullyVisible(scrollView: ScrollView, targetView: View) {
+        if (targetView.visibility != View.VISIBLE) return
+
+        val scrollRect = Rect()
+        scrollView.getHitRect(scrollRect)
+        scrollRect.top += scrollView.paddingTop
+        scrollRect.bottom -= scrollView.paddingBottom
+
+        val targetRect = Rect()
+        targetView.getDrawingRect(targetRect)
+        scrollView.offsetDescendantRectToMyCoords(targetView, targetRect)
+
+        if (!scrollRect.contains(targetRect)) {
+            val marginPx = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                16f,
+                scrollView.resources.displayMetrics,
+            ).toInt()
+            val targetY = maxOf(0, targetRect.top - marginPx)
+            scrollView.smoothScrollTo(0, targetY)
+        }
+    }
+
+    private fun showProfileLoadErrorDialog(user: FirebaseUser?) {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.login_error_profile_load))
+            .setTitle(getString(R.string.login_error_profile_title))
             .setMessage(getString(R.string.login_error_profile_load))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.login_btn_retry)) { _, _ ->
-                viewModel.checkProfileAndNavigate(user)
+                if (user != null) {
+                    viewModel.checkProfileAndNavigate(user)
+                } else {
+                    viewModel.signOut()
+                }
             }
             .setNegativeButton(getString(R.string.login_btn_sign_out)) { _, _ ->
                 viewModel.signOut()
@@ -173,13 +204,17 @@ class TestLoginActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showProfileSaveErrorDialog(user: FirebaseUser) {
+    private fun showProfileSaveErrorDialog(user: FirebaseUser?) {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.login_error_profile_save))
+            .setTitle(getString(R.string.login_error_profile_title))
             .setMessage(getString(R.string.login_error_profile_save))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.login_btn_retry)) { _, _ ->
-                promptProfileNickname(user)
+                if (user != null) {
+                    promptProfileNickname(user)
+                } else {
+                    viewModel.signOut()
+                }
             }
             .setNegativeButton(getString(R.string.login_btn_sign_out)) { _, _ ->
                 viewModel.signOut()
@@ -187,7 +222,18 @@ class TestLoginActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun promptProfileNickname(user: FirebaseUser) {
+    private fun showCorruptedProfileDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.login_dialog_profile_corrupted_title))
+            .setMessage(getString(R.string.login_dialog_profile_corrupted_message))
+            .setCancelable(false)
+            .setNegativeButton(getString(R.string.login_btn_sign_out)) { _, _ ->
+                viewModel.signOut()
+            }
+            .show()
+    }
+
+    private fun promptProfileNickname(user: FirebaseUser?) {
         val input = EditText(this).apply {
             hint = getString(R.string.nickname_hint)
         }

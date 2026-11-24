@@ -103,6 +103,7 @@
     <string name="login_error_empty_nickname">Please enter a nickname.</string>
     <string name="login_error_check_credentials">Please check your email and password.</string>
     <string name="login_error_generic">Unable to sign in. Please try again.</string>
+    <string name="login_error_profile_title">Profile error</string>
     <string name="login_error_profile_load">Unable to load your profile. Please try again.</string>
     <string name="login_error_profile_save">Unable to save your profile. Please try again.</string>
     <string name="login_dialog_profile_title">Set Profile Nickname</string>
@@ -151,6 +152,7 @@
     <string name="signup_error_terms_required">Please agree to the Terms of Service.</string>
     <string name="signup_error_generic">Unable to sign up. Please try again.</string>
     <string name="signup_error_email_already_in_use">Please check your details or sign in.</string>
+    <string name="signup_error_profile_title">Profile error</string>
     <string name="signup_error_profile_load">Unable to load your profile. Please try again.</string>
     <string name="signup_error_profile_save">Unable to save your profile. Please try again.</string>
     <string name="signup_status_signing_up">Signing up…</string>
