@@ -331,4 +331,21 @@
     <string name="place_detail_like">좋아요</string>
     <string name="place_detail_unlike">좋아요 취소</string>
     <string name="place_detail_like_failed">좋아요를 반영하지 못했어요</string>
+
+    <!-- Travel Mode -->
+    <string name="menu_travel_mode_turn_on">여행 모드 켜기</string>
+    <string name="menu_travel_mode_turn_off">여행 모드 끄기</string>
+    <string name="menu_travel_mode_switch_to_this_room">이 방으로 여행 모드 바꾸기</string>
+
+    <string name="notification_channel_travel_mode">여행 모드</string>
+    <string name="notification_travel_mode_title">여행 모드</string>
+    <string name="notification_travel_mode_content_format">여행 모드 · %1$s</string>
+    <string name="notification_action_stop">끄기</string>
+
+    <string name="travel_mode_location_permission_required">여행 모드는 위치 권한이 필요해요</string>
+    <string name="travel_mode_location_permission_dialog_title">위치 권한 필요</string>
+    <string name="travel_mode_location_permission_dialog_message">여행 모드를 사용하려면 위치 권한이 필요합니다. 설정 화면에서 위치 권한을 허용해 주세요.</string>
+    <string name="travel_mode_btn_go_to_settings">설정으로 이동</string>
+
+    <string name="travel_mode_notification_permission_denied_toast">알림을 허용하면 근처 장소를 알려드려요</string>
 </resources>

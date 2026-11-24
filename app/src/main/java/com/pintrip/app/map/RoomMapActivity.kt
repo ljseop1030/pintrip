@@ -1,5 +1,6 @@
 package com.pintrip.app.map
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -7,13 +8,19 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.LatLng
@@ -30,6 +37,12 @@ import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
 import com.pintrip.app.place.PlaceDetailActivity
 import com.pintrip.app.room.DeepLinkUtils
+import com.pintrip.app.travel.TravelModeService
+import com.pintrip.app.travel.TravelModeState
+import com.pintrip.app.travel.TravelState
+import com.pintrip.app.ui.common.LocationPermissionHelper
+import com.pintrip.app.ui.common.NotificationPermissionHelper
+import kotlinx.coroutines.launch
 
 class RoomMapActivity : AppCompatActivity() {
 
@@ -62,6 +75,31 @@ class RoomMapActivity : AppCompatActivity() {
     private var isCleaningUpForDestroy = false
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
+
+    private val requestLocationPermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+            val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+            if (fineGranted || coarseGranted) {
+                checkNotificationPermissionAndStartService()
+            } else {
+                val showRationaleFine = shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+                val showRationaleCoarse = shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (!showRationaleFine && !showRationaleCoarse) {
+                    showLocationPermissionSettingsDialog()
+                } else {
+                    Toast.makeText(this, R.string.travel_mode_location_permission_required, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+    private val requestNotificationPermissionLauncher =
+        NotificationPermissionHelper.registerNotificationPermissionLauncher(this) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, R.string.travel_mode_notification_permission_denied_toast, Toast.LENGTH_SHORT).show()
+            }
+            startTravelModeService()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -170,9 +208,84 @@ class RoomMapActivity : AppCompatActivity() {
                     viewModel.onInviteCodeClick()
                     true
                 }
+                R.id.action_travel_mode -> {
+                    handleTravelModeMenuClick()
+                    true
+                }
                 else -> false
             }
         }
+        observeTravelModeState()
+    }
+
+    private fun observeTravelModeState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                TravelModeState.state.collect { travelState ->
+                    updateTravelModeMenuItem(travelState)
+                }
+            }
+        }
+    }
+
+    private fun handleTravelModeMenuClick() {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val currentState = TravelModeState.state.value
+
+        if (currentState.isRunning && currentState.roomId == roomId) {
+            startService(TravelModeService.stopIntent(this))
+        } else {
+            if (LocationPermissionHelper.hasLocationPermission(this)) {
+                checkNotificationPermissionAndStartService()
+            } else {
+                requestLocationPermissionsLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
+        }
+    }
+
+    private fun checkNotificationPermissionAndStartService() {
+        NotificationPermissionHelper.requestNotificationPermission(
+            context = this,
+            launcher = requestNotificationPermissionLauncher,
+            onAlreadyGranted = {
+                startTravelModeService()
+            }
+        )
+    }
+
+    private fun startTravelModeService() {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val roomName = currentSuccessState?.roomName.orEmpty().ifBlank { getString(R.string.app_name) }
+        val serviceIntent = TravelModeService.startIntent(this, roomId, roomName)
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
+    private fun showLocationPermissionSettingsDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.travel_mode_location_permission_dialog_title)
+            .setMessage(R.string.travel_mode_location_permission_dialog_message)
+            .setPositiveButton(R.string.travel_mode_btn_go_to_settings) { _, _ ->
+                LocationPermissionHelper.openAppSettings(this)
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    private fun updateTravelModeMenuItem(travelState: TravelState) {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val menuItem = binding.toolbar.menu.findItem(R.id.action_travel_mode) ?: return
+
+        val titleResId = when {
+            !travelState.isRunning -> R.string.menu_travel_mode_turn_on
+            travelState.roomId == roomId -> R.string.menu_travel_mode_turn_off
+            else -> R.string.menu_travel_mode_switch_to_this_room
+        }
+        menuItem.setTitle(titleResId)
     }
 
     private fun setupBottomSheet() {
