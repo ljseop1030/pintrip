@@ -1,9 +1,7 @@
 package com.pintrip.app.auth
 
 import android.content.Intent
-import android.graphics.Rect
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.View
 import android.widget.EditText
 import android.widget.ScrollView
@@ -118,7 +116,9 @@ class TestLoginActivity : AppCompatActivity() {
                     binding.tvFormError.visibility = View.VISIBLE
 
                     binding.scrollView.post {
-                        scrollToEnsureViewFullyVisible(binding.scrollView, binding.tvFormError)
+                        if (binding.tvFormError.visibility == View.VISIBLE) {
+                            binding.scrollView.scrollToEnsureViewFullyVisible(binding.tvFormError)
+                        }
                     }
                 }
 
@@ -163,28 +163,7 @@ class TestLoginActivity : AppCompatActivity() {
         binding.tvFormError.visibility = View.GONE
     }
 
-    private fun scrollToEnsureViewFullyVisible(scrollView: ScrollView, targetView: View) {
-        if (targetView.visibility != View.VISIBLE) return
 
-        val scrollRect = Rect()
-        scrollView.getHitRect(scrollRect)
-        scrollRect.top += scrollView.paddingTop
-        scrollRect.bottom -= scrollView.paddingBottom
-
-        val targetRect = Rect()
-        targetView.getDrawingRect(targetRect)
-        scrollView.offsetDescendantRectToMyCoords(targetView, targetRect)
-
-        if (!scrollRect.contains(targetRect)) {
-            val marginPx = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                16f,
-                scrollView.resources.displayMetrics,
-            ).toInt()
-            val targetY = maxOf(0, targetRect.top - marginPx)
-            scrollView.smoothScrollTo(0, targetY)
-        }
-    }
 
     private fun showProfileLoadErrorDialog(user: FirebaseUser?) {
         AlertDialog.Builder(this)
