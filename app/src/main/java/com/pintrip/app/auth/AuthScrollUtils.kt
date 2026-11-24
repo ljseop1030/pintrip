@@ -13,7 +13,6 @@ fun ScrollView.scrollToEnsureViewFullyVisible(targetView: View, marginDp: Float 
     if (targetView.visibility != View.VISIBLE || !targetView.isLaidOut) return
 
     val child = getChildAt(0) ?: return
-    val maxScrollY = maxOf(0, child.height - height)
 
     val targetRect = Rect()
     targetView.getDrawingRect(targetRect)
@@ -34,7 +33,7 @@ fun ScrollView.scrollToEnsureViewFullyVisible(targetView: View, marginDp: Float 
         scrollViewHeight = height,
         paddingTop = paddingTop,
         paddingBottom = paddingBottom,
-        maxScrollY = maxScrollY,
+        contentHeight = child.height,
         targetTop = targetRect.top,
         targetBottom = targetRect.bottom,
         marginPx = marginPx,
@@ -43,6 +42,20 @@ fun ScrollView.scrollToEnsureViewFullyVisible(targetView: View, marginDp: Float 
     if (targetScrollY != null) {
         smoothScrollTo(0, targetScrollY)
     }
+}
+
+/**
+ * ScrollView의 콘텐츠 높이와 유효 뷰포트 높이(padding 포함)를 바탕으로 최대 스크롤 가능 범위(maxScrollY)를 계산합니다.
+ * Android ScrollView.getScrollRange() 기준입니다.
+ */
+fun computeMaxScrollY(
+    contentHeight: Int,
+    scrollViewHeight: Int,
+    paddingTop: Int,
+    paddingBottom: Int,
+): Int {
+    val visibleViewportHeight = scrollViewHeight - paddingTop - paddingBottom
+    return maxOf(0, contentHeight - visibleViewportHeight)
 }
 
 /**
@@ -55,13 +68,20 @@ fun computeTargetScrollY(
     scrollViewHeight: Int,
     paddingTop: Int,
     paddingBottom: Int,
-    maxScrollY: Int,
+    contentHeight: Int,
     targetTop: Int,
     targetBottom: Int,
     marginPx: Int = 0,
 ): Int? {
     val visibleHeight = scrollViewHeight - paddingTop - paddingBottom
     if (visibleHeight <= 0) return null
+
+    val maxScrollY = computeMaxScrollY(
+        contentHeight = contentHeight,
+        scrollViewHeight = scrollViewHeight,
+        paddingTop = paddingTop,
+        paddingBottom = paddingBottom,
+    )
 
     val visibleTop = scrollY + paddingTop
     val visibleBottom = scrollY + scrollViewHeight - paddingBottom
