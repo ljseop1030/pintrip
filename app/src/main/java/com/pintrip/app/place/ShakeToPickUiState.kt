@@ -30,6 +30,13 @@ enum class PlaceCategory(val code: String) {
         val normalized = placeCategory?.lowercase()?.trim().orEmpty()
         return normalized == code
     }
+
+    companion object {
+        fun fromCode(code: String?): PlaceCategory {
+            val normalized = code?.lowercase()?.trim().orEmpty()
+            return values().firstOrNull { it.code == normalized } ?: ETC
+        }
+    }
 }
 
 /**

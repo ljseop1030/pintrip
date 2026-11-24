@@ -6,6 +6,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.pintrip.app.data.model.Place
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -173,5 +176,88 @@ open class PlaceRepository(
             .await()
 
         return snapshot.toObjects(Place::class.java)
+    }
+
+    /**
+     * 지정한 방의 장소 문서에 대해 로그인한 사용자의 좋아요 상태를 토글(추가/제거)합니다.
+     *
+     * docs/data-contract.md §5 및 §7 규격을 준수합니다:
+     * - 로그인 uid가 likedBy에 없으면 arrayUnion(uid) + likeCount increment(1)
+     * - 로그인 uid가 likedBy에 있으면 arrayRemove(uid) + likeCount increment(-1)
+     * - likedBy, likeCount 외의 다른 필드는 절대 수정하지 않습니다.
+     *
+     * @param roomId 대상 방 ID
+     * @param kakaoPlaceId 대상 장소의 카카오 장소 ID
+     * @return 토글 후 내가 좋아요한 상태인지 여부 (추가되었으면 true, 제거되었으면 false)
+     * @throws IllegalStateException 사용자가 로그인되어 있지 않은 경우
+     * @throws IllegalArgumentException 방 ID/장소 ID가 비어 있거나, 장소 문서가 존재하지 않는 경우
+     */
+    open suspend fun toggleLike(roomId: String, kakaoPlaceId: String): Boolean {
+        require(roomId.isNotBlank()) { "roomId는 비어 있을 수 없습니다." }
+        require(kakaoPlaceId.isNotBlank()) { "kakaoPlaceId는 비어 있을 수 없습니다." }
+
+        val currentUser = auth.currentUser
+        checkNotNull(currentUser) { "로그인된 사용자 정보가 없습니다. (Auth currentUser is null)" }
+        val currentUid = currentUser.uid
+
+        val placeRef = db.collection("rooms").document(roomId).collection("places").document(kakaoPlaceId)
+
+        return db.runTransaction { transaction ->
+            val snapshot = transaction.get(placeRef)
+            if (!snapshot.exists()) {
+                throw IllegalArgumentException("존재하지 않는 장소입니다: $kakaoPlaceId")
+            }
+
+            val likedBy = (snapshot.get("likedBy") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+            val isLiked = likedBy.contains(currentUid)
+
+            if (isLiked) {
+                transaction.update(
+                    placeRef,
+                    "likedBy", FieldValue.arrayRemove(currentUid),
+                    "likeCount", FieldValue.increment(-1),
+                )
+                false
+            } else {
+                transaction.update(
+                    placeRef,
+                    "likedBy", FieldValue.arrayUnion(currentUid),
+                    "likeCount", FieldValue.increment(1),
+                )
+                true
+            }
+        }.await()
+    }
+
+    /**
+     * 지정한 방의 특정 장소 문서를 실시간 감시합니다.
+     *
+     * @param roomId 대상 방 ID
+     * @param kakaoPlaceId 대상 장소의 카카오 장소 ID
+     * @return [Place] 객체의 실시간 [Flow] (문서가 삭제되면 null, 에러 발생 시 Flow close)
+     * @throws IllegalArgumentException 방 ID 또는 장소 ID가 비어 있는 경우
+     */
+    open fun observePlace(roomId: String, kakaoPlaceId: String): Flow<Place?> = callbackFlow {
+        require(roomId.isNotBlank()) { "roomId는 비어 있을 수 없습니다." }
+        require(kakaoPlaceId.isNotBlank()) { "kakaoPlaceId는 비어 있을 수 없습니다." }
+
+        val placeRef = db.collection("rooms").document(roomId).collection("places").document(kakaoPlaceId)
+
+        val listenerRegistration = placeRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot == null || !snapshot.exists()) {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            val place = snapshot.toObject(Place::class.java)
+            trySend(place)
+        }
+
+        awaitClose {
+            listenerRegistration.remove()
+        }
     }
 }

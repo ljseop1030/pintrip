@@ -1,18 +1,14 @@
 package com.pintrip.app.map
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.util.TypedValue
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -20,36 +16,26 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
-import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.camera.CameraUpdateFactory
+import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
-import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
-import com.kakao.vectormap.label.LabelTextStyle
-import com.pintrip.app.BuildConfig
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.databinding.ActivityRoomMapBinding
 import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
+import com.pintrip.app.place.PlaceDetailActivity
 import com.pintrip.app.room.DeepLinkUtils
-import java.util.concurrent.atomic.AtomicReference
 
 class RoomMapActivity : AppCompatActivity() {
-
-    enum class SdkInitState {
-        NOT_INITIALIZED,
-        SUCCESS,
-        FAILED
-    }
 
     companion object {
         private const val TAG = "RoomMapActivity"
         const val EXTRA_ROOM_ID = "extra_room_id"
-        private val sdkInitState = AtomicReference(SdkInitState.NOT_INITIALIZED)
 
         fun newIntent(context: Context, roomId: String): Intent {
             return Intent(context, RoomMapActivity::class.java).apply {
@@ -60,12 +46,18 @@ class RoomMapActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRoomMapBinding
     private val viewModel: RoomMapViewModel by viewModels()
+    private val shakeViewModel: com.pintrip.app.place.ShakeToPickViewModel by viewModels()
 
     private var kakaoMapInstance: KakaoMap? = null
     private var labelStyles: LabelStyles? = null
+    private val labelPlaceMap = mutableMapOf<Label, String>()
     private var currentSuccessState: RoomMapUiState.Success? = null
     private var bottomSheetBehavior: BottomSheetBehavior<*>? = null
     private lateinit var roomPlaceAdapter: RoomPlaceAdapter
+
+    private var shakeDetector: com.pintrip.app.place.ShakeDetector? = null
+    private var shakeBottomSheetDialog: com.google.android.material.bottomsheet.BottomSheetDialog? = null
+    private var shakeDialogBinding: com.pintrip.app.databinding.BottomSheetShakeToPickBinding? = null
 
     private var isCleaningUpForDestroy = false
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
@@ -93,12 +85,27 @@ class RoomMapActivity : AppCompatActivity() {
 
         setupToolbar()
         setupBottomSheet()
-        setupRecyclerView()
+        setupRecyclerView(roomId)
         setupCategoryChips()
         setupDiceButton()
 
-        val currentState = sdkInitState.get()
-        if (currentState == SdkInitState.FAILED) {
+        val sensorManager = getSystemService(Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+        shakeDetector = com.pintrip.app.place.ShakeDetector(sensorManager) {
+            shakeViewModel.pickRandomPlace()
+        }
+
+        lifecycle.addObserver(object : androidx.lifecycle.LifecycleEventObserver {
+            override fun onStateChanged(source: androidx.lifecycle.LifecycleOwner, event: androidx.lifecycle.Lifecycle.Event) {
+                if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                    binding.root.post { updateSensorState() }
+                } else if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                    shakeDetector?.stop()
+                }
+            }
+        })
+
+        val currentState = KakaoMapHelper.getSdkInitState()
+        if (currentState == KakaoMapHelper.SdkInitState.FAILED) {
             binding.mapView.isVisible = false
             binding.pbLoading.isVisible = false
             binding.layoutError.isVisible = false
@@ -110,9 +117,11 @@ class RoomMapActivity : AppCompatActivity() {
         }
 
         try {
-            if (currentState == SdkInitState.NOT_INITIALIZED) {
-                KakaoMapSdk.init(applicationContext, BuildConfig.KAKAO_NATIVE_APP_KEY)
-                sdkInitState.set(SdkInitState.SUCCESS)
+            if (currentState == KakaoMapHelper.SdkInitState.NOT_INITIALIZED) {
+                KakaoMapHelper.initSdk(applicationContext)
+            }
+            if (KakaoMapHelper.getSdkInitState() == KakaoMapHelper.SdkInitState.FAILED) {
+                throw IllegalStateException("KakaoMapSdk init failed")
             }
             binding.tvMapUnavailable.isVisible = false
             setupMapView()
@@ -122,7 +131,6 @@ class RoomMapActivity : AppCompatActivity() {
             viewModel.loadRoomMap(roomId)
         } catch (e: Throwable) {
             Log.e(TAG, "KakaoMapSdk init failed on this device: ${e.message}", e)
-            sdkInitState.set(SdkInitState.FAILED)
             binding.mapView.isVisible = false
             binding.pbLoading.isVisible = false
             binding.layoutError.isVisible = false
@@ -136,6 +144,14 @@ class RoomMapActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         isCleaningUpForDestroy = true
+
+        shakeDetector?.stop()
+        shakeDetector = null
+
+        shakeBottomSheetDialog?.setOnDismissListener(null)
+        shakeBottomSheetDialog?.dismiss()
+        shakeBottomSheetDialog = null
+        shakeDialogBinding = null
 
         inviteCodeDialog?.setOnDismissListener(null)
         inviteCodeDialog?.dismiss()
@@ -163,15 +179,10 @@ class RoomMapActivity : AppCompatActivity() {
         bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
     }
 
-    private fun setupRecyclerView() {
-        roomPlaceAdapter = RoomPlaceAdapter(
-            onFoundClick = { kakaoPlaceId ->
-                focusPlace(kakaoPlaceId)
-            },
-            onNotFoundClick = { kakaoPlaceUrl ->
-                openKakaoPlaceUrl(kakaoPlaceUrl)
-            }
-        )
+    private fun setupRecyclerView(roomId: String) {
+        roomPlaceAdapter = RoomPlaceAdapter { kakaoPlaceId ->
+            startActivity(PlaceDetailActivity.newIntent(this, roomId, kakaoPlaceId))
+        }
         binding.rvPlaces.apply {
             layoutManager = LinearLayoutManager(this@RoomMapActivity)
             adapter = roomPlaceAdapter
@@ -196,7 +207,7 @@ class RoomMapActivity : AppCompatActivity() {
 
     private fun setupDiceButton() {
         binding.fabDice.setOnClickListener {
-            // TODO: 흔들어서 고르기 팝업 연결 (정혁) - 결과는 focusPlace(kakaoPlaceId)로
+            shakeViewModel.openDialogFresh()
         }
     }
 
@@ -212,19 +223,6 @@ class RoomMapActivity : AppCompatActivity() {
         }
 
         bottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
-    }
-
-    private fun openKakaoPlaceUrl(url: String) {
-        if (url.isBlank()) {
-            Toast.makeText(this, R.string.place_list_error_cannot_open_url, Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.place_list_error_cannot_open_url, Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun setupMapView() {
@@ -254,40 +252,26 @@ class RoomMapActivity : AppCompatActivity() {
             override fun onMapReady(kakaoMap: KakaoMap) {
                 kakaoMapInstance = kakaoMap
                 initLabelStyles(kakaoMap)
+                setupLabelClickListener(kakaoMap)
                 applyMapData()
             }
         })
     }
 
+    private fun setupLabelClickListener(kakaoMap: KakaoMap) {
+        kakaoMap.setOnLabelClickListener { _, _, label ->
+            val kakaoPlaceId = labelPlaceMap[label]
+            if (!kakaoPlaceId.isNullOrBlank()) {
+                val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+                startActivity(PlaceDetailActivity.newIntent(this@RoomMapActivity, roomId, kakaoPlaceId))
+            }
+            true
+        }
+    }
+
     private fun initLabelStyles(kakaoMap: KakaoMap) {
         if (labelStyles != null) return
-
-        val drawable = ContextCompat.getDrawable(this, R.drawable.ic_map_marker)
-        val bitmap = drawable?.toBitmap()
-        if (bitmap == null) {
-            Log.e(TAG, "Failed to convert ic_map_marker to bitmap")
-            return
-        }
-
-        val textColor = ContextCompat.getColor(this, R.color.map_label_text)
-        val strokeColor = ContextCompat.getColor(this, R.color.map_label_stroke)
-
-        val textSizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_SP,
-            13f,
-            resources.displayMetrics
-        ).toInt()
-        val strokeWidthPx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            2f,
-            resources.displayMetrics
-        ).toInt()
-
-        val labelStyle = LabelStyle.from(bitmap)
-            .setAnchorPoint(0.5f, 1.0f)
-            .setTextStyles(LabelTextStyle.from(textSizePx, textColor, strokeWidthPx, strokeColor))
-
-        labelStyles = kakaoMap.labelManager?.addLabelStyles(LabelStyles.from(labelStyle))
+        labelStyles = KakaoMapHelper.createLabelStyles(this, kakaoMap)
     }
 
     override fun onResume() {
@@ -299,6 +283,7 @@ class RoomMapActivity : AppCompatActivity() {
         } catch (e: Throwable) {
             Log.e(TAG, "MapView resume failed: ${e.message}", e)
         }
+        updateSensorState()
     }
 
     override fun onPause() {
@@ -310,6 +295,7 @@ class RoomMapActivity : AppCompatActivity() {
         } catch (e: Throwable) {
             Log.e(TAG, "MapView pause failed: ${e.message}", e)
         }
+        shakeDetector?.stop()
     }
 
     private fun setupListeners(roomId: String) {
@@ -335,6 +321,7 @@ class RoomMapActivity : AppCompatActivity() {
                 is RoomMapUiState.Loading -> {
                     binding.pbLoading.isVisible = true
                     binding.layoutError.isVisible = false
+                    shakeViewModel.setHomeLoading()
                 }
                 is RoomMapUiState.Success -> {
                     binding.pbLoading.isVisible = false
@@ -379,12 +366,20 @@ class RoomMapActivity : AppCompatActivity() {
                     }
 
                     applyMapData()
+
+                    val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+                    shakeViewModel.setPlacesInMemory(
+                        roomId = roomId,
+                        places = viewModel.getAllPlaceDetails(),
+                        category = viewModel.getSelectedCategory(),
+                    )
                 }
                 is RoomMapUiState.Error -> {
                     binding.pbLoading.isVisible = false
                     binding.layoutError.isVisible = true
                     binding.tvErrorMessage.text = getString(state.messageResId)
                     binding.btnRetry.isVisible = true
+                    shakeViewModel.setHomeError(state.messageResId)
                 }
             }
         }
@@ -403,6 +398,202 @@ class RoomMapActivity : AppCompatActivity() {
                 renderInviteCodeDialogState(dialogBinding, state)
             }
         }
+
+        shakeViewModel.isShakeDialogOpen.observe(this) { isOpen ->
+            if (isOpen) {
+                showShakeToPickBottomSheet()
+            } else {
+                dismissShakeToPickBottomSheet()
+            }
+        }
+
+        shakeViewModel.uiState.observe(this) { state ->
+            val dialogBinding = shakeDialogBinding
+            if (dialogBinding != null) {
+                renderShakeDialogState(dialogBinding, state)
+            }
+            updateSensorState()
+        }
+    }
+
+    private fun updateSensorState() {
+        val isDialogOpen = shakeBottomSheetDialog?.isShowing == true
+        val isResumedState = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        val currentState = shakeViewModel.uiState.value
+        val isAwaitingWithCandidates = currentState is com.pintrip.app.place.ShakeToPickUiState.Ready && currentState.filteredCount > 0
+
+        val dialogBinding = shakeDialogBinding
+
+        if (isDialogOpen && isResumedState && isAwaitingWithCandidates) {
+            val isSensorStarted = shakeDetector?.start() == true
+            if (dialogBinding != null) {
+                if (isSensorStarted) {
+                    dialogBinding.tvReadyHeading.setText(R.string.shake_ready_heading_sensor)
+                    dialogBinding.tvReadyGuide.setText(R.string.shake_ready_guide_sensor)
+                } else {
+                    dialogBinding.tvReadyHeading.setText(R.string.shake_ready_heading_touch)
+                    dialogBinding.tvReadyGuide.setText(R.string.shake_ready_guide_touch)
+                }
+            }
+        } else {
+            shakeDetector?.stop()
+        }
+    }
+
+    private fun showShakeToPickBottomSheet() {
+        if (shakeBottomSheetDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.BottomSheetShakeToPickBinding.inflate(layoutInflater)
+        shakeDialogBinding = dialogBinding
+
+        dialogBinding.btnClose.setOnClickListener {
+            dismissShakeToPickBottomSheet()
+        }
+
+        dialogBinding.btnTouchPick.setOnClickListener {
+            shakeViewModel.pickRandomPlace()
+        }
+
+        dialogBinding.btnPickAgain.setOnClickListener {
+            shakeViewModel.resetToReady()
+        }
+
+        dialogBinding.btnViewOnMap.setOnClickListener {
+            val currentState = shakeViewModel.uiState.value
+            if (currentState is com.pintrip.app.place.ShakeToPickUiState.Result) {
+                val placeId = currentState.selectedPlace.place.kakaoPlaceId
+                focusPlace(placeId)
+            }
+            dismissShakeToPickBottomSheet()
+        }
+
+        dialogBinding.btnEmptyClose.setOnClickListener {
+            dismissShakeToPickBottomSheet()
+        }
+
+        val currentState = shakeViewModel.uiState.value ?: com.pintrip.app.place.ShakeToPickUiState.Idle
+        renderShakeDialogState(dialogBinding, currentState)
+
+        shakeBottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+            .apply {
+                setContentView(dialogBinding.root)
+                setCancelable(true)
+
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+
+                setOnDismissListener {
+                    shakeDialogBinding = null
+                    shakeBottomSheetDialog = null
+                    updateSensorState()
+                    if (!isCleaningUpForDestroy && !isChangingConfigurations) {
+                        shakeViewModel.closeDialog()
+                    }
+                }
+                show()
+            }
+
+        dialogBinding.root.post {
+            updateSensorState()
+        }
+    }
+
+    private fun dismissShakeToPickBottomSheet() {
+        val dialog = shakeBottomSheetDialog
+        shakeDialogBinding = null
+        shakeBottomSheetDialog = null
+        dialog?.dismiss()
+        updateSensorState()
+    }
+
+    private fun renderShakeDialogState(
+        dialogBinding: com.pintrip.app.databinding.BottomSheetShakeToPickBinding,
+        state: com.pintrip.app.place.ShakeToPickUiState,
+    ) {
+        when (state) {
+            is com.pintrip.app.place.ShakeToPickUiState.Idle,
+            is com.pintrip.app.place.ShakeToPickUiState.Loading -> {
+                dialogBinding.layoutLoading.isVisible = true
+                dialogBinding.layoutReady.isVisible = false
+                dialogBinding.layoutResult.isVisible = false
+                dialogBinding.layoutEmpty.isVisible = false
+            }
+            is com.pintrip.app.place.ShakeToPickUiState.Ready -> {
+                dialogBinding.layoutLoading.isVisible = false
+                dialogBinding.layoutReady.isVisible = true
+                dialogBinding.layoutResult.isVisible = false
+                dialogBinding.layoutEmpty.isVisible = false
+
+                val categoryName = getString(getCategoryNameResId(state.category))
+                dialogBinding.tvReadySubtitle.text = getString(
+                    R.string.shake_ready_subtitle_format,
+                    categoryName,
+                    state.filteredCount,
+                )
+                dialogBinding.tvReadyCategoryBadge.text = categoryName
+                dialogBinding.btnTouchPick.isEnabled = state.filteredCount > 0
+            }
+            is com.pintrip.app.place.ShakeToPickUiState.Result -> {
+                dialogBinding.layoutLoading.isVisible = false
+                dialogBinding.layoutReady.isVisible = false
+                dialogBinding.layoutResult.isVisible = true
+                dialogBinding.layoutEmpty.isVisible = false
+
+                val place = state.selectedPlace
+                dialogBinding.tvResultPlaceName.text = place.name.orEmpty().ifBlank { place.place.searchKeyword }
+
+                val actualCategoryEnum = com.pintrip.app.place.PlaceCategory.fromCode(place.category)
+                val actualCategoryName = getString(getCategoryNameResId(actualCategoryEnum))
+                val address = place.address.orEmpty()
+                val addedBy = place.place.addedByNickname.orEmpty()
+
+                dialogBinding.tvResultPlaceInfo.text = when {
+                    address.isNotBlank() && addedBy.isNotBlank() -> {
+                        getString(R.string.shake_place_info_with_added_by_format, actualCategoryName, address, getString(R.string.place_added_by, addedBy))
+                    }
+                    address.isNotBlank() -> {
+                        getString(R.string.shake_place_info_format, actualCategoryName, address)
+                    }
+                    addedBy.isNotBlank() -> {
+                        getString(R.string.shake_place_info_format, actualCategoryName, getString(R.string.place_added_by, addedBy))
+                    }
+                    else -> actualCategoryName
+                }
+            }
+            is com.pintrip.app.place.ShakeToPickUiState.Empty -> {
+                dialogBinding.layoutLoading.isVisible = false
+                dialogBinding.layoutReady.isVisible = false
+                dialogBinding.layoutResult.isVisible = false
+                dialogBinding.layoutEmpty.isVisible = true
+
+                val categoryName = getString(getCategoryNameResId(state.category))
+                dialogBinding.tvEmptyMessage.text = when (state.reason) {
+                    com.pintrip.app.place.EmptyReason.NO_SAVED_PLACES -> getString(R.string.shake_empty_no_saved_places)
+                    com.pintrip.app.place.EmptyReason.NO_AVAILABLE_PLACES -> getString(R.string.shake_empty_no_available_places)
+                    com.pintrip.app.place.EmptyReason.NO_FILTER_MATCHES -> getString(R.string.shake_empty_no_filter_matches, categoryName)
+                }
+                dialogBinding.btnEmptyClose.text = getString(R.string.btn_close)
+                dialogBinding.btnEmptyClose.setOnClickListener { dismissShakeToPickBottomSheet() }
+            }
+            is com.pintrip.app.place.ShakeToPickUiState.Error -> {
+                dialogBinding.layoutLoading.isVisible = false
+                dialogBinding.layoutReady.isVisible = false
+                dialogBinding.layoutResult.isVisible = false
+                dialogBinding.layoutEmpty.isVisible = true
+                dialogBinding.tvEmptyMessage.text = getString(state.messageResId)
+                dialogBinding.btnEmptyClose.text = getString(R.string.btn_retry)
+                dialogBinding.btnEmptyClose.setOnClickListener {
+                    val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+                    viewModel.retry(roomId)
+                    dismissShakeToPickBottomSheet()
+                }
+            }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        updateSensorState()
     }
 
     private fun showInviteCodeDialog() {
@@ -542,6 +733,7 @@ class RoomMapActivity : AppCompatActivity() {
         val labelManager = map.labelManager
         val layer = labelManager?.layer
         layer?.removeAll()
+        labelPlaceMap.clear()
 
         val foundPlaces = success.placeDetails.filter { it.status == PlaceDetail.STATUS_FOUND && it.lat != null && it.lng != null }
         var addedLabelCount = 0
@@ -555,6 +747,7 @@ class RoomMapActivity : AppCompatActivity() {
                     .setTexts(textBuilder)
                 val label = layer?.addLabel(options)
                 if (label != null) {
+                    labelPlaceMap[label] = place.place.kakaoPlaceId
                     addedLabelCount++
                 }
             }
