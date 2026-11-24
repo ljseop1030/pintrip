@@ -107,6 +107,12 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
             android:label="@string/title_activity_room_map" />
+
+        <activity
+            android:name=".place.PlaceDetailActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:label="@string/title_activity_place_detail" />
     </application>
 
 </manifest>

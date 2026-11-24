@@ -63,6 +63,21 @@ open class PlaceDetailRepository(
     }
 
     /**
+     * 지정한 방(roomId)의 장소 목록 중 특정 kakaoPlaceId에 해당하는 장소를 찾아 카카오 Local API에서 재조회하고 [PlaceDetail]로 반환합니다.
+     *
+     * @param roomId 대상 방 ID
+     * @param roomRegion 방 대표 지역명 (예: "부산")
+     * @param kakaoPlaceId 대상 장소의 카카오 장소 ID
+     * @return 재조회된 [PlaceDetail] 또는 Firestore에 장소가 없으면 null
+     * @throws Exception [loadPlaces] 실패 시 예외 발생
+     */
+    open suspend fun getPlaceDetail(roomId: String, roomRegion: String, kakaoPlaceId: String): PlaceDetail? {
+        val places = loadPlaces(roomId)
+        val place = places.firstOrNull { it.kakaoPlaceId == kakaoPlaceId } ?: return null
+        return reFetchSinglePlace(place, roomRegion)
+    }
+
+    /**
      * 방 지역명으로 카카오 키워드 검색을 수행하여 첫 번째 결과의 좌표(위도, 경도)를 반환합니다.
      * (docs/data-contract.md §4 Map camera: found 장소가 0개일 때 사용)
      *
