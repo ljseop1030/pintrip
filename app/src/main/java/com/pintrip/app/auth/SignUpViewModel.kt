@@ -12,6 +12,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Source
 import com.pintrip.app.R
 import com.pintrip.app.data.repository.UserRepository
+import com.pintrip.app.ui.common.Event
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -31,6 +32,14 @@ class SignUpViewModel(
     private val currentUidProvider: (() -> String?)? = null,
 ) : ViewModel() {
 
+    data class PendingErrorContext(
+        val user: FirebaseUser?,
+        val uid: String,
+        val nickname: String,
+        val email: String,
+        val isExistingAuthAccount: Boolean,
+    )
+
     private val firebaseAuth: FirebaseAuth
         get() = auth ?: FirebaseAuth.getInstance()
 
@@ -38,14 +47,26 @@ class SignUpViewModel(
         get() = userRepository ?: UserRepository(auth = firebaseAuth)
 
     private fun getCurrentAuthUid(): String? {
-        return currentUidProvider?.invoke() ?: try { firebaseAuth.currentUser?.uid } catch (_: Exception) { null }
+        return if (currentUidProvider != null) {
+            currentUidProvider.invoke()
+        } else {
+            try { firebaseAuth.currentUser?.uid } catch (_: Exception) { null }
+        }
     }
 
     private val _uiState = MutableLiveData<SignUpUiState>(SignUpUiState.Idle)
     val uiState: LiveData<SignUpUiState> get() = _uiState
 
+    private val _events = MutableLiveData<Event<SignUpEvent>?>()
+    val events: LiveData<Event<SignUpEvent>?> get() = _events
+
     private var isSignUpInProgress = false
+    private var isSignUpCompleted = false
+    private var completedUid: String? = null
     private var sessionToken = 0L
+
+    var pendingErrorContext: PendingErrorContext? = null
+        private set
 
     /**
      * 비동기 작업 완료 후 세션 토큰 및 현재 Auth UID 검증.
@@ -60,7 +81,7 @@ class SignUpViewModel(
         val currentUid = getCurrentAuthUid()
         if (currentUid.isNullOrBlank() || currentUid != targetUid) {
             // 현재 활성 토큰 요청이지만 UID가 달라졌거나 로그아웃됨:
-            // Loading 락 해제 및 재시도 가능 상태로 안전 복구
+            // Loading 락 해제 및 재시도 가능한 상태로 안전 복구
             isSignUpInProgress = false
             _uiState.value = SignUpUiState.FormError(R.string.signup_error_generic)
             return false
@@ -118,6 +139,10 @@ class SignUpViewModel(
 
         _uiState.value = SignUpUiState.Loading
         isSignUpInProgress = true
+        isSignUpCompleted = false
+        completedUid = null
+        pendingErrorContext = null
+        _events.value = null
         val token = ++sessionToken
 
         viewModelScope.launch {
@@ -201,6 +226,15 @@ class SignUpViewModel(
         }
     }
 
+    fun retryProfileStep() {
+        val ctx = pendingErrorContext
+        if (ctx != null) {
+            retryProfileStep(ctx.user, ctx.uid, ctx.nickname, ctx.email, ctx.isExistingAuthAccount)
+        } else {
+            _uiState.value = SignUpUiState.FormError(R.string.signup_error_generic)
+        }
+    }
+
     fun retryProfileStep(
         user: FirebaseUser?,
         uid: String,
@@ -216,8 +250,13 @@ class SignUpViewModel(
             return
         }
 
+        pendingErrorContext = PendingErrorContext(user, uid, nickname, email, isExistingAuthAccount)
+
         _uiState.value = SignUpUiState.Loading
         isSignUpInProgress = true
+        isSignUpCompleted = false
+        completedUid = null
+        _events.value = null
         val token = ++sessionToken
 
         performProfileStepInternal(user, uid, nickname, email, isExistingAuthAccount, token)
@@ -244,12 +283,16 @@ class SignUpViewModel(
                 } catch (_: Exception) {
                     if (!validateSessionAndUid(token, uid)) return@launch
                     isSignUpInProgress = false
-                    _uiState.value = SignUpUiState.ProfileLoadError(
-                        user = user,
-                        uid = uid,
-                        nickname = nickname,
-                        email = email,
-                        isExistingAuthAccount = isExistingAuthAccount,
+                    pendingErrorContext = PendingErrorContext(user, uid, nickname, email, isExistingAuthAccount)
+                    _uiState.value = SignUpUiState.Idle
+                    _events.value = Event(
+                        SignUpEvent.ShowProfileLoadError(
+                            user = user,
+                            uid = uid,
+                            nickname = nickname,
+                            email = email,
+                            isExistingAuthAccount = isExistingAuthAccount,
+                        )
                     )
                     return@launch
                 }
@@ -258,13 +301,18 @@ class SignUpViewModel(
 
                 if (existingProfile != null) {
                     isSignUpInProgress = false
+                    _uiState.value = SignUpUiState.Idle
                     if (existingProfile.nickname.isNotBlank()) {
-                        _uiState.value = SignUpUiState.SignUpComplete(
-                            isExistingAccount = true,
-                            isProfileRestored = false,
+                        isSignUpCompleted = true
+                        completedUid = uid
+                        _events.value = Event(
+                            SignUpEvent.ShowSignUpComplete(
+                                isExistingAccount = true,
+                                isProfileRestored = false,
+                            )
                         )
                     } else {
-                        _uiState.value = SignUpUiState.ProfileCorrupted(user)
+                        _events.value = Event(SignUpEvent.ShowProfileCorrupted)
                     }
                 } else {
                     try {
@@ -276,9 +324,14 @@ class SignUpViewModel(
                         if (!validateSessionAndUid(token, uid)) return@launch
 
                         isSignUpInProgress = false
-                        _uiState.value = SignUpUiState.SignUpComplete(
-                            isExistingAccount = isExistingAuthAccount,
-                            isProfileRestored = isExistingAuthAccount,
+                        isSignUpCompleted = true
+                        completedUid = uid
+                        _uiState.value = SignUpUiState.Idle
+                        _events.value = Event(
+                            SignUpEvent.ShowSignUpComplete(
+                                isExistingAccount = isExistingAuthAccount,
+                                isProfileRestored = isExistingAuthAccount,
+                            )
                         )
                     } catch (e: CancellationException) {
                         isSignUpInProgress = false
@@ -286,12 +339,16 @@ class SignUpViewModel(
                     } catch (_: Exception) {
                         if (!validateSessionAndUid(token, uid)) return@launch
                         isSignUpInProgress = false
-                        _uiState.value = SignUpUiState.ProfileSaveError(
-                            user = user,
-                            uid = uid,
-                            nickname = nickname,
-                            email = email,
-                            isExistingAuthAccount = isExistingAuthAccount,
+                        pendingErrorContext = PendingErrorContext(user, uid, nickname, email, isExistingAuthAccount)
+                        _uiState.value = SignUpUiState.Idle
+                        _events.value = Event(
+                            SignUpEvent.ShowProfileSaveError(
+                                user = user,
+                                uid = uid,
+                                nickname = nickname,
+                                email = email,
+                                isExistingAuthAccount = isExistingAuthAccount,
+                            )
                         )
                     }
                 }
@@ -306,9 +363,28 @@ class SignUpViewModel(
         }
     }
 
+    fun onGetStartedClicked() {
+        if (!isSignUpCompleted) return
+        val currentUid = getCurrentAuthUid()
+        if (currentUid.isNullOrBlank() || currentUid != completedUid) {
+            isSignUpCompleted = false
+            completedUid = null
+            _events.value = null
+            _uiState.value = SignUpUiState.FormError(R.string.signup_error_generic)
+            return
+        }
+        isSignUpCompleted = false
+        completedUid = null
+        _events.value = Event(SignUpEvent.NavigateToRoomList)
+    }
+
     fun signOut() {
         sessionToken++
         isSignUpInProgress = false
+        isSignUpCompleted = false
+        completedUid = null
+        pendingErrorContext = null
+        _events.value = null
         try { firebaseAuth.signOut() } catch (_: Exception) {}
         _uiState.value = SignUpUiState.Idle
     }

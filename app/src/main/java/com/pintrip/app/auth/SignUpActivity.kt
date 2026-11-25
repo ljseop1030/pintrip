@@ -5,12 +5,11 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doOnTextChanged
-import com.google.firebase.auth.FirebaseUser
+import androidx.lifecycle.Lifecycle
 import com.pintrip.app.R
 import com.pintrip.app.databinding.ActivitySignUpBinding
 import com.pintrip.app.room.RoomListActivity
@@ -21,7 +20,10 @@ import com.pintrip.app.room.RoomListActivity
  * 닉네임, 이메일, 비밀번호, 비밀번호 확인을 입력받아 Firebase Auth 계정을 생성하고
  * Firestore `users/{uid}`에 프로필 정보(nickname, email, avatarColor, createdAt)를 저장합니다.
  */
-class SignUpActivity : AppCompatActivity() {
+class SignUpActivity : AppCompatActivity(),
+    ProfileErrorDialogFragment.Listener,
+    ProfileCorruptedDialogFragment.Listener,
+    SignUpCompleteDialogFragment.Listener {
 
     private lateinit var binding: ActivitySignUpBinding
     private val viewModel: SignUpViewModel by viewModels()
@@ -60,6 +62,11 @@ class SignUpActivity : AppCompatActivity() {
                 isTermsChecked = binding.cbTerms.isChecked,
             )
         }
+    }
+
+    override fun onResumeFragments() {
+        super.onResumeFragments()
+        processPendingEventIfSafe()
     }
 
     private fun setupInputListeners() {
@@ -174,36 +181,103 @@ class SignUpActivity : AppCompatActivity() {
                         }
                     }
                 }
-
-                is SignUpUiState.ProfileLoadError -> {
-                    binding.btnSignUp.isEnabled = true
-                    binding.btnSignUp.text = getString(R.string.btn_signup)
-                    clearAllErrorsFromUi()
-                    showProfileLoadErrorDialog(state.user, state.uid, state.nickname, state.email, state.isExistingAuthAccount)
-                }
-
-                is SignUpUiState.ProfileSaveError -> {
-                    binding.btnSignUp.isEnabled = true
-                    binding.btnSignUp.text = getString(R.string.btn_signup)
-                    clearAllErrorsFromUi()
-                    showProfileSaveErrorDialog(state.user, state.uid, state.nickname, state.email, state.isExistingAuthAccount)
-                }
-
-                is SignUpUiState.ProfileCorrupted -> {
-                    binding.btnSignUp.isEnabled = true
-                    binding.btnSignUp.text = getString(R.string.btn_signup)
-                    clearAllErrorsFromUi()
-                    showCorruptedProfileDialog()
-                }
-
-                is SignUpUiState.SignUpComplete -> {
-                    binding.btnSignUp.isEnabled = true
-                    binding.btnSignUp.text = getString(R.string.btn_signup)
-                    clearAllErrorsFromUi()
-                    showSignUpCompleteDialog(state.isExistingAccount, state.isProfileRestored)
-                }
             }
         }
+
+        viewModel.events.observe(this) {
+            processPendingEventIfSafe()
+        }
+    }
+
+    private fun processPendingEventIfSafe() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            return
+        }
+        val eventWrapper = viewModel.events.value ?: return
+        if (!eventWrapper.hasBeenHandled) {
+            eventWrapper.getContentIfNotHandled()?.let { handleSignUpEvent(it) }
+        }
+    }
+
+    private fun handleSignUpEvent(event: SignUpEvent) {
+        when (event) {
+            is SignUpEvent.ShowProfileLoadError -> {
+                showErrorDialog(R.string.signup_error_profile_title, R.string.signup_error_profile_load, false)
+            }
+
+            is SignUpEvent.ShowProfileSaveError -> {
+                showErrorDialog(R.string.signup_error_profile_title, R.string.signup_error_profile_save, true)
+            }
+
+            is SignUpEvent.ShowProfileCorrupted -> {
+                showCorruptedDialog()
+            }
+
+            is SignUpEvent.ShowSignUpComplete -> {
+                showSignUpCompleteDialog(event.isExistingAccount)
+            }
+
+            is SignUpEvent.NavigateToRoomList -> {
+                navigateToRoomList()
+            }
+        }
+    }
+
+    private fun showErrorDialog(titleRes: Int, messageRes: Int, isSaveError: Boolean) {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        val tag = if (isSaveError) ProfileErrorDialogFragment.TAG_SAVE_ERROR else ProfileErrorDialogFragment.TAG_LOAD_ERROR
+        if (supportFragmentManager.findFragmentByTag(tag) == null) {
+            ProfileErrorDialogFragment.newInstance(titleRes, messageRes, isSaveError)
+                .show(supportFragmentManager, tag)
+        }
+    }
+
+    private fun showCorruptedDialog() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        if (supportFragmentManager.findFragmentByTag(ProfileCorruptedDialogFragment.TAG) == null) {
+            ProfileCorruptedDialogFragment.newInstance(
+                R.string.signup_dialog_corrupted_title,
+                R.string.signup_dialog_corrupted_message,
+            ).show(supportFragmentManager, ProfileCorruptedDialogFragment.TAG)
+        }
+    }
+
+    private fun showSignUpCompleteDialog(isExistingAccount: Boolean) {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        val (titleRes, messageRes) = if (isExistingAccount) {
+            Pair(R.string.signup_restored_title, R.string.signup_restored_message)
+        } else {
+            Pair(R.string.signup_complete_title, R.string.signup_complete_message)
+        }
+
+        if (supportFragmentManager.findFragmentByTag(SignUpCompleteDialogFragment.TAG) == null) {
+            SignUpCompleteDialogFragment.newInstance(titleRes, messageRes)
+                .show(supportFragmentManager, SignUpCompleteDialogFragment.TAG)
+        }
+    }
+
+    override fun onRetryProfile(isSaveError: Boolean) {
+        viewModel.retryProfileStep()
+    }
+
+    override fun onSignOutFromErrorDialog() {
+        viewModel.signOut()
+    }
+
+    override fun onSignOutFromCorruptedDialog() {
+        viewModel.signOut()
+    }
+
+    override fun onGetStartedFromSignUpComplete() {
+        viewModel.onGetStartedClicked()
+    }
+
+    private fun navigateToRoomList() {
+        val intent = Intent(this, RoomListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun clearAllErrorsFromUi() {
@@ -213,79 +287,5 @@ class SignUpActivity : AppCompatActivity() {
         binding.tilConfirmPassword.error = null
         binding.tvTermsError.visibility = View.GONE
         binding.tvFormError.visibility = View.GONE
-    }
-
-
-
-    private fun showProfileLoadErrorDialog(
-        user: FirebaseUser?,
-        uid: String,
-        nickname: String,
-        email: String,
-        isExistingAuthAccount: Boolean,
-    ) {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.signup_error_profile_title))
-            .setMessage(getString(R.string.signup_error_profile_load))
-            .setCancelable(false)
-            .setPositiveButton(getString(R.string.signup_btn_retry)) { _, _ ->
-                viewModel.retryProfileStep(user, uid, nickname, email, isExistingAuthAccount)
-            }
-            .setNegativeButton(getString(R.string.signup_btn_sign_out)) { _, _ ->
-                viewModel.signOut()
-            }
-            .show()
-    }
-
-    private fun showProfileSaveErrorDialog(
-        user: FirebaseUser?,
-        uid: String,
-        nickname: String,
-        email: String,
-        isExistingAuthAccount: Boolean,
-    ) {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.signup_error_profile_title))
-            .setMessage(getString(R.string.signup_error_profile_save))
-            .setCancelable(false)
-            .setPositiveButton(getString(R.string.signup_btn_retry)) { _, _ ->
-                viewModel.retryProfileStep(user, uid, nickname, email, isExistingAuthAccount)
-            }
-            .setNegativeButton(getString(R.string.signup_btn_sign_out)) { _, _ ->
-                viewModel.signOut()
-            }
-            .show()
-    }
-
-    private fun showCorruptedProfileDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.signup_dialog_corrupted_title))
-            .setMessage(getString(R.string.signup_dialog_corrupted_message))
-            .setCancelable(false)
-            .setNegativeButton(getString(R.string.signup_btn_sign_out)) { _, _ ->
-                viewModel.signOut()
-            }
-            .show()
-    }
-
-    private fun showSignUpCompleteDialog(isExistingAccount: Boolean, isProfileRestored: Boolean) {
-        val (titleRes, messageRes) = if (isExistingAccount) {
-            Pair(R.string.signup_restored_title, R.string.signup_restored_message)
-        } else {
-            Pair(R.string.signup_complete_title, R.string.signup_complete_message)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle(getString(titleRes))
-            .setMessage(getString(messageRes))
-            .setCancelable(false)
-            .setPositiveButton(getString(R.string.signup_btn_get_started)) { _, _ ->
-                val intent = Intent(this, RoomListActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
-                startActivity(intent)
-                finish()
-            }
-            .show()
     }
 }

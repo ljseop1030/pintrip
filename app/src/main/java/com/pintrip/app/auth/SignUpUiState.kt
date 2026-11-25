@@ -3,7 +3,7 @@ package com.pintrip.app.auth
 import com.google.firebase.auth.FirebaseUser
 
 /**
- * 회원가입 화면 UI 상태.
+ * 회원가입 화면 지속 UI 상태 (입력 폼 및 버튼 활성화용).
  */
 sealed interface SignUpUiState {
     object Idle : SignUpUiState
@@ -20,29 +20,34 @@ sealed interface SignUpUiState {
     data class FormError(
         val messageResId: Int,
     ) : SignUpUiState
+}
 
-    data class ProfileLoadError(
+/**
+ * 회원가입 화면 일회성 이벤트 (다이얼로그 노출 및 이동용).
+ */
+sealed interface SignUpEvent {
+    data class ShowProfileLoadError(
         val user: FirebaseUser?,
         val uid: String,
         val nickname: String,
         val email: String,
         val isExistingAuthAccount: Boolean,
-    ) : SignUpUiState
+    ) : SignUpEvent
 
-    data class ProfileSaveError(
+    data class ShowProfileSaveError(
         val user: FirebaseUser?,
         val uid: String,
         val nickname: String,
         val email: String,
         val isExistingAuthAccount: Boolean,
-    ) : SignUpUiState
+    ) : SignUpEvent
 
-    data class ProfileCorrupted(
-        val user: FirebaseUser?,
-    ) : SignUpUiState
+    object ShowProfileCorrupted : SignUpEvent
 
-    data class SignUpComplete(
+    data class ShowSignUpComplete(
         val isExistingAccount: Boolean,
         val isProfileRestored: Boolean = false,
-    ) : SignUpUiState
+    ) : SignUpEvent
+
+    object NavigateToRoomList : SignUpEvent
 }

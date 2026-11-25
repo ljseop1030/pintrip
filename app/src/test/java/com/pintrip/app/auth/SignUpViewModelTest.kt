@@ -172,9 +172,9 @@ class SignUpViewModelTest {
 
         assertTrue(createCalled)
         assertTrue(signInCalled)
-        val state = viewModel.uiState.value
-        assertTrue(state is SignUpUiState.SignUpComplete)
-        assertTrue((state as SignUpUiState.SignUpComplete).isExistingAccount)
+        val event = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(event is SignUpEvent.ShowSignUpComplete)
+        assertTrue((event as SignUpEvent.ShowSignUpComplete).isExistingAccount)
     }
 
     @Test
@@ -256,7 +256,7 @@ class SignUpViewModelTest {
     fun `UID change during profile fetch releases loading and emits FormError`() {
         var activeUid: String? = "u123"
         val fakeRepo = object : UserRepository(null, null) {
-            override suspend fun getUserProfile(uid: String, source: com.google.firebase.firestore.Source): User? {
+            override suspend fun getUserProfile(uid: String, source: com.google.firebase.firestore.Source): User {
                 activeUid = null
                 return User(nickname = "Minji", email = "test@example.com")
             }
@@ -303,37 +303,98 @@ class SignUpViewModelTest {
     }
 
     @Test
-    fun `retryProfileStep does not call Auth createUserAction again`() {
-        var authCallCount = 0
+    fun `retryProfileStep without arguments uses preserved pendingErrorContext`() {
         val fakeRepo = FakeUserRepository(shouldThrowOnGet = true)
-
         val viewModel = SignUpViewModel(
             userRepository = fakeRepo,
             currentUidProvider = { "u123" },
-            authUserProvider = { email, _, _ ->
-                authCallCount++
-                Pair("u123", email)
-            },
+            authUserProvider = { email, _, _ -> Pair("u123", email) },
         )
 
-        viewModel.performSignUp("Minji", "new@example.com", "password123", "password123", true)
+        viewModel.performSignUp("Minji", "test@example.com", "password123", "password123", true)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(1, authCallCount)
-        assertTrue(viewModel.uiState.value is SignUpUiState.ProfileLoadError)
+        val errorEvent = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(errorEvent is SignUpEvent.ShowProfileLoadError)
+        assertEquals("u123", viewModel.pendingErrorContext?.uid)
 
-        val errorState = viewModel.uiState.value as SignUpUiState.ProfileLoadError
-
-        // Retry profile step
-        viewModel.retryProfileStep(errorState.user, errorState.uid, errorState.nickname, errorState.email, errorState.isExistingAuthAccount)
+        // Retry without arguments using preserved pendingErrorContext
+        viewModel.retryProfileStep()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Auth count must STILL be 1 (no re-creation of Auth user)
-        assertEquals(1, authCallCount)
+        assertEquals(2, fakeRepo.getUserProfileCallCount)
     }
 
     @Test
-    fun `signOut invalidates in-flight signup response`() {
+    fun `onGetStartedClicked emits NavigateToRoomList event ONCE when signup completed and active UID matches`() {
+        var activeUid: String? = "u123"
+        val fakeRepo = FakeUserRepository(profileToReturn = null)
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { activeUid },
+            authUserProvider = { email, _, _ -> Pair("u123", email) },
+        )
+
+        viewModel.performSignUp("Minji", "test@example.com", "password123", "password123", true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val completeEvent = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(completeEvent is SignUpEvent.ShowSignUpComplete)
+
+        // Click Get Started -> emits NavigateToRoomList event
+        viewModel.onGetStartedClicked()
+        val navEvent1 = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(navEvent1 is SignUpEvent.NavigateToRoomList)
+
+        // Second click onGetStartedClicked does not re-emit navigation event (unhandled content is null)
+        viewModel.onGetStartedClicked()
+        assertNull(viewModel.events.value?.getContentIfNotHandled())
+    }
+
+    @Test
+    fun `onGetStartedClicked when active UID becomes null or changes to different UID does NOT navigate and emits FormError`() {
+        var activeUid: String? = "u123"
+        val fakeRepo = FakeUserRepository(profileToReturn = null)
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { activeUid },
+            authUserProvider = { email, _, _ -> Pair("u123", email) },
+        )
+
+        viewModel.performSignUp("Minji", "test@example.com", "password123", "password123", true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val completeEvent = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(completeEvent is SignUpEvent.ShowSignUpComplete)
+
+        // Active UID becomes null (logged out) or changes
+        activeUid = null
+
+        // Click Get Started
+        viewModel.onGetStartedClicked()
+
+        assertNull(viewModel.events.value)
+        val state = viewModel.uiState.value
+        assertTrue(state is SignUpUiState.FormError)
+        assertEquals(R.string.signup_error_generic, (state as SignUpUiState.FormError).messageResId)
+    }
+
+    @Test
+    fun `onGetStartedClicked before completion or after signOut does NOT emit navigation event`() {
+        val viewModel = SignUpViewModel()
+
+        // Call before completion
+        viewModel.onGetStartedClicked()
+        assertNull(viewModel.events.value)
+
+        // Call after signOut
+        viewModel.signOut()
+        viewModel.onGetStartedClicked()
+        assertNull(viewModel.events.value)
+    }
+
+    @Test
+    fun `signOut in-flight delay invalidates late response and clears pending context`() {
         val viewModel = SignUpViewModel(
             authUserProvider = { email, _, _ ->
                 delay(1000)
@@ -345,9 +406,14 @@ class SignUpViewModelTest {
         assertEquals(SignUpUiState.Loading, viewModel.uiState.value)
 
         viewModel.signOut()
+
         assertEquals(SignUpUiState.Idle, viewModel.uiState.value)
+        assertNull(viewModel.pendingErrorContext)
+        assertNull(viewModel.events.value)
 
         testDispatcher.scheduler.advanceUntilIdle()
+
         assertEquals(SignUpUiState.Idle, viewModel.uiState.value)
+        assertNull(viewModel.events.value)
     }
 }
