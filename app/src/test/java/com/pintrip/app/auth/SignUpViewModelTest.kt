@@ -1,12 +1,15 @@
 package com.pintrip.app.auth
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.pintrip.app.R
 import com.pintrip.app.data.model.User
 import com.pintrip.app.data.repository.UserRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -41,7 +44,7 @@ class SignUpViewModelTest {
 
     private class FakeUserRepository(
         private val profileToReturn: User? = null,
-        private val shouldThrowOnGet: Boolean = false,
+        var shouldThrowOnGet: Boolean = false,
         private val shouldThrowOnCreate: Boolean = false,
     ) : UserRepository(null, null) {
         var getUserProfileCallCount = 0
@@ -327,8 +330,8 @@ class SignUpViewModelTest {
 
     @Test
     fun `onGetStartedClicked emits NavigateToRoomList event ONCE when signup completed and active UID matches`() {
-        var activeUid: String? = "u123"
-        val fakeRepo = FakeUserRepository(profileToReturn = null)
+        val activeUid: String? = "u123"
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "Minji", email = "test@example.com"))
         val viewModel = SignUpViewModel(
             userRepository = fakeRepo,
             currentUidProvider = { activeUid },
@@ -341,20 +344,118 @@ class SignUpViewModelTest {
         val completeEvent = viewModel.events.value?.getContentIfNotHandled()
         assertTrue(completeEvent is SignUpEvent.ShowSignUpComplete)
 
-        // Click Get Started -> emits NavigateToRoomList event
+        // Click Get Started -> verifies profile and emits NavigateToRoomList event
         viewModel.onGetStartedClicked()
+        testDispatcher.scheduler.advanceUntilIdle()
+
         val navEvent1 = viewModel.events.value?.getContentIfNotHandled()
         assertTrue(navEvent1 is SignUpEvent.NavigateToRoomList)
 
-        // Second click onGetStartedClicked does not re-emit navigation event (unhandled content is null)
+        // Second click onGetStartedClicked does not re-emit navigation event
         viewModel.onGetStartedClicked()
+        testDispatcher.scheduler.advanceUntilIdle()
+
         assertNull(viewModel.events.value?.getContentIfNotHandled())
+    }
+
+    @Test
+    fun `restored SignUpViewModel with SavedStateHandle completed context fetches profile and emits NavigateToRoomList`() {
+        val savedStateHandle = SavedStateHandle().apply {
+            set("key_completed_uid", "u123")
+            set("key_is_signup_completed", true)
+        }
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "Minji", email = "test@example.com"))
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { "u123" },
+            savedStateHandle = savedStateHandle,
+        )
+
+        assertTrue(viewModel.isSignUpCompleted)
+        assertEquals("u123", viewModel.completedUid)
+
+        // Click Get Started on restored ViewModel
+        viewModel.onGetStartedClicked()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, fakeRepo.getUserProfileCallCount)
+        assertEquals(0, fakeRepo.createUserProfileCallCount) // Read-only check: zero profile creations
+        val event = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(event is SignUpEvent.NavigateToRoomList)
+    }
+
+    @Test
+    fun `restored SignUpViewModel with SavedStateHandle completion check throws exception emits ShowCompletionCheckError and retryCompletionCheck succeeds`() {
+        val savedStateHandle = SavedStateHandle().apply {
+            set("key_completed_uid", "u123")
+            set("key_is_signup_completed", true)
+        }
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "Minji", email = "test@example.com"), shouldThrowOnGet = true)
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { "u123" },
+            savedStateHandle = savedStateHandle,
+        )
+
+        viewModel.onGetStartedClicked()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, fakeRepo.getUserProfileCallCount)
+        assertEquals(0, fakeRepo.createUserProfileCallCount) // Read-only: zero writes
+        val event = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(event is SignUpEvent.ShowCompletionCheckError)
+        assertEquals("u123", (event as SignUpEvent.ShowCompletionCheckError).uid)
+
+        // Turn off throw, retry completion check
+        fakeRepo.shouldThrowOnGet = false
+        viewModel.retryCompletionCheck()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(2, fakeRepo.getUserProfileCallCount)
+        assertEquals(0, fakeRepo.createUserProfileCallCount) // Read-only: zero writes throughout!
+        val navEvent = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(navEvent is SignUpEvent.NavigateToRoomList)
+    }
+
+    @Test
+    fun `restored SignUpViewModel with SavedStateHandle completed context when UID mismatches emits FormError`() {
+        val savedStateHandle = SavedStateHandle().apply {
+            set("key_completed_uid", "u123")
+            set("key_is_signup_completed", true)
+        }
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "Minji", email = "test@example.com"))
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { "u999_different" },
+            savedStateHandle = savedStateHandle,
+        )
+
+        // Click Get Started on restored ViewModel when active UID is different
+        viewModel.onGetStartedClicked()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0, fakeRepo.getUserProfileCallCount)
+        val state = viewModel.uiState.value
+        assertTrue(state is SignUpUiState.FormError)
+        assertEquals(R.string.signup_error_generic, (state as SignUpUiState.FormError).messageResId)
+    }
+
+    @Test
+    fun `onGetStartedClicked when completion context is missing emits FormError`() {
+        val viewModel = SignUpViewModel()
+
+        // Call onGetStartedClicked without completed context
+        viewModel.onGetStartedClicked()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is SignUpUiState.FormError)
+        assertEquals(R.string.signup_error_generic, (state as SignUpUiState.FormError).messageResId)
     }
 
     @Test
     fun `onGetStartedClicked when active UID becomes null or changes to different UID does NOT navigate and emits FormError`() {
         var activeUid: String? = "u123"
-        val fakeRepo = FakeUserRepository(profileToReturn = null)
+        val fakeRepo = FakeUserRepository(profileToReturn = User(nickname = "Minji", email = "test@example.com"))
         val viewModel = SignUpViewModel(
             userRepository = fakeRepo,
             currentUidProvider = { activeUid },
@@ -373,10 +474,68 @@ class SignUpViewModelTest {
         // Click Get Started
         viewModel.onGetStartedClicked()
 
-        assertNull(viewModel.events.value)
         val state = viewModel.uiState.value
         assertTrue(state is SignUpUiState.FormError)
         assertEquals(R.string.signup_error_generic, (state as SignUpUiState.FormError).messageResId)
+    }
+
+    @Test
+    fun `cancellation of previous completion check does not clear new request loading state`() {
+        val savedStateHandle = SavedStateHandle().apply {
+            set("key_completed_uid", "u123")
+            set("key_is_signup_completed", true)
+        }
+
+        val deferredA = CompletableDeferred<User?>()
+        val deferredB = CompletableDeferred<User?>()
+        var getProfileCallCount = 0
+
+        val fakeRepo = object : UserRepository(null, null) {
+            override suspend fun getUserProfile(uid: String, source: com.google.firebase.firestore.Source): User? {
+                getProfileCallCount++
+                return if (getProfileCallCount == 1) {
+                    deferredA.await()
+                } else {
+                    deferredB.await()
+                }
+            }
+        }
+
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { "u123" },
+            savedStateHandle = savedStateHandle,
+        )
+
+        // 1. Completion verification A starts and pauses at deferredA
+        viewModel.onGetStartedClicked()
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(1, getProfileCallCount)
+        assertEquals(SignUpUiState.Loading, viewModel.uiState.value)
+
+        // 2. signOut invalidates session token A
+        viewModel.signOut()
+        assertEquals(SignUpUiState.Idle, viewModel.uiState.value)
+
+        // 3. New Request B starts (retryProfileStep) and enters loading state
+        viewModel.retryProfileStep(null, "u123", "Minji", "test@example.com", false)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(2, getProfileCallCount)
+        assertEquals(SignUpUiState.Loading, viewModel.uiState.value)
+
+        // 4. Request A completes with CancellationException
+        deferredA.completeExceptionally(CancellationException("Request A cancelled"))
+        testDispatcher.scheduler.runCurrent()
+
+        // 5. Verify Request A's cancellation DID NOT reset Request B's Loading state to Idle!
+        assertEquals(SignUpUiState.Loading, viewModel.uiState.value)
+
+        // 6. Complete Request B
+        deferredB.complete(User(nickname = "Minji", email = "test@example.com"))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Request B completed cleanly
+        assertEquals(SignUpUiState.Idle, viewModel.uiState.value)
     }
 
     @Test
@@ -385,12 +544,46 @@ class SignUpViewModelTest {
 
         // Call before completion
         viewModel.onGetStartedClicked()
-        assertNull(viewModel.events.value)
+        val stateBefore = viewModel.uiState.value
+        assertTrue(stateBefore is SignUpUiState.FormError)
 
         // Call after signOut
         viewModel.signOut()
         viewModel.onGetStartedClicked()
+        val stateAfter = viewModel.uiState.value
+        assertTrue(stateAfter is SignUpUiState.FormError)
         assertNull(viewModel.events.value)
+    }
+
+    @Test
+    fun `retryProfileStep does not call Auth createUserAction again`() {
+        var authCallCount = 0
+        val fakeRepo = FakeUserRepository(shouldThrowOnGet = true)
+
+        val viewModel = SignUpViewModel(
+            userRepository = fakeRepo,
+            currentUidProvider = { "u123" },
+            authUserProvider = { email, _, _ ->
+                authCallCount++
+                Pair("u123", email)
+            },
+        )
+
+        viewModel.performSignUp("Minji", "new@example.com", "password123", "password123", true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, authCallCount)
+        val event1 = viewModel.events.value?.getContentIfNotHandled()
+        assertTrue(event1 is SignUpEvent.ShowProfileLoadError)
+
+        val errorEvent = event1 as SignUpEvent.ShowProfileLoadError
+
+        // Retry profile step
+        viewModel.retryProfileStep(errorEvent.user, errorEvent.uid, errorEvent.nickname, errorEvent.email, errorEvent.isExistingAuthAccount)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Auth count must STILL be 1 (no re-creation of Auth user)
+        assertEquals(1, authCallCount)
     }
 
     @Test

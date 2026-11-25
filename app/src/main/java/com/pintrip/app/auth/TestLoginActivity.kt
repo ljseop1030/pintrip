@@ -202,7 +202,7 @@ class TestLoginActivity : AppCompatActivity(),
         viewModel.signOut()
     }
 
-    override fun onRetryProfile(isSaveError: Boolean) {
+    override fun onRetryProfile(isSaveError: Boolean, isCompletionCheck: Boolean) {
         if (isSaveError) {
             showNicknameDialog()
         } else {

@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doOnTextChanged
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Lifecycle
 import com.pintrip.app.R
 import com.pintrip.app.databinding.ActivitySignUpBinding
@@ -25,8 +26,16 @@ class SignUpActivity : AppCompatActivity(),
     ProfileCorruptedDialogFragment.Listener,
     SignUpCompleteDialogFragment.Listener {
 
+    companion object {
+        const val TAG_COMPLETION_ERROR = "CompletionCheckErrorDialogFragment"
+    }
+
     private lateinit var binding: ActivitySignUpBinding
-    private val viewModel: SignUpViewModel by viewModels()
+    private val viewModel: SignUpViewModel by viewModels {
+        SignUpViewModelFactory(owner = this)
+    }
+
+    private var pendingRetryAction: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +76,16 @@ class SignUpActivity : AppCompatActivity(),
     override fun onResumeFragments() {
         super.onResumeFragments()
         processPendingEventIfSafe()
+        processPendingRetryIfSafe()
+    }
+
+    private fun processPendingRetryIfSafe() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            return
+        }
+        val action = pendingRetryAction ?: return
+        pendingRetryAction = null
+        action.invoke()
     }
 
     private fun setupInputListeners() {
@@ -167,6 +186,8 @@ class SignUpActivity : AppCompatActivity(),
                     binding.btnSignUp.isEnabled = true
                     binding.btnSignUp.text = getString(R.string.btn_signup)
 
+                    dismissSignUpCompleteDialogIfNeeded()
+
                     binding.tilNickname.error = null
                     binding.tilEmail.error = null
                     binding.tilPassword.error = null
@@ -199,17 +220,32 @@ class SignUpActivity : AppCompatActivity(),
         }
     }
 
+    private fun dismissSignUpCompleteDialogIfNeeded() {
+        val completeDialog = supportFragmentManager.findFragmentByTag(SignUpCompleteDialogFragment.TAG)
+        if (completeDialog is DialogFragment) {
+            completeDialog.dismiss()
+        }
+    }
+
     private fun handleSignUpEvent(event: SignUpEvent) {
         when (event) {
             is SignUpEvent.ShowProfileLoadError -> {
+                dismissSignUpCompleteDialogIfNeeded()
                 showErrorDialog(R.string.signup_error_profile_title, R.string.signup_error_profile_load, false)
             }
 
             is SignUpEvent.ShowProfileSaveError -> {
+                dismissSignUpCompleteDialogIfNeeded()
                 showErrorDialog(R.string.signup_error_profile_title, R.string.signup_error_profile_save, true)
             }
 
+            is SignUpEvent.ShowCompletionCheckError -> {
+                dismissSignUpCompleteDialogIfNeeded()
+                showCompletionCheckErrorDialog()
+            }
+
             is SignUpEvent.ShowProfileCorrupted -> {
+                dismissSignUpCompleteDialogIfNeeded()
                 showCorruptedDialog()
             }
 
@@ -218,28 +254,60 @@ class SignUpActivity : AppCompatActivity(),
             }
 
             is SignUpEvent.NavigateToRoomList -> {
+                dismissSignUpCompleteDialogIfNeeded()
                 navigateToRoomList()
             }
         }
     }
 
+    private fun showCompletionCheckErrorDialog() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        val existing = supportFragmentManager.findFragmentByTag(TAG_COMPLETION_ERROR)
+        if (existing != null && !existing.isRemoving && !existing.isDetached) {
+            return
+        }
+        if (existing is DialogFragment) {
+            existing.dismissNow()
+        }
+        ProfileErrorDialogFragment.newInstance(
+            titleResId = R.string.signup_error_profile_title,
+            messageResId = R.string.signup_error_profile_load,
+            isSaveError = false,
+            isCompletionCheck = true,
+        ).show(supportFragmentManager, TAG_COMPLETION_ERROR)
+    }
+
     private fun showErrorDialog(titleRes: Int, messageRes: Int, isSaveError: Boolean) {
         if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
         val tag = if (isSaveError) ProfileErrorDialogFragment.TAG_SAVE_ERROR else ProfileErrorDialogFragment.TAG_LOAD_ERROR
-        if (supportFragmentManager.findFragmentByTag(tag) == null) {
-            ProfileErrorDialogFragment.newInstance(titleRes, messageRes, isSaveError)
-                .show(supportFragmentManager, tag)
+        val existing = supportFragmentManager.findFragmentByTag(tag)
+        if (existing != null && !existing.isRemoving && !existing.isDetached) {
+            return
         }
+        if (existing is DialogFragment) {
+            existing.dismissNow()
+        }
+        ProfileErrorDialogFragment.newInstance(
+            titleResId = titleRes,
+            messageResId = messageRes,
+            isSaveError = isSaveError,
+            isCompletionCheck = false,
+        ).show(supportFragmentManager, tag)
     }
 
     private fun showCorruptedDialog() {
         if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
-        if (supportFragmentManager.findFragmentByTag(ProfileCorruptedDialogFragment.TAG) == null) {
-            ProfileCorruptedDialogFragment.newInstance(
-                R.string.signup_dialog_corrupted_title,
-                R.string.signup_dialog_corrupted_message,
-            ).show(supportFragmentManager, ProfileCorruptedDialogFragment.TAG)
+        val existing = supportFragmentManager.findFragmentByTag(ProfileCorruptedDialogFragment.TAG)
+        if (existing != null && !existing.isRemoving && !existing.isDetached) {
+            return
         }
+        if (existing is DialogFragment) {
+            existing.dismissNow()
+        }
+        ProfileCorruptedDialogFragment.newInstance(
+            R.string.signup_dialog_corrupted_title,
+            R.string.signup_dialog_corrupted_message,
+        ).show(supportFragmentManager, ProfileCorruptedDialogFragment.TAG)
     }
 
     private fun showSignUpCompleteDialog(isExistingAccount: Boolean) {
@@ -250,21 +318,51 @@ class SignUpActivity : AppCompatActivity(),
             Pair(R.string.signup_complete_title, R.string.signup_complete_message)
         }
 
-        if (supportFragmentManager.findFragmentByTag(SignUpCompleteDialogFragment.TAG) == null) {
-            SignUpCompleteDialogFragment.newInstance(titleRes, messageRes)
-                .show(supportFragmentManager, SignUpCompleteDialogFragment.TAG)
+        val existing = supportFragmentManager.findFragmentByTag(SignUpCompleteDialogFragment.TAG)
+        if (existing != null && !existing.isRemoving && !existing.isDetached) {
+            return
+        }
+        if (existing is DialogFragment) {
+            existing.dismissNow()
+        }
+        SignUpCompleteDialogFragment.newInstance(titleRes, messageRes)
+            .show(supportFragmentManager, SignUpCompleteDialogFragment.TAG)
+    }
+
+    override fun onRetryProfile(isSaveError: Boolean, isCompletionCheck: Boolean) {
+        if (isFinishing || isDestroyed) return
+
+        val retryRunnable = {
+            val tag = when {
+                isCompletionCheck -> TAG_COMPLETION_ERROR
+                isSaveError -> ProfileErrorDialogFragment.TAG_SAVE_ERROR
+                else -> ProfileErrorDialogFragment.TAG_LOAD_ERROR
+            }
+            val existingDialog = supportFragmentManager.findFragmentByTag(tag) as? DialogFragment
+            if (existingDialog != null && !isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved) {
+                existingDialog.dismissNow()
+            }
+            if (isCompletionCheck) {
+                viewModel.retryCompletionCheck()
+            } else {
+                viewModel.retryProfileStep()
+            }
+        }
+
+        if (supportFragmentManager.isStateSaved || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            pendingRetryAction = retryRunnable
+        } else {
+            retryRunnable.invoke()
         }
     }
 
-    override fun onRetryProfile(isSaveError: Boolean) {
-        viewModel.retryProfileStep()
-    }
-
     override fun onSignOutFromErrorDialog() {
+        pendingRetryAction = null
         viewModel.signOut()
     }
 
     override fun onSignOutFromCorruptedDialog() {
+        pendingRetryAction = null
         viewModel.signOut()
     }
 
@@ -287,5 +385,34 @@ class SignUpActivity : AppCompatActivity(),
         binding.tilConfirmPassword.error = null
         binding.tvTermsError.visibility = View.GONE
         binding.tvFormError.visibility = View.GONE
+    }
+}
+
+class SignUpViewModelFactory(
+    private val auth: com.google.firebase.auth.FirebaseAuth? = null,
+    private val userRepository: com.pintrip.app.data.repository.UserRepository? = null,
+    private val createUserAction: (suspend (String, String) -> com.google.firebase.auth.FirebaseUser?)? = null,
+    private val signInAction: (suspend (String, String) -> com.google.firebase.auth.FirebaseUser?)? = null,
+    private val authUserProvider: (suspend (String, String, Boolean) -> Pair<String, String?>?)? = null,
+    private val currentUidProvider: (() -> String?)? = null,
+    owner: androidx.savedstate.SavedStateRegistryOwner,
+    defaultArgs: Bundle? = null,
+) : androidx.lifecycle.AbstractSavedStateViewModelFactory(owner, defaultArgs) {
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(
+        key: String,
+        modelClass: Class<T>,
+        handle: androidx.lifecycle.SavedStateHandle,
+    ): T {
+        return SignUpViewModel(
+            auth = auth,
+            userRepository = userRepository,
+            createUserAction = createUserAction,
+            signInAction = signInAction,
+            authUserProvider = authUserProvider,
+            currentUidProvider = currentUidProvider,
+            savedStateHandle = handle,
+        ) as T
     }
 }

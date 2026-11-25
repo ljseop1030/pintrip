@@ -93,7 +93,7 @@ class ProfileNicknameDialogFragment : DialogFragment() {
 }
 
 /**
- * 프로필 조회/저장 오류 다이얼로그 (DialogFragment로 수명 관리).
+ * 프로필 조회/저장/완료검증 오류 다이얼로그 (DialogFragment로 수명 관리).
  */
 class ProfileErrorDialogFragment : DialogFragment() {
 
@@ -104,20 +104,27 @@ class ProfileErrorDialogFragment : DialogFragment() {
         private const val ARG_TITLE_RES = "arg_title_res"
         private const val ARG_MSG_RES = "arg_msg_res"
         private const val ARG_IS_SAVE_ERROR = "arg_is_save_error"
+        private const val ARG_IS_COMPLETION_CHECK = "arg_is_completion_check"
 
-        fun newInstance(titleResId: Int, messageResId: Int, isSaveError: Boolean = false): ProfileErrorDialogFragment {
+        fun newInstance(
+            titleResId: Int,
+            messageResId: Int,
+            isSaveError: Boolean = false,
+            isCompletionCheck: Boolean = false,
+        ): ProfileErrorDialogFragment {
             return ProfileErrorDialogFragment().apply {
                 arguments = Bundle().apply {
                     putInt(ARG_TITLE_RES, titleResId)
                     putInt(ARG_MSG_RES, messageResId)
                     putBoolean(ARG_IS_SAVE_ERROR, isSaveError)
+                    putBoolean(ARG_IS_COMPLETION_CHECK, isCompletionCheck)
                 }
             }
         }
     }
 
     interface Listener {
-        fun onRetryProfile(isSaveError: Boolean)
+        fun onRetryProfile(isSaveError: Boolean, isCompletionCheck: Boolean)
         fun onSignOutFromErrorDialog()
     }
 
@@ -138,13 +145,14 @@ class ProfileErrorDialogFragment : DialogFragment() {
         val titleRes = requireArguments().getInt(ARG_TITLE_RES)
         val msgRes = requireArguments().getInt(ARG_MSG_RES)
         val isSaveError = requireArguments().getBoolean(ARG_IS_SAVE_ERROR)
+        val isCompletionCheck = requireArguments().getBoolean(ARG_IS_COMPLETION_CHECK)
 
         return AlertDialog.Builder(requireContext())
             .setTitle(getString(titleRes))
             .setMessage(getString(msgRes))
             .setCancelable(false)
             .setPositiveButton(getString(R.string.login_btn_retry)) { _, _ ->
-                listener?.onRetryProfile(isSaveError)
+                listener?.onRetryProfile(isSaveError, isCompletionCheck)
             }
             .setNegativeButton(getString(R.string.login_btn_sign_out)) { _, _ ->
                 listener?.onSignOutFromErrorDialog()
@@ -252,9 +260,15 @@ class SignUpCompleteDialogFragment : DialogFragment() {
             .setTitle(getString(titleRes))
             .setMessage(getString(msgRes))
             .setCancelable(false)
-            .setPositiveButton(getString(R.string.signup_btn_get_started)) { _, _ ->
-                listener?.onGetStartedFromSignUpComplete()
-            }
+            .setPositiveButton(getString(R.string.signup_btn_get_started), null)
             .create()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val alertDialog = dialog as? AlertDialog ?: return
+        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
+            listener?.onGetStartedFromSignUpComplete()
+        }
     }
 }

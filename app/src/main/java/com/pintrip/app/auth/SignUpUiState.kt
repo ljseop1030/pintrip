@@ -42,6 +42,10 @@ sealed interface SignUpEvent {
         val isExistingAuthAccount: Boolean,
     ) : SignUpEvent
 
+    data class ShowCompletionCheckError(
+        val uid: String,
+    ) : SignUpEvent
+
     object ShowProfileCorrupted : SignUpEvent
 
     data class ShowSignUpComplete(

@@ -3,6 +3,7 @@ package com.pintrip.app.auth
 import android.util.Patterns
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -30,7 +31,13 @@ class SignUpViewModel(
     private val signInAction: (suspend (String, String) -> FirebaseUser?)? = null,
     private val authUserProvider: (suspend (String, String, Boolean) -> Pair<String, String?>?)? = null,
     private val currentUidProvider: (() -> String?)? = null,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
+
+    companion object {
+        private const val KEY_COMPLETED_UID = "key_completed_uid"
+        private const val KEY_IS_SIGNUP_COMPLETED = "key_is_signup_completed"
+    }
 
     data class PendingErrorContext(
         val user: FirebaseUser?,
@@ -61,9 +68,19 @@ class SignUpViewModel(
     val events: LiveData<Event<SignUpEvent>?> get() = _events
 
     private var isSignUpInProgress = false
-    private var isSignUpCompleted = false
-    private var completedUid: String? = null
     private var sessionToken = 0L
+
+    var isSignUpCompleted: Boolean
+        get() = savedStateHandle.get<Boolean>(KEY_IS_SIGNUP_COMPLETED) ?: false
+        private set(value) {
+            savedStateHandle[KEY_IS_SIGNUP_COMPLETED] = value
+        }
+
+    var completedUid: String?
+        get() = savedStateHandle.get<String>(KEY_COMPLETED_UID)
+        private set(value) {
+            savedStateHandle[KEY_COMPLETED_UID] = value
+        }
 
     var pendingErrorContext: PendingErrorContext? = null
         private set
@@ -363,19 +380,70 @@ class SignUpViewModel(
         }
     }
 
+    fun retryCompletionCheck() {
+        if (completedUid.isNullOrBlank()) {
+            _uiState.value = SignUpUiState.FormError(R.string.signup_error_generic)
+            return
+        }
+        isSignUpCompleted = true
+        onGetStartedClicked()
+    }
+
     fun onGetStartedClicked() {
-        if (!isSignUpCompleted) return
-        val currentUid = getCurrentAuthUid()
-        if (currentUid.isNullOrBlank() || currentUid != completedUid) {
+        if (!isSignUpCompleted || completedUid.isNullOrBlank()) {
             isSignUpCompleted = false
             completedUid = null
             _events.value = null
             _uiState.value = SignUpUiState.FormError(R.string.signup_error_generic)
             return
         }
-        isSignUpCompleted = false
-        completedUid = null
-        _events.value = Event(SignUpEvent.NavigateToRoomList)
+
+        val targetUid = completedUid.orEmpty()
+        val activeUid = getCurrentAuthUid()
+
+        if (activeUid.isNullOrBlank() || targetUid.isBlank() || activeUid != targetUid) {
+            isSignUpCompleted = false
+            completedUid = null
+            _events.value = null
+            _uiState.value = SignUpUiState.FormError(R.string.signup_error_generic)
+            return
+        }
+
+        if (_uiState.value is SignUpUiState.Loading) return
+        _uiState.value = SignUpUiState.Loading
+        val token = ++sessionToken
+
+        viewModelScope.launch {
+            try {
+                if (!validateSessionAndUid(token, targetUid)) return@launch
+
+                val profile = userRepo.getUserProfile(targetUid, source = Source.SERVER)
+                if (!validateSessionAndUid(token, targetUid)) return@launch
+
+                _uiState.value = SignUpUiState.Idle
+
+                if (profile != null && profile.nickname.isNotBlank()) {
+                    isSignUpCompleted = false
+                    completedUid = null
+                    _events.value = Event(SignUpEvent.NavigateToRoomList)
+                } else if (profile != null && profile.nickname.isBlank()) {
+                    isSignUpCompleted = false
+                    completedUid = null
+                    _events.value = Event(SignUpEvent.ShowProfileCorrupted)
+                } else {
+                    _events.value = Event(SignUpEvent.ShowCompletionCheckError(targetUid))
+                }
+            } catch (e: CancellationException) {
+                if (token == sessionToken) {
+                    _uiState.value = SignUpUiState.Idle
+                }
+                throw e
+            } catch (_: Exception) {
+                if (!validateSessionAndUid(token, targetUid)) return@launch
+                _uiState.value = SignUpUiState.Idle
+                _events.value = Event(SignUpEvent.ShowCompletionCheckError(targetUid))
+            }
+        }
     }
 
     fun signOut() {
