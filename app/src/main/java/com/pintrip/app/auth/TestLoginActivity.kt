@@ -2,24 +2,17 @@ package com.pintrip.app.auth
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.EditText
-import android.widget.Toast
+import android.view.View
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AlertDialog
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.Source
+import androidx.core.widget.doOnTextChanged
+import androidx.lifecycle.Lifecycle
 import com.pintrip.app.R
-import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.databinding.ActivityTestLoginBinding
 import com.pintrip.app.room.RoomListActivity
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 /**
  * 정식 로그인 화면 (Figma S01).
@@ -27,11 +20,13 @@ import kotlinx.coroutines.tasks.await
  * 이메일/비밀번호로 로그인하며, 프로필 문서(users/{uid})가 없는 경우
  * 화면에서 닉네임을 입력받아 프로필을 생성합니다.
  */
-class TestLoginActivity : AppCompatActivity() {
+class TestLoginActivity : AppCompatActivity(),
+    ProfileNicknameDialogFragment.Listener,
+    ProfileErrorDialogFragment.Listener,
+    ProfileCorruptedDialogFragment.Listener {
 
     private lateinit var binding: ActivityTestLoginBinding
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-    private val userRepository: UserRepository by lazy { UserRepository(auth = auth) }
+    private val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,176 +37,191 @@ class TestLoginActivity : AppCompatActivity() {
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
+            val bottomPadding = maxOf(systemBars.bottom, ime.bottom)
+            binding.scrollView.setPadding(0, 0, 0, bottomPadding)
+
             insets
         }
 
+        setupInputListeners()
+        observeViewModel()
+
         binding.btnLogin.setOnClickListener {
-            performLogin()
+            viewModel.performLogin(
+                emailRaw = binding.etEmail.text?.toString().orEmpty(),
+                passwordRaw = binding.etPassword.text?.toString().orEmpty(),
+            )
         }
 
         binding.tvSignUpLink.setOnClickListener {
             startActivity(Intent(this, SignUpActivity::class.java))
         }
 
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            binding.tvStatus.text = getString(R.string.status_logging_in)
-            binding.btnLogin.isEnabled = false
-            checkProfileAndNavigate(currentUser)
-        } else {
-            binding.tvStatus.text = getString(R.string.status_logged_out)
-            binding.btnLogin.isEnabled = true
+        viewModel.checkExistingSession()
+    }
+
+    override fun onResumeFragments() {
+        super.onResumeFragments()
+        processPendingEventIfSafe()
+    }
+
+    private fun setupInputListeners() {
+        binding.etEmail.doOnTextChanged { _, _, _, _ ->
+            if (binding.etEmail.hasFocus()) {
+                binding.tilEmail.error = null
+                binding.tvFormError.visibility = View.GONE
+                viewModel.clearEmailError()
+            }
+        }
+
+        binding.etPassword.doOnTextChanged { _, _, _, _ ->
+            if (binding.etPassword.hasFocus()) {
+                binding.tilPassword.error = null
+                binding.tvFormError.visibility = View.GONE
+                viewModel.clearPasswordError()
+            }
         }
     }
 
-    private fun performLogin() {
-        val email = binding.etEmail.text?.toString()?.trim().orEmpty()
-        val password = binding.etPassword.text?.toString().orEmpty()
-
-        if (email.isEmpty()) {
-            binding.tilEmail.error = getString(R.string.error_empty_email)
-            return
-        } else {
-            binding.tilEmail.error = null
-        }
-
-        if (password.isEmpty()) {
-            binding.tilPassword.error = getString(R.string.error_empty_password)
-            return
-        } else {
-            binding.tilPassword.error = null
-        }
-
-        binding.tvStatus.text = getString(R.string.status_logging_in)
-        binding.btnLogin.isEnabled = false
-
-        lifecycleScope.launch {
-            try {
-                val authResult = auth.signInWithEmailAndPassword(email, password).await()
-                val user = authResult.user
-                if (user != null) {
-                    checkProfileAndNavigate(user)
-                } else {
+    private fun observeViewModel() {
+        viewModel.uiState.observe(this) { state ->
+            when (state) {
+                is LoginUiState.Idle -> {
                     binding.btnLogin.isEnabled = true
+                    binding.btnLogin.text = getString(R.string.btn_login)
+                    clearAllErrorsFromUi()
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                binding.btnLogin.isEnabled = true
-                val errorMsg = e.localizedMessage ?: getString(R.string.error_login_failed_default)
-                binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
+
+                is LoginUiState.Loading -> {
+                    binding.btnLogin.isEnabled = false
+                    binding.btnLogin.text = getString(R.string.login_status_signing_in)
+                    clearAllErrorsFromUi()
+                }
+
+                is LoginUiState.InputError -> {
+                    binding.btnLogin.isEnabled = true
+                    binding.btnLogin.text = getString(R.string.btn_login)
+
+                    binding.tilEmail.error = state.emailErrorResId?.let { getString(it) }
+                    binding.tilPassword.error = state.passwordErrorResId?.let { getString(it) }
+                    binding.tvFormError.visibility = View.GONE
+                }
+
+                is LoginUiState.FormError -> {
+                    binding.btnLogin.isEnabled = true
+                    binding.btnLogin.text = getString(R.string.btn_login)
+
+                    binding.tilEmail.error = null
+                    binding.tilPassword.error = null
+                    binding.tvFormError.text = getString(state.messageResId)
+                    binding.tvFormError.visibility = View.VISIBLE
+
+                    binding.scrollView.post {
+                        if (binding.tvFormError.visibility == View.VISIBLE) {
+                            binding.scrollView.scrollToEnsureViewFullyVisible(binding.tvFormError)
+                        }
+                    }
+                }
+            }
+        }
+
+        viewModel.events.observe(this) {
+            processPendingEventIfSafe()
+        }
+    }
+
+    private fun processPendingEventIfSafe() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            return
+        }
+        val eventWrapper = viewModel.events.value ?: return
+        if (!eventWrapper.hasBeenHandled) {
+            eventWrapper.getContentIfNotHandled()?.let { handleLoginEvent(it) }
+        }
+    }
+
+    private fun handleLoginEvent(event: LoginEvent) {
+        when (event) {
+            is LoginEvent.ShowProfileMissing -> {
+                showNicknameDialog()
+            }
+
+            is LoginEvent.ShowProfileCorrupted -> {
+                showCorruptedDialog()
+            }
+
+            is LoginEvent.ShowProfileLoadError -> {
+                showErrorDialog(R.string.login_error_profile_title, R.string.login_error_profile_load, false)
+            }
+
+            is LoginEvent.ShowProfileSaveError -> {
+                showErrorDialog(R.string.login_error_profile_title, R.string.login_error_profile_save, true)
+            }
+
+            is LoginEvent.NavigateToRoomList -> {
+                navigateToRoomList()
             }
         }
     }
 
-    private fun checkProfileAndNavigate(user: FirebaseUser) {
-        lifecycleScope.launch {
-            try {
-                binding.btnLogin.isEnabled = false
-                val profile = userRepository.getUserProfile(user.uid, source = Source.SERVER)
-                if (profile != null) {
-                    if (profile.nickname.isNotBlank()) {
-                        navigateToRoomList()
-                    } else {
-                        showCorruptedProfileDialog()
-                    }
-                } else {
-                    promptProfileNickname(user)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                binding.btnLogin.isEnabled = true
-                val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_load_failed)
-                binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
-
-                AlertDialog.Builder(this@TestLoginActivity)
-                    .setTitle(getString(R.string.error_profile_load_failed))
-                    .setMessage(errorMsg)
-                    .setCancelable(false)
-                    .setPositiveButton(getString(R.string.btn_retry)) { _, _ ->
-                        checkProfileAndNavigate(user)
-                    }
-                    .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                        auth.signOut()
-                        binding.tvStatus.text = getString(R.string.status_logged_out)
-                        binding.btnLogin.isEnabled = true
-                    }
-                    .show()
-            }
+    private fun showNicknameDialog() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        if (supportFragmentManager.findFragmentByTag(ProfileNicknameDialogFragment.TAG) == null) {
+            ProfileNicknameDialogFragment.newInstance()
+                .show(supportFragmentManager, ProfileNicknameDialogFragment.TAG)
         }
     }
 
-    private fun showCorruptedProfileDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.error_profile_corrupted_title))
-            .setMessage(getString(R.string.error_profile_corrupted_message))
-            .setCancelable(false)
-            .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                auth.signOut()
-                binding.tvStatus.text = getString(R.string.status_logged_out)
-                binding.btnLogin.isEnabled = true
-            }
-            .show()
+    private fun showCorruptedDialog() {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        if (supportFragmentManager.findFragmentByTag(ProfileCorruptedDialogFragment.TAG) == null) {
+            ProfileCorruptedDialogFragment.newInstance(
+                R.string.login_dialog_profile_corrupted_title,
+                R.string.login_dialog_profile_corrupted_message,
+            ).show(supportFragmentManager, ProfileCorruptedDialogFragment.TAG)
+        }
     }
 
-    private fun promptProfileNickname(user: FirebaseUser) {
-        val input = EditText(this).apply {
-            hint = getString(R.string.nickname_hint)
+    private fun showErrorDialog(titleRes: Int, messageRes: Int, isSaveError: Boolean) {
+        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
+        val tag = if (isSaveError) ProfileErrorDialogFragment.TAG_SAVE_ERROR else ProfileErrorDialogFragment.TAG_LOAD_ERROR
+        if (supportFragmentManager.findFragmentByTag(tag) == null) {
+            ProfileErrorDialogFragment.newInstance(titleRes, messageRes, isSaveError)
+                .show(supportFragmentManager, tag)
         }
+    }
 
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.profile_dialog_title))
-            .setMessage(getString(R.string.profile_dialog_message))
-            .setView(input)
-            .setCancelable(false)
-            .setPositiveButton(getString(R.string.btn_save_profile)) { _, _ ->
-                val nickname = input.text.toString().trim()
-                if (nickname.isBlank()) {
-                    Toast.makeText(this@TestLoginActivity, getString(R.string.error_empty_nickname), Toast.LENGTH_SHORT).show()
-                    promptProfileNickname(user)
-                    return@setPositiveButton
-                }
+    override fun onSaveNickname(nickname: String) {
+        viewModel.saveProfileNickname(nickname)
+    }
 
-                lifecycleScope.launch {
-                    try {
-                        userRepository.createUserProfile(
-                            uid = user.uid,
-                            nickname = nickname,
-                            email = user.email.orEmpty(),
-                        )
-                        Toast.makeText(this@TestLoginActivity, getString(R.string.status_signup_success), Toast.LENGTH_SHORT).show()
-                        navigateToRoomList()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        binding.btnLogin.isEnabled = true
-                        val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_save_failed)
-                        binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
+    override fun onSignOutFromNicknameDialog() {
+        viewModel.signOut()
+    }
 
-                        AlertDialog.Builder(this@TestLoginActivity)
-                            .setTitle(getString(R.string.error_profile_save_failed))
-                            .setMessage(errorMsg)
-                            .setCancelable(false)
-                            .setPositiveButton(getString(R.string.btn_retry_profile)) { _, _ ->
-                                promptProfileNickname(user)
-                            }
-                            .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                                auth.signOut()
-                                binding.tvStatus.text = getString(R.string.status_logged_out)
-                                binding.btnLogin.isEnabled = true
-                            }
-                            .show()
-                    }
-                }
-            }
-            .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                auth.signOut()
-                binding.tvStatus.text = getString(R.string.status_logged_out)
-                binding.btnLogin.isEnabled = true
-            }
-            .show()
+    override fun onRetryProfile(isSaveError: Boolean, isCompletionCheck: Boolean) {
+        if (isSaveError) {
+            showNicknameDialog()
+        } else {
+            viewModel.retryProfileCheck()
+        }
+    }
+
+    override fun onSignOutFromErrorDialog() {
+        viewModel.signOut()
+    }
+
+    override fun onSignOutFromCorruptedDialog() {
+        viewModel.signOut()
+    }
+
+    private fun clearAllErrorsFromUi() {
+        binding.tilEmail.error = null
+        binding.tilPassword.error = null
+        binding.tvFormError.visibility = View.GONE
     }
 
     private fun navigateToRoomList() {
