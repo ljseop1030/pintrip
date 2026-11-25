@@ -341,10 +341,10 @@
     <string name="notification_channel_nearby_place">근처 장소</string>
     <string name="notification_travel_mode_title">여행 모드</string>
     <string name="notification_travel_mode_content_format">여행 모드 · %1$s</string>
-    <string name="notification_travel_mode_loading">여행 모드 · %1$s · 장소 불러오는 중</string>
-    <string name="notification_travel_mode_loaded">여행 모드 · %1$s · 장소 %2$d곳 확인 중</string>
-    <string name="notification_travel_mode_load_failed">여행 모드 · %1$s · 장소를 불러오지 못했어요</string>
-    <string name="notification_nearby_place_title">근처에 %1$s이(가) 있어요</string>
+    <string name="notification_travel_mode_loading">%1$s · 장소 불러오는 중</string>
+    <string name="notification_travel_mode_loaded">%1$s · 장소 %2$d곳 확인 중</string>
+    <string name="notification_travel_mode_load_failed">%1$s · 장소를 불러오지 못했어요</string>
+    <string name="notification_nearby_place_title">근처에 %1$s%2$s 있어요</string>
     <string name="notification_nearby_place_content">%1$dm · 눌러서 자세히 보기</string>
     <string name="notification_action_stop">끄기</string>
 

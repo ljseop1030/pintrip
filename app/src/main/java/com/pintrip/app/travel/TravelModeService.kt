@@ -29,6 +29,7 @@ import com.pintrip.app.data.repository.PlaceDetailRepository
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.map.RoomMapActivity
 import com.pintrip.app.place.PlaceDetailActivity
+import com.pintrip.app.ui.common.KoreanJosa
 import com.pintrip.app.ui.common.LocationPermissionHelper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -249,9 +250,10 @@ class TravelModeService : Service() {
             )
         }
 
+        val particle = KoreanJosa.subjectParticle(candidate.name)
         val notification = NotificationCompat.Builder(this, NEARBY_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_pintrip_pin)
-            .setContentTitle(getString(R.string.notification_nearby_place_title, candidate.name))
+            .setContentTitle(getString(R.string.notification_nearby_place_title, candidate.name, particle))
             .setContentText(getString(R.string.notification_nearby_place_content, distance))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
