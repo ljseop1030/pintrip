@@ -48,6 +48,26 @@ service cloud.firestore {
         && request.resource.data.avatarColor.matches('^#[0-9A-Fa-f]{6}$')
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.keys().hasOnly(['nickname', 'email', 'avatarColor', 'createdAt']);
+
+      // -----------------------------------------------------------
+      // 기기 토큰 서브컬렉션 규칙 (users/{uid}/devices/{installationId})
+      // -----------------------------------------------------------
+      match /devices/{installationId} {
+        // 읽기: 본인 UID만 허용
+        allow read: if isSignedIn() && request.auth.uid == uid;
+
+        // 생성 (create) / 수정 (update): 본인 UID + 필드 규격 검증 (token: 비어있지 않은 문자열, platform: 'android', updatedAt: 서버시각)
+        allow create, update: if isSignedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.platform == 'android'
+          && request.resource.data.updatedAt == request.time;
+
+        // 삭제 (delete): 본인 UID만 허용
+        allow delete: if isSignedIn() && request.auth.uid == uid;
+      }
     }
 
     // -------------------------------------------------------------
@@ -331,6 +351,16 @@ service cloud.firestore {
               && request.resource.data.likeCount == resource.data.likeCount - 1
             )
           );
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 4. 서버 전용 알림 추적 컬렉션 (notificationEvents/{eventId})
+    // -------------------------------------------------------------
+    match /notificationEvents/{eventId} {
+      allow read, write: if false;
+      match /{allChildren=**} {
+        allow read, write: if false;
       }
     }
 

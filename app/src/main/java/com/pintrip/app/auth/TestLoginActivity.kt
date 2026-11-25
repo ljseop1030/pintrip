@@ -2,6 +2,7 @@ package com.pintrip.app.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -14,12 +15,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.Source
 import com.pintrip.app.R
+import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.databinding.ActivityTestLoginBinding
 import com.pintrip.app.room.RoomListActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 /**
  * 정식 로그인 화면 (Figma S01).
@@ -29,13 +30,17 @@ import kotlinx.coroutines.tasks.await
  */
 class TestLoginActivity : AppCompatActivity() {
 
+    companion object {
+        private const val TAG = "TestLoginActivity"
+    }
+
     private lateinit var binding: ActivityTestLoginBinding
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val userRepository: UserRepository by lazy { UserRepository(auth = auth) }
+    private val deviceTokenRepository: DeviceTokenRepository by lazy { DeviceTokenRepository.getInstance(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
         binding = ActivityTestLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -56,53 +61,43 @@ class TestLoginActivity : AppCompatActivity() {
 
         val currentUser = auth.currentUser
         if (currentUser != null) {
-            binding.tvStatus.text = getString(R.string.status_logging_in)
-            binding.btnLogin.isEnabled = false
             checkProfileAndNavigate(currentUser)
         } else {
             binding.tvStatus.text = getString(R.string.status_logged_out)
-            binding.btnLogin.isEnabled = true
         }
     }
 
     private fun performLogin() {
-        val email = binding.etEmail.text?.toString()?.trim().orEmpty()
-        val password = binding.etPassword.text?.toString().orEmpty()
+        val email = binding.etEmail.text.toString().trim()
+        val password = binding.etPassword.text.toString().trim()
 
-        if (email.isEmpty()) {
-            binding.tilEmail.error = getString(R.string.error_empty_email)
+        if (email.isBlank()) {
+            Toast.makeText(this, getString(R.string.error_empty_email), Toast.LENGTH_SHORT).show()
             return
-        } else {
-            binding.tilEmail.error = null
+        }
+        if (password.isBlank()) {
+            Toast.makeText(this, getString(R.string.error_empty_password), Toast.LENGTH_SHORT).show()
+            return
         }
 
-        if (password.isEmpty()) {
-            binding.tilPassword.error = getString(R.string.error_empty_password)
-            return
-        } else {
-            binding.tilPassword.error = null
-        }
-
-        binding.tvStatus.text = getString(R.string.status_logging_in)
         binding.btnLogin.isEnabled = false
+        binding.tvStatus.text = getString(R.string.status_logging_in)
 
-        lifecycleScope.launch {
-            try {
-                val authResult = auth.signInWithEmailAndPassword(email, password).await()
-                val user = authResult.user
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnSuccessListener { result ->
+                val user = result.user
                 if (user != null) {
                     checkProfileAndNavigate(user)
                 } else {
                     binding.btnLogin.isEnabled = true
+                    binding.tvStatus.text = getString(R.string.status_login_failed, getString(R.string.error_login_failed_default))
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
+            }
+            .addOnFailureListener { e ->
                 binding.btnLogin.isEnabled = true
                 val errorMsg = e.localizedMessage ?: getString(R.string.error_login_failed_default)
                 binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
             }
-        }
     }
 
     private fun checkProfileAndNavigate(user: FirebaseUser) {
@@ -112,9 +107,18 @@ class TestLoginActivity : AppCompatActivity() {
                 val profile = userRepository.getUserProfile(user.uid, source = Source.SERVER)
                 if (profile != null) {
                     if (profile.nickname.isNotBlank()) {
+                        deviceTokenRepository.activateSession(user.uid)
+                        launch {
+                            try {
+                                deviceTokenRepository.syncToken()
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                Log.w(TAG, "Failed to sync token on login: ${e.message}")
+                            }
+                        }
                         navigateToRoomList()
                     } else {
-                        showCorruptedProfileDialog()
+                        showCorruptedProfileDialog(user.uid)
                     }
                 } else {
                     promptProfileNickname(user)
@@ -134,24 +138,20 @@ class TestLoginActivity : AppCompatActivity() {
                         checkProfileAndNavigate(user)
                     }
                     .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                        auth.signOut()
-                        binding.tvStatus.text = getString(R.string.status_logged_out)
-                        binding.btnLogin.isEnabled = true
+                        performLogout(user.uid)
                     }
                     .show()
             }
         }
     }
 
-    private fun showCorruptedProfileDialog() {
+    private fun showCorruptedProfileDialog(uid: String) {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.error_profile_corrupted_title))
             .setMessage(getString(R.string.error_profile_corrupted_message))
             .setCancelable(false)
             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                auth.signOut()
-                binding.tvStatus.text = getString(R.string.status_logged_out)
-                binding.btnLogin.isEnabled = true
+                performLogout(uid)
             }
             .show()
     }
@@ -179,14 +179,21 @@ class TestLoginActivity : AppCompatActivity() {
                         userRepository.createUserProfile(
                             uid = user.uid,
                             nickname = nickname,
-                            email = user.email.orEmpty(),
+                            email = user.email ?: "",
                         )
-                        Toast.makeText(this@TestLoginActivity, getString(R.string.status_signup_success), Toast.LENGTH_SHORT).show()
+                        deviceTokenRepository.activateSession(user.uid)
+                        launch {
+                            try {
+                                deviceTokenRepository.syncToken()
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                Log.w(TAG, "Failed to sync token on profile creation: ${e.message}")
+                            }
+                        }
                         navigateToRoomList()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        binding.btnLogin.isEnabled = true
                         val errorMsg = e.localizedMessage ?: getString(R.string.error_profile_save_failed)
                         binding.tvStatus.text = getString(R.string.status_login_failed, errorMsg)
 
@@ -198,20 +205,32 @@ class TestLoginActivity : AppCompatActivity() {
                                 promptProfileNickname(user)
                             }
                             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                                auth.signOut()
-                                binding.tvStatus.text = getString(R.string.status_logged_out)
-                                binding.btnLogin.isEnabled = true
+                                performLogout(user.uid)
                             }
                             .show()
                     }
                 }
             }
             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                auth.signOut()
-                binding.tvStatus.text = getString(R.string.status_logged_out)
-                binding.btnLogin.isEnabled = true
+                performLogout(user.uid)
             }
             .show()
+    }
+
+    private fun performLogout(previousUid: String?) {
+        lifecycleScope.launch {
+            if (!previousUid.isNullOrBlank()) {
+                try {
+                    deviceTokenRepository.cleanupTokenOnLogout(previousUid)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Failed to cleanup token on logout: ${e.message}")
+                }
+            }
+            auth.signOut()
+            binding.tvStatus.text = getString(R.string.status_logged_out)
+            binding.btnLogin.isEnabled = true
+        }
     }
 
     private fun navigateToRoomList() {

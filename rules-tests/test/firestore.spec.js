@@ -2047,4 +2047,120 @@ describe("Firestore Security Rules Tests", () => {
       assert.strictEqual(snap.data().likeCount, 1);
     });
   });
+
+  describe("users/{uid}/devices/{installationId} subcollection rules", () => {
+    const userUid = "user_1";
+    const otherUid = "user_2";
+    const installationId = "install_123";
+
+    it("allows logged-in user to create their own device token document", async () => {
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertSucceeds(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("allows logged-in user to update their own device token document", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection("users").doc(userUid).collection("devices").doc(installationId).set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: new Date(),
+        });
+      });
+
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertSucceeds(
+        deviceRef.update({
+          token: "fcm_token_updated",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("allows logged-in user to delete their own device token document", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection("users").doc(userUid).collection("devices").doc(installationId).set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: new Date(),
+        });
+      });
+
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertSucceeds(deviceRef.delete());
+    });
+
+    it("rejects unauthenticated user from reading/writing device token document", async () => {
+      const db = getDb(null);
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertFails(deviceRef.get());
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("rejects user from accessing another user's device token document", async () => {
+      const db = getDb({ uid: otherUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertFails(deviceRef.get());
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+      await assertFails(deviceRef.delete());
+    });
+
+    it("rejects device token creation with invalid fields or non-android platform", async () => {
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "ios",
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+          extraField: "bad",
+        })
+      );
+
+      await assertFails(
+        deviceRef.set({
+          token: "",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+  });
 });

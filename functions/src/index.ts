@@ -1,0 +1,1 @@
+export { onFriendPlaceAdded } from "./onFriendPlaceAdded";

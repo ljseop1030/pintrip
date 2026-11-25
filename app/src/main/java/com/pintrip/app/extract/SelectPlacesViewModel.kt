@@ -1,5 +1,6 @@
 package com.pintrip.app.extract
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -205,7 +206,7 @@ class SelectPlacesViewModel(
     /**
      * 체크된 유효 장소 목록을 [Place] 모델로 변환하여 [PlaceRepository.addPlaces]를 호출해 저장합니다.
      */
-    fun saveSelectedPlaces(skipUnconfirmed: Boolean = false) {
+    fun saveSelectedPlaces(context: Context? = null, skipUnconfirmed: Boolean = false) {
         if (_isSaving.value == true) return
         _isSaving.value = true
 
@@ -317,6 +318,22 @@ class SelectPlacesViewModel(
 
                 val result = placeRepository.addPlaces(currentRoomId, placesToSave)
                 Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=$excludedCount, notFound=$notFoundCount")
+
+                result.addedPlaces.forEach { addedPlace ->
+                    if (context != null) {
+                        try {
+                            com.pintrip.app.notification.FriendPlaceNotificationWorker.enqueueWork(
+                                context = context.applicationContext,
+                                roomId = currentRoomId,
+                                kakaoPlaceId = addedPlace.kakaoPlaceId,
+                                createdAtMs = addedPlace.createdAtMs,
+                                requestingUid = uid
+                            )
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to enqueue notification work for ${addedPlace.kakaoPlaceId}: ${e.message}")
+                        }
+                    }
+                }
 
                 _isSaving.value = false
                 _saveResultEvent.value = Event(

@@ -331,4 +331,19 @@
     <string name="place_detail_like">좋아요</string>
     <string name="place_detail_unlike">좋아요 취소</string>
     <string name="place_detail_like_failed">좋아요를 반영하지 못했어요</string>
+
+    <!-- Notification Strings -->
+    <string name="channel_friend_place_added_name">친구 장소 추가 알림</string>
+    <string name="channel_friend_place_added_description">방에 친구가 새로운 장소를 추가했을 때 받는 알림입니다.</string>
+    <string name="notification_friend_place_added_title">새로운 장소 핀 추가</string>
+    <string name="notification_friend_place_added_body">방에 새로운 장소가 추가되었습니다.</string>
+    <string name="btn_notification_settings">친구 알림 설정</string>
+    <string name="notice_notification_enabled">친구 장소 추가 알림이 활성화되어 있습니다.</string>
+    <string name="notice_notification_granted">친구 장소 추가 알림이 활성화되었습니다.</string>
+    <string name="notice_notification_denied">알림 권한이 거부되었습니다. 설정에서 언제든지 켤 수 있습니다.</string>
+    <string name="notice_notification_blocked_title">알림이 차단되어 있습니다</string>
+    <string name="notice_notification_blocked_message">앱 또는 알림 채널 설정이 꺼져 있습니다. 기기 설정에서 알림을 허용해 주세요.</string>
+    <string name="btn_open_settings">설정으로 이동</string>
+    <string name="notice_notification_access_denied">접근 권한이 없는 방이거나 이미 삭제된 장소입니다.</string>
+    <string name="notice_notification_account_mismatch">다른 계정으로 전달된 알림입니다.</string>
 </resources>

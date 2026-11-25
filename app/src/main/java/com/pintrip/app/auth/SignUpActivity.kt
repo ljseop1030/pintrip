@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.firestore.Source
 import com.pintrip.app.R
+import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.data.repository.UserRepository
 import com.pintrip.app.databinding.ActivitySignUpBinding
 import com.pintrip.app.room.RoomListActivity
@@ -21,17 +22,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-/**
- * 정식 회원가입 화면 (Figma S02).
- *
- * 닉네임, 이메일, 비밀번호, 비밀번호 확인을 입력받아 Firebase Auth 계정을 생성하고
- * Firestore `users/{uid}`에 프로필 정보(nickname, email, avatarColor, createdAt)를 저장합니다.
- */
 class SignUpActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySignUpBinding
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val userRepository: UserRepository by lazy { UserRepository(auth = auth) }
+    private val deviceTokenRepository: DeviceTokenRepository by lazy { DeviceTokenRepository.getInstance(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -225,20 +221,45 @@ class SignUpActivity : AppCompatActivity() {
         }
     }
 
+    private fun performLogout(previousUid: String?) {
+        lifecycleScope.launch {
+            if (!previousUid.isNullOrBlank()) {
+                try {
+                    deviceTokenRepository.cleanupTokenOnLogout(previousUid)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                }
+            }
+            auth.signOut()
+            binding.tvStatus.text = getString(R.string.status_logged_out)
+            binding.btnSignUp.isEnabled = true
+        }
+    }
+
     private fun showCorruptedProfileDialog() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.error_profile_corrupted_title))
             .setMessage(getString(R.string.error_profile_corrupted_message))
             .setCancelable(false)
             .setNegativeButton(getString(R.string.btn_logout)) { _, _ ->
-                auth.signOut()
-                binding.tvStatus.text = getString(R.string.status_logged_out)
-                binding.btnSignUp.isEnabled = true
+                performLogout(auth.currentUser?.uid)
             }
             .show()
     }
 
     private fun showSignUpCompleteDialog() {
+        val currentUid = auth.currentUser?.uid
+        if (!currentUid.isNullOrBlank()) {
+            deviceTokenRepository.activateSession(currentUid)
+        }
+        lifecycleScope.launch {
+            try {
+                deviceTokenRepository.syncToken()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.notice_new_user_title))
             .setMessage(getString(R.string.notice_new_user_message))

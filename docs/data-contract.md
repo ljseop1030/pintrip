@@ -20,6 +20,7 @@ Single source of truth for Firestore schema, in-memory models, and the Gemini/Ka
 
 ```
 users/{uid}
+users/{uid}/devices/{installationId}
 rooms/{roomId}
 rooms/{roomId}/places/{kakaoPlaceId}
 inviteCodes/{code}
@@ -39,6 +40,98 @@ There is no `likes` collection. Likes live in each place's `likedBy` array.
 | email | String | ✓ | |
 | avatarColor | String | ✓ | `#RRGGBB`, random at sign-up |
 | createdAt | Timestamp | ✓ | |
+
+### users/{uid}/devices/{installationId}  (doc ID = app installation unit UUID)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| token | String | ✓ | FCM device token |
+| platform | String | ✓ | `"android"` |
+| updatedAt | Timestamp | ✓ | `serverTimestamp` |
+
+- `installationId`: Unique UUID stored in local `SharedPreferences` (`pintrip_device_prefs`) representing the app installation instance (not hardware ID).
+- Sync policy: Synced after login/profile verification or upon `onNewToken` refresh. Pre-login sync is blocked. On logout, `cleanupTokenOnLogout` attempts remote deletion of `users/{previousUid}/devices/{installationId}` with a 3-second timeout.
+- Note on logout & new UID: Creating a document under `{newUid}` creates a new document; it does NOT delete or overwrite `{previousUid}`'s document. If remote deletion fails or times out during offline logout, `{previousUid}`'s document may temporarily remain in Firestore until administrative cleanup or re-login. However, local session invalidation (`isLoggingOut`, `sessionGeneration`) and strict `recipientUid` checks guarantee that no cross-account notifications or navigations occur on the device.
+
+---
+
+## 4. FCM Push Notification Contract (Friend Place Added)
+
+Server-to-client push notification protocol for `type = "PLACE_ADDED"` (new pin in room).
+
+### Message Payload Format (Legacy AndroidConfig - Data-Only)
+
+Server MUST send **data-only FCM messages** (`data` map). Do **NOT** send `notification` payload (which triggers OS auto-display bypassing client-side recipient and permission checks).
+
+| Field | Type | Req | Value / Description |
+|---|---|---|---|
+| `type` | String | ✓ | `"PLACE_ADDED"` |
+| `eventId` | String | ✓ | Unique event identifier (`evt_${roomId}_${placeId}_${cloudEventId}`). Used for client-side LRU deduplication |
+| `recipientUid` | String | ✓ | Firebase Auth UID of the recipient. Messages are rejected if unauthenticated or UID mismatches |
+| `roomId` | String | ✓ | Target room ID (`rooms/{roomId}`) |
+| `kakaoPlaceId` | String | ✓ | Target Kakao place ID (`places/{kakaoPlaceId}`) |
+
+### Delivery Configuration
+- `priority`: `"high"`
+- `time_to_live`: `86400000` (24 hours in milliseconds for Admin SDK `ttl`)
+- Client Callback: Handled in `FriendNotificationService.onMessageReceived(RemoteMessage)`.
+
+---
+
+## 4.1. Vercel Serverless FCM API Endpoint (`/api/friend-place-added`)
+
+Serverless function endpoint used on Firebase Spark Plan to trigger friend place notifications via Vercel.
+
+- **HTTP Method**: `POST`
+- **Request Header**: `Authorization: Bearer <Firebase_ID_Token>`
+- **Request Body**:
+  ```json
+  {
+    "roomId": "room_123",
+    "kakaoPlaceId": "place_456",
+    "createdAtMs": 1700000000000
+  }
+  ```
+- **Place Generation Check**:
+  - The server verifies `createdAtMs` against `rooms/{roomId}/places/{kakaoPlaceId}`'s confirmed `createdAt.toMillis()`.
+  - Mismatch (stale work request from an older generation) returns HTTP 200 `{ "success": true, "skipped": true, "reason": "STALE_GENERATION" }`.
+- **Client Configuration**:
+  - `NOTIFICATION_API_URL` configured in `secrets.properties` (e.g. `NOTIFICATION_API_URL=https://<your-project>.vercel.app`).
+  - Client enqueues `FriendPlaceNotificationWorker` via WorkManager with exponential backoff retries on network/server error.
+
+---
+
+## 5. Server-Only Notification Delivery Tracking Collection
+
+Collection used strictly by Cloud Functions Admin SDK for tracking notification delivery states, idempotency, and retries. Client access is strictly blocked in `firestore.rules`.
+
+### notificationEvents/{eventId}  (doc ID = `evt_${roomId}_${placeId}_${cloudEventId}`)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| eventId | String | ✓ | Unique stable event ID (`evt_${roomId}_${placeId}_${cloudEventId}`) |
+| roomId | String | ✓ | Target room ID |
+| kakaoPlaceId | String | ✓ | Target Kakao place ID |
+| addedBy | String | ✓ | Author UID |
+| status | String | ✓ | `"pending"` \| `"in_progress"` \| `"completed"` \| `"failed_transient"` \| `"failed_permanent"` |
+| createdAt | Timestamp | ✓ | Function trigger creation time (preserved on updates) |
+| updatedAt | Timestamp | ✓ | Last delivery attempt time |
+
+### notificationEvents/{eventId}/deliveries/{deliveryId}  (doc ID = `${recipientUid}_${installationId}`)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| deliveryId | String | ✓ | `${recipientUid}_${installationId}` |
+| recipientUid | String | ✓ | Recipient user UID |
+| installationId | String | ✓ | Device installation ID |
+| status | String | ✓ | `"pending"` \| `"in_progress"` \| `"success"` \| `"failed_transient"` \| `"failed_permanent"` |
+| leaseOwner | String? | | Execution UUID holding current 5-minute lease |
+| leaseExpiresAt | Number? | | Lease expiration timestamp in ms (`now + 5 mins`) |
+| retryCount | Number? | | Delivery attempt count |
+| errorCode | String? | | Firebase Messaging error code if failed |
+| updatedAt | Timestamp | ✓ | Last attempt timestamp |
+
+---
 
 ### rooms/{roomId}  (doc ID = auto ID)
 
