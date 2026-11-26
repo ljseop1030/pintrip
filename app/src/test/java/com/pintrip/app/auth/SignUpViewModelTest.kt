@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.firestore.Source
 import com.pintrip.app.R
 import com.pintrip.app.data.model.User
 import com.pintrip.app.data.repository.UserRepository
@@ -690,5 +691,62 @@ class SignUpViewModelTest {
             com.pintrip.app.data.repository.DeviceTokenRepository.firestoreDeleterOverride = null
             com.pintrip.app.data.repository.DeviceTokenRepository.setLoggingOut(false)
         }
+    }
+
+    @Test
+    fun `existingAccountRecovery_isBlockedDuringLogout`() {
+        var activeUid: String? = "account_A"
+        var createCalls = 0
+        var recoveryCalls = 0
+        var profileCalls = 0
+        val auth = org.mockito.Mockito.mock(FirebaseAuth::class.java)
+        org.mockito.Mockito.doAnswer { activeUid = null; null }.`when`(auth).signOut()
+        val profiles = object : UserRepository(null, null) {
+            override suspend fun getUserProfile(uid: String, source: Source): User? {
+                profileCalls++
+                return User(nickname = "Synthetic A", email = "a@example.com")
+            }
+        }
+        val cleanupGate = CompletableDeferred<Unit>()
+        val tokens = object : com.pintrip.app.data.repository.DeviceTokenRepository() {
+            override suspend fun cleanupTokenOnLogout(previousUid: String): Boolean {
+                cleanupGate.await()
+                return true
+            }
+        }
+        val viewModel = SignUpViewModel(
+            auth = auth,
+            userRepository = profiles,
+            currentUidProvider = { activeUid },
+            authUserProvider = { email, _, creating ->
+                if (creating) {
+                    createCalls++
+                    throw FirebaseAuthUserCollisionException("ERROR_EMAIL_ALREADY_IN_USE", "Synthetic collision")
+                }
+                recoveryCalls++
+                activeUid = "account_A"
+                "account_A" to email
+            }
+        )
+        viewModel.performLogout(tokens)
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.performSignUp("Synthetic A", "a@example.com", "synthetic_password", "synthetic_password", true)
+        testDispatcher.scheduler.runCurrent()
+
+        val eventDuringCleanup = viewModel.events.value?.peekContent()
+        cleanupGate.complete(Unit)
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("Sign-up must be ignored while logout is pending", 0, createCalls)
+        assertEquals(0, recoveryCalls)
+        assertEquals(0, profileCalls)
+        assertNull("No event should be emitted during logout", eventDuringCleanup)
+
+        // After logout completes, a new signup request can proceed normally
+        viewModel.performSignUp("Synthetic A", "a@example.com", "synthetic_password", "synthetic_password", true)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals("Sign-up is allowed after logout completes", 1, createCalls)
+        assertEquals(1, recoveryCalls)
     }
 }

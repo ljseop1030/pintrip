@@ -113,7 +113,7 @@ class SignUpViewModel(
         confirmPasswordRaw: String,
         isTermsChecked: Boolean,
     ) {
-        if (_uiState.value is SignUpUiState.Loading || isSignUpInProgress) return
+        if (_uiState.value is SignUpUiState.Loading || isSignUpInProgress || isLogoutInProgress) return
 
         val nickname = nicknameRaw.trim()
         val email = emailRaw.trim()
@@ -480,7 +480,7 @@ class SignUpViewModel(
                                 // cleanup error or cancellation should not block sign out
                             }
                         }
-                        if (getCurrentAuthUid() == previousUid) {
+                        if (token == sessionToken && getCurrentAuthUid() == previousUid) {
                             try { firebaseAuth.signOut() } catch (_: Exception) {}
                         }
                     } finally {
