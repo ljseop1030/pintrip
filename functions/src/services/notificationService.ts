@@ -527,7 +527,9 @@ export class NotificationService {
     executionId: string = crypto.randomUUID()
   ): Promise<ProcessNotificationResult> {
     const notificationBatchId = placeData.notificationBatchId || `cf_${placeId}_${cloudEventId}`;
-    const overrideEventId = `evt_${roomId}_${placeId}_${cloudEventId}`;
+    const overrideEventId = placeData.notificationBatchId
+      ? `evt_${roomId}_${placeData.addedBy}_${placeData.notificationBatchId}`
+      : `evt_${roomId}_${placeId}_${cloudEventId}`;
     return this.processFriendPlaceAddedBatch({
       roomId,
       notificationBatchId,

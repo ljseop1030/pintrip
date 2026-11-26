@@ -1,11 +1,13 @@
 package com.pintrip.app.auth
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.pintrip.app.R
 import com.pintrip.app.data.model.User
 import com.pintrip.app.data.repository.UserRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -14,6 +16,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -407,5 +410,85 @@ class LoginViewModelTest {
 
         assertEquals(LoginUiState.Idle, viewModel.uiState.value)
         assertNull(viewModel.events.value)
+    }
+
+    @Test
+    fun `login_oldLogout_preservesNewAccount`() {
+        var activeUid: String? = "account_A"
+        val mockAuth = org.mockito.Mockito.mock(FirebaseAuth::class.java)
+        org.mockito.Mockito.doAnswer { activeUid = null; null }.`when`(mockAuth).signOut()
+
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var cleanupCount = 0
+        val fakeRepo = object : com.pintrip.app.data.repository.DeviceTokenRepository() {
+            override suspend fun cleanupTokenOnLogout(previousUid: String): Boolean {
+                assertEquals("account_A", previousUid)
+                cleanupCount++
+                gate.await()
+                return true
+            }
+        }
+
+        val viewModel = LoginViewModel(auth = mockAuth, currentUidProvider = { activeUid })
+        viewModel.performLogout(fakeRepo)
+
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(1, cleanupCount)
+        assertTrue(com.pintrip.app.data.repository.DeviceTokenRepository.isLoggingOut)
+
+        // Account B logs in while cleanup is suspended
+        activeUid = "account_B"
+        com.pintrip.app.data.repository.DeviceTokenRepository.activateSession("account_B")
+
+        // Unblock cleanup
+        gate.complete(Unit)
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("Old logout must preserve the newer authenticated account", "account_B", activeUid)
+        assertFalse("New active session isLoggingOut flag must remain false", com.pintrip.app.data.repository.DeviceTokenRepository.isLoggingOut)
+    }
+
+    @Test
+    fun `login_cleanupCancellation_releasesFlagAndSignsOut`() {
+        val mockAuth = org.mockito.Mockito.mock(FirebaseAuth::class.java)
+        val fakeRepo = object : com.pintrip.app.data.repository.DeviceTokenRepository() {
+            override suspend fun cleanupTokenOnLogout(previousUid: String): Boolean {
+                throw CancellationException("synthetic cleanup cancellation")
+            }
+        }
+
+        val viewModel = LoginViewModel(auth = mockAuth, currentUidProvider = { "account_A" })
+        viewModel.performLogout(fakeRepo)
+
+        testDispatcher.scheduler.runCurrent()
+        assertFalse("Cleanup cancellation must not leave the logout flag set", com.pintrip.app.data.repository.DeviceTokenRepository.isLoggingOut)
+        org.mockito.Mockito.verify(mockAuth).signOut()
+    }
+
+    @Test
+    fun `login_realTokenRepository_normalLogoutReleasesFlag`() {
+        var activeUid: String? = "account_A"
+        val mockAuth = org.mockito.Mockito.mock(FirebaseAuth::class.java)
+        org.mockito.Mockito.doAnswer { activeUid = null; null }.`when`(mockAuth).signOut()
+        var deleteCount = 0
+        com.pintrip.app.data.repository.DeviceTokenRepository.preferenceOverride = com.pintrip.app.room.FakeSharedPreferences()
+        com.pintrip.app.data.repository.DeviceTokenRepository.firestoreDeleterOverride = { uid, _ ->
+            assertEquals("account_A", uid)
+            deleteCount++
+            true
+        }
+        try {
+            val viewModel = LoginViewModel(auth = mockAuth, currentUidProvider = { activeUid })
+            viewModel.performLogout(com.pintrip.app.data.repository.DeviceTokenRepository())
+            testDispatcher.scheduler.runCurrent()
+            assertEquals(1, deleteCount)
+            org.mockito.Mockito.verify(mockAuth).signOut()
+            assertEquals(null, activeUid)
+            assertFalse("Normal logout using the REAL token repository must release the logout flag", com.pintrip.app.data.repository.DeviceTokenRepository.isLoggingOut)
+        } finally {
+            com.pintrip.app.data.repository.DeviceTokenRepository.preferenceOverride = null
+            com.pintrip.app.data.repository.DeviceTokenRepository.firestoreDeleterOverride = null
+            com.pintrip.app.data.repository.DeviceTokenRepository.setLoggingOut(false)
+        }
     }
 }

@@ -596,6 +596,195 @@ describe("S02 Friend Place Added FCM Notification Tests", () => {
     expect(fakeDb.dbMap.get("users/user_stale/devices/dev_stale").token).to.equal("tok_NEW_456");
   });
 
+  it("sends 1 FCM message with addedCount == '3', empty kakaoPlaceId, addedByNickname, and roomName when 3 places are added in a batch", async () => {
+    const roomData: RoomDocument = {
+      name: "Busan Trip",
+      region: "부산",
+      ownerId: "user_author",
+      memberIds: ["user_author", "user_m1"],
+      members: {
+        user_author: { nickname: "Minji", avatarColor: "#FF0000" },
+        user_m1: { nickname: "Hani", avatarColor: "#00FF00" },
+      },
+      placeCount: 3,
+      createdAt: null,
+      updatedAt: null,
+    };
+    fakeDb.dbMap.set("rooms/room_b3", roomData);
+    fakeDb.dbMap.set("users/user_m1/devices/dev_m1", { token: "tok_m1", platform: "android" });
+
+    const batchId = "batch_3_places";
+    for (const pId of ["p1", "p2", "p3"]) {
+      fakeDb.dbMap.set(`rooms/room_b3/places/${pId}`, {
+        kakaoPlaceId: pId,
+        kakaoPlaceUrl: `https://place.map.kakao.com/${pId}`,
+        searchKeyword: `Place ${pId}`,
+        matchType: "confirmed",
+        sourceType: "text",
+        addedBy: "user_author",
+        addedByNickname: "Minji",
+        notificationBatchId: batchId,
+        likedBy: [],
+        likeCount: 0,
+        createdAt: null,
+      });
+    }
+
+    fakeMessaging.sentMessages = [];
+    const res = await service.processFriendPlaceAddedBatch({
+      roomId: "room_b3",
+      notificationBatchId: batchId,
+      requestingUid: "user_author",
+      executionId: "exec_b3",
+    });
+
+    expect(res.succeededDevices).to.equal(1);
+    expect(fakeMessaging.sentMessages.length).to.equal(1);
+
+    const sentData = (fakeMessaging.sentMessages[0] as any).data;
+    expect(sentData.type).to.equal("PLACE_ADDED");
+    expect(sentData.addedCount).to.equal("3");
+    expect(sentData.kakaoPlaceId).to.equal("");
+    expect(sentData.addedByNickname).to.equal("Minji");
+    expect(sentData.roomName).to.equal("Busan Trip");
+  });
+
+  it("filters out places added by other authors in the same batch ID", async () => {
+    const roomData: RoomDocument = {
+      name: "Jeju Trip",
+      region: "제주",
+      ownerId: "user_author",
+      memberIds: ["user_author", "user_friend", "user_m1"],
+      members: {
+        user_author: { nickname: "Minji", avatarColor: "#FF0000" },
+        user_friend: { nickname: "Hani", avatarColor: "#00FF00" },
+        user_m1: { nickname: "Danielle", avatarColor: "#0000FF" },
+      },
+      placeCount: 3,
+      createdAt: null,
+      updatedAt: null,
+    };
+    fakeDb.dbMap.set("rooms/room_mixed", roomData);
+    fakeDb.dbMap.set("users/user_m1/devices/dev_m1", { token: "tok_m1", platform: "android" });
+
+    const batchId = "batch_mixed_authors";
+    // Author A added p1, p2
+    for (const pId of ["p1", "p2"]) {
+      fakeDb.dbMap.set(`rooms/room_mixed/places/${pId}`, {
+        kakaoPlaceId: pId,
+        kakaoPlaceUrl: `https://place.map.kakao.com/${pId}`,
+        searchKeyword: `Place ${pId}`,
+        matchType: "confirmed",
+        sourceType: "text",
+        addedBy: "user_author",
+        addedByNickname: "Minji",
+        notificationBatchId: batchId,
+        likedBy: [],
+        likeCount: 0,
+        createdAt: null,
+      });
+    }
+    // Friend B added p3 with same batch ID
+    fakeDb.dbMap.set("rooms/room_mixed/places/p3", {
+      kakaoPlaceId: "p3",
+      kakaoPlaceUrl: "https://place.map.kakao.com/p3",
+      searchKeyword: "Place p3",
+      matchType: "confirmed",
+      sourceType: "text",
+      addedBy: "user_friend",
+      addedByNickname: "Hani",
+      notificationBatchId: batchId,
+      likedBy: [],
+      likeCount: 0,
+      createdAt: null,
+    });
+
+    fakeMessaging.sentMessages = [];
+    const res = await service.processFriendPlaceAddedBatch({
+      roomId: "room_mixed",
+      notificationBatchId: batchId,
+      requestingUid: "user_author",
+      executionId: "exec_mixed",
+    });
+
+    expect(res.succeededDevices).to.equal(1);
+    expect(fakeMessaging.sentMessages.length).to.equal(1);
+
+    const sentData = (fakeMessaging.sentMessages[0] as any).data;
+    // Only user_author's 2 places should be counted
+    expect(sentData.addedCount).to.equal("2");
+    expect(sentData.addedByNickname).to.equal("Minji");
+  });
+
+  it("deduplicates re-requests for same batch and legacy single-place requests targeting a batch place", async () => {
+    const roomData: RoomDocument = {
+      name: "Gangneung Trip",
+      region: "강릉",
+      ownerId: "user_author",
+      memberIds: ["user_author", "user_m1"],
+      members: {
+        user_author: { nickname: "Minji", avatarColor: "#FF0000" },
+        user_m1: { nickname: "Hani", avatarColor: "#00FF00" },
+      },
+      placeCount: 1,
+      createdAt: null,
+      updatedAt: null,
+    };
+    fakeDb.dbMap.set("rooms/room_idempotent", roomData);
+    fakeDb.dbMap.set("users/user_m1/devices/dev_m1", { token: "tok_m1", platform: "android" });
+
+    const batchId = "batch_idempotency_123";
+    const placeData: PlaceDocument = {
+      kakaoPlaceId: "place_single",
+      kakaoPlaceUrl: "https://place.map.kakao.com/place_single",
+      searchKeyword: "Gyeongpo",
+      matchType: "confirmed",
+      sourceType: "text",
+      addedBy: "user_author",
+      addedByNickname: "Minji",
+      notificationBatchId: batchId,
+      likedBy: [],
+      likeCount: 0,
+      createdAt: null,
+    };
+    fakeDb.dbMap.set("rooms/room_idempotent/places/place_single", placeData);
+
+    fakeMessaging.sentMessages = [];
+
+    // First Batch Request -> 1 message sent
+    const res1 = await service.processFriendPlaceAddedBatch({
+      roomId: "room_idempotent",
+      notificationBatchId: batchId,
+      requestingUid: "user_author",
+      executionId: "exec_idempotent_1",
+    });
+    expect(res1.succeededDevices).to.equal(1);
+    expect(fakeMessaging.sentMessages.length).to.equal(1);
+
+    // Second Batch Request (Retry) -> 0 new messages sent
+    fakeMessaging.sentMessages = [];
+    const res2 = await service.processFriendPlaceAddedBatch({
+      roomId: "room_idempotent",
+      notificationBatchId: batchId,
+      requestingUid: "user_author",
+      executionId: "exec_idempotent_2",
+    });
+    expect(res2.skippedAlreadySucceeded).to.equal(1);
+    expect(fakeMessaging.sentMessages.length).to.equal(0);
+
+    // Legacy Single Place Request targeting place with notificationBatchId -> uses canonical event ID -> 0 new messages sent
+    fakeMessaging.sentMessages = [];
+    const res3 = await service.processFriendPlaceAdded(
+      "room_idempotent",
+      "place_single",
+      "cloud_123",
+      placeData,
+      "exec_idempotent_3"
+    );
+    expect(res3.skippedAlreadySucceeded).to.equal(1);
+    expect(fakeMessaging.sentMessages.length).to.equal(0);
+  });
+
   it("aborts when parent room is missing or author is not a room member or path placeId mismatches", async () => {
     const placeData: PlaceDocument = {
       kakaoPlaceId: "place_1",

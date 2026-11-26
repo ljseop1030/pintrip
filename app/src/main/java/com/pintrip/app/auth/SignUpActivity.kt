@@ -377,22 +377,7 @@ class SignUpActivity : AppCompatActivity(),
 
     private fun performLogout() {
         pendingRetryAction = null
-        val tokenRepo = DeviceTokenRepository.getInstance(applicationContext)
-        val previousUid = FirebaseAuth.getInstance().currentUser?.uid
-        DeviceTokenRepository.setLoggingOut(true)
-        DeviceTokenRepository.invalidateSession()
-        lifecycleScope.launch {
-            if (!previousUid.isNullOrBlank()) {
-                try {
-                    tokenRepo.cleanupTokenOnLogout(previousUid)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w(TAG, "Token cleanup failed on logout: ${e.message}")
-                }
-            }
-            viewModel.signOut()
-            DeviceTokenRepository.setLoggingOut(false)
-        }
+        viewModel.performLogout(DeviceTokenRepository.getInstance(applicationContext))
     }
 
     private fun navigateToRoomList() {

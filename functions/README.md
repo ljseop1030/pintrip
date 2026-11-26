@@ -40,17 +40,21 @@ The test suite validates:
 1. Exclusion of place author from FCM targets, title/body omission from data payload (allowing client localized strings), and distinct `recipientUid` per recipient device.
 2. Atomic lease locking (`in_progress`, `leaseOwner`, 5-minute `leaseExpiresAt`) preventing duplicate sends on concurrent executions.
 3. Repro A Fix: Stale execution late completion does NOT overwrite parent event status to `completed` if a delivery is `failed_transient` or in progress.
-4. Repro B Fix: Mixed `success` and `in_progress` lease targets keep parent event status as `in_progress` / `failed_transient` and throw error to trigger Cloud Functions retry pipeline.
-5. Distinct `eventId` generation (`evt_${roomId}_${placeId}_${cloudEventId}`) allowing separate creation events for deleted and re-added places.
-6. Recovery of expired in-flight leases (`now >= leaseExpiresAt`) and stale lease owner late result rejection.
-7. Error classification: permanent errors (`messaging/invalid-payload`, `invalid-argument`) marked `failed_permanent` and skipped on retry; transient errors marked `failed_transient` and retried.
-8. Atomic token cleanup in transaction ONLY IF current document token matches failed token.
-9. Safety checks for missing parent room, non-member author, or path `placeId` vs `kakaoPlaceId` mismatch.
-10. Vercel Serverless API handler export, Method Not Allowed (405), Unauthorized (401), Forbidden (403), Bad Request (400), and Stale Place Generation (`createdAtMs`) rejection.
+4. Repro B Fix: Mixed `success` and `in_progress` lease targets keep parent status as `in_progress` / `failed_transient` and throw error to trigger Cloud Functions retry pipeline.
+5. Batch processing (`notificationBatchId`): 3 places added in a batch send 1 FCM message per recipient device with `addedCount = "3"`, `addedByNickname`, `roomName`, and `kakaoPlaceId = ""`.
+6. Mixed author filtering: only places belonging to the requesting author in a batch are counted.
+7. Deduplication of identical batch requests and legacy single place requests targeting batch places.
+8. Recovery of expired in-flight leases (`now >= leaseExpiresAt`) and stale lease owner late result rejection.
+9. Error classification: permanent errors marked `failed_permanent`; transient errors marked `failed_transient` and leased for immediate retry.
+10. Atomic token cleanup in transaction ONLY IF current document token matches failed token.
+11. Vercel API handler export, non-POST rejection (405), missing/invalid token rejection (401), missing roomId after valid authentication (400), and non-member/non-author rejection after valid authentication (403). API 404 and legacy generation-skip paths are not covered by this suite.
 
 ---
 
 ## 3. Vercel Serverless Deployment Guide (Firebase Spark Plan Compatible)
+
+> [!IMPORTANT]
+> **Deployment Sequence**: Deploy updated Firestore security rules (`firebase deploy --only firestore:rules --project pintrip-a12a6`) BEFORE installing the updated Android client APK on devices.
 
 ### Step 1: Vercel Project Setup
 1. Log in to [Vercel](https://vercel.com) and import the repository.
@@ -103,3 +107,8 @@ firebase deploy --only functions:onFriendPlaceAdded --project pintrip-a12a6
    - `notificationEvents/{eventId}` and `notificationEvents/{eventId}/deliveries/{deliveryId}` are strictly server-side tracking collections. Client access is forbidden in `firestore.rules` (`allow read, write: if false;`).
 4. **At-Least-Once Delivery Boundary**:
    - If FCM `sendEach()` succeeds but the server/database crashes before writing `status = "success"`, a subsequent retry may re-acquire the lease and resend. Client-side `eventId` LRU deduplication (`ProcessedEventCache`) on Android filters out duplicate receipt on the device.
+
+
+## Verification limits
+
+Local tests do not verify FCM delivery or notification navigation on devices. Process termination can interrupt token cleanup. In-memory logout flags and session generations do not survive restart; a matching persisted Auth UID can still pass recipientUid validation.

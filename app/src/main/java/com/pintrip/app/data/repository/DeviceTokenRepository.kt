@@ -211,7 +211,9 @@ open class DeviceTokenRepository(
      * 이전 UID의 users/{previousUid}/devices/{installationId} 원격 토큰 연결을 제한 시간(3초) 내에 삭제 시도합니다.
      */
     open suspend fun cleanupTokenOnLogout(previousUid: String): Boolean {
-        invalidateSession()
+        if (!isLoggingOut) {
+            invalidateSession()
+        }
 
         context?.let { ctx ->
             FriendNotificationService.cancelFriendNotifications(ctx)
