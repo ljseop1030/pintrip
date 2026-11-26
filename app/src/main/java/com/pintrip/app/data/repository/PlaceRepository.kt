@@ -17,15 +17,10 @@ import kotlinx.coroutines.tasks.await
  * @property addedCount 실제 Firestore에 새롭게 추가된 장소 개수
  * @property skippedCount 중복(요청 목록 내 중복 또는 Firestore에 이미 존재하는 장소)으로 건너뛴 개수
  */
-data class AddedPlaceMetadata(
-    val kakaoPlaceId: String,
-    val createdAtMs: Long = System.currentTimeMillis()
-)
-
 data class AddPlacesResult(
     val addedCount: Int,
     val skippedCount: Int,
-    val addedPlaces: List<AddedPlaceMetadata> = emptyList(),
+    val notificationBatchId: String? = null,
 )
 
 /**
@@ -99,9 +94,10 @@ open class PlaceRepository(
         }
 
         val roomRef = db.collection("rooms").document(roomId)
+        val batchId = java.util.UUID.randomUUID().toString()
 
         // 4. Firestore Transaction (모든 Read 실행 후 Write 진행)
-        val txPair = db.runTransaction { transaction ->
+        return db.runTransaction { transaction ->
             // (a) Read: 방 문서 존재 여부 확인
             val roomSnapshot = transaction.get(roomRef)
             if (!roomSnapshot.exists()) {
@@ -117,23 +113,21 @@ open class PlaceRepository(
 
             // (c) Write 계산: 신규 장소와 기존 장소 분리 및 초기값 재설정
             val newPlaces = mutableListOf<Place>()
-            val addedPlacesMetadata = mutableListOf<AddedPlaceMetadata>()
             var dbSkippedCount = 0
-            val nowMs = System.currentTimeMillis()
 
             for (place in distinctPlaces) {
                 val snapshot = existingSnapshots[place.kakaoPlaceId]
                 if ((snapshot != null) && snapshot.exists()) {
                     dbSkippedCount++
                 } else {
-                    // 신규 장소 초기화: likedBy 비우기, likeCount 0, createdAt null(서버 타임스탬프 자동 부여)
+                    // 신규 장소 초기화: likedBy 비우기, likeCount 0, notificationBatchId 할당, createdAt null(서버 타임스탬프 자동 부여)
                     val placeToSave = place.copy(
                         likedBy = emptyList(),
                         likeCount = 0,
+                        notificationBatchId = batchId,
                         createdAt = null,
                     )
                     newPlaces.add(placeToSave)
-                    addedPlacesMetadata.add(AddedPlaceMetadata(place.kakaoPlaceId, nowMs))
                 }
             }
 
@@ -151,35 +145,12 @@ open class PlaceRepository(
                 )
             }
 
-            val result = AddPlacesResult(
+            AddPlacesResult(
                 addedCount = newPlaces.size,
                 skippedCount = dbSkippedCount + requestDuplicatesCount,
-                addedPlaces = addedPlacesMetadata,
+                notificationBatchId = if (newPlaces.isNotEmpty()) batchId else null,
             )
-            result to newPlaces.map { it.kakaoPlaceId }
         }.await()
-
-        val txResult = txPair.first
-        val addedPlaceIds = txPair.second
-
-        if (addedPlaceIds.isEmpty()) {
-            return txResult
-        }
-
-        // 5. 저장 성공 후 확정된 Firestore 서버 createdAt 시각을 조회하여 작업 메타데이터 재구성
-        return try {
-            val confirmedList = mutableListOf<AddedPlaceMetadata>()
-            for (placeId in addedPlaceIds) {
-                val docSnap = roomRef.collection("places").document(placeId).get(Source.SERVER).await()
-                val serverTimestamp = docSnap.getTimestamp("createdAt")
-                val createdAtMs = serverTimestamp?.toDate()?.time ?: System.currentTimeMillis()
-                confirmedList.add(AddedPlaceMetadata(placeId, createdAtMs))
-            }
-            txResult.copy(addedPlaces = confirmedList)
-        } catch (e: Exception) {
-            // 서버 시각 조회 실패 시 트랜잭션 결과 보존 및 기본 타임스탬프 반환
-            txResult
-        }
     }
 
     /**

@@ -123,8 +123,12 @@ class RoomListActivity : AppCompatActivity() {
                     override.invoke(this, result.roomId, result.kakaoPlaceId)
                 } else {
                     val roomMapIntent = RoomMapActivity.newIntent(this, result.roomId)
-                    val placeDetailIntent = PlaceDetailActivity.newIntent(this, result.roomId, result.kakaoPlaceId)
-                    startActivities(arrayOf(roomMapIntent, placeDetailIntent))
+                    if (result.kakaoPlaceId.isNotBlank()) {
+                        val placeDetailIntent = PlaceDetailActivity.newIntent(this, result.roomId, result.kakaoPlaceId)
+                        startActivities(arrayOf(roomMapIntent, placeDetailIntent))
+                    } else {
+                        startActivity(roomMapIntent)
+                    }
                 }
             }
             is com.pintrip.app.notification.PendingDestinationResult.AccountMismatch -> {

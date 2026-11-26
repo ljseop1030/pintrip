@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import { NotificationService } from "../src/services/notificationService";
-import { PlaceDocument } from "../src/types";
+import { PlaceDocument, RoomDocument } from "../src/types";
 
 // Firebase Admin App Initialization using Server Environment Variables
 if (admin.apps.length === 0) {
@@ -54,80 +54,148 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // 2. Body Parsing & Input Validation
-  const { roomId, kakaoPlaceId, createdAtMs } = req.body || {};
-  if (
-    !roomId ||
-    !kakaoPlaceId ||
-    typeof roomId !== "string" ||
-    typeof kakaoPlaceId !== "string" ||
-    typeof createdAtMs !== "number"
-  ) {
-    return res.status(400).json({ error: "Bad Request. Missing or invalid roomId, kakaoPlaceId, or createdAtMs." });
+  const { roomId, notificationBatchId, kakaoPlaceId, createdAtMs } = req.body || {};
+  if (!roomId || typeof roomId !== "string") {
+    return res.status(400).json({ error: "Bad Request. Missing or invalid roomId." });
   }
 
+  const executionId = crypto.randomUUID();
+  const db = admin.firestore();
+  const notificationService = new NotificationService({
+    db,
+    messaging: admin.messaging(),
+  });
+
   try {
-    const db = admin.firestore();
-    const placeRef = db.collection("rooms").doc(roomId).collection("places").doc(kakaoPlaceId);
-    const placeSnap = await placeRef.get();
-
-    if (!placeSnap.exists) {
-      return res.status(404).json({ error: `Place ${kakaoPlaceId} not found in room ${roomId}.` });
+    // 3. Parent Room Existence and Membership Verification
+    const roomRef = db.collection("rooms").doc(roomId);
+    const roomSnap = await roomRef.get();
+    if (!roomSnap.exists) {
+      return res.status(404).json({ error: `Room ${roomId} not found.` });
     }
 
-    const placeData = placeSnap.data() as PlaceDocument;
-    if (placeData.addedBy !== requestingUid) {
-      return res.status(403).json({ error: "Forbidden. Requesting user is not the place author." });
+    const roomData = roomSnap.data() as RoomDocument;
+    if (!Array.isArray(roomData.memberIds) || !roomData.memberIds.includes(requestingUid)) {
+      return res.status(403).json({ error: `Forbidden. Requesting user ${requestingUid} is not a member of room ${roomId}.` });
     }
 
-    // 3. Document Generation Comparison (compare request createdAtMs vs Firestore doc createdAtMs)
-    const rawCreatedAt = placeData.createdAt;
-    const docCreatedAtMs =
-      typeof rawCreatedAt?.toMillis === "function"
-        ? rawCreatedAt.toMillis()
-        : typeof rawCreatedAt?.seconds === "number"
-        ? rawCreatedAt.seconds * 1000
-        : typeof rawCreatedAt === "number"
-        ? rawCreatedAt
-        : null;
+    // Path A: Batch ID Request (Primary Route)
+    if (notificationBatchId && typeof notificationBatchId === "string") {
+      const batchPlacesSnap = await roomRef
+        .collection("places")
+        .where("notificationBatchId", "==", notificationBatchId)
+        .get();
 
-    if (docCreatedAtMs !== null && docCreatedAtMs !== createdAtMs) {
-      console.warn(
-        `Stale place creation generation detected. Request createdAtMs: ${createdAtMs}, doc createdAtMs: ${docCreatedAtMs}. Aborting.`
+      if (batchPlacesSnap.empty) {
+        // Batch no longer exists in Firestore -> normal skip
+        return res.status(200).json({
+          success: true,
+          skipped: true,
+          reason: "NO_PLACES_IN_BATCH",
+        });
+      }
+
+      const authorPlaces = batchPlacesSnap.docs.filter(
+        (doc) => (doc.data() as PlaceDocument).addedBy === requestingUid
       );
+
+      if (authorPlaces.length === 0) {
+        // Batch exists, but requesting user is NOT the author of any places in this batch -> 403 Forbidden!
+        return res.status(403).json({
+          error: `Forbidden. Requesting user ${requestingUid} is not the author of batch ${notificationBatchId}.`,
+        });
+      }
+
+      const result = await notificationService.processFriendPlaceAddedBatch({
+        roomId,
+        notificationBatchId,
+        requestingUid,
+        executionId,
+      });
+
       return res.status(200).json({
         success: true,
-        skipped: true,
-        reason: "STALE_GENERATION",
+        result,
       });
     }
 
-    // 4. Deterministic Event ID & Execution ID
-    const confirmedMs = docCreatedAtMs || createdAtMs;
-    const cloudEventId = `vcl_${confirmedMs}`;
-    const executionId = crypto.randomUUID();
+    // Path B: Legacy Single Place Request (Backward Compatibility Route)
+    if (kakaoPlaceId && typeof kakaoPlaceId === "string" && typeof createdAtMs === "number") {
+      const placeRef = roomRef.collection("places").doc(kakaoPlaceId);
+      const placeSnap = await placeRef.get();
 
-    const notificationService = new NotificationService({
-      db,
-      messaging: admin.messaging(),
-    });
+      if (!placeSnap.exists) {
+        return res.status(404).json({ error: `Place ${kakaoPlaceId} not found in room ${roomId}.` });
+      }
 
-    const result = await notificationService.processFriendPlaceAdded(
-      roomId,
-      kakaoPlaceId,
-      cloudEventId,
-      placeData,
-      executionId
-    );
+      const placeData = placeSnap.data() as PlaceDocument;
+      if (placeData.addedBy !== requestingUid) {
+        return res.status(403).json({ error: "Forbidden. Requesting user is not the place author." });
+      }
 
-    return res.status(200).json({
-      success: true,
-      result,
-    });
+      const rawCreatedAt = placeData.createdAt;
+      const docCreatedAtMs =
+        typeof rawCreatedAt?.toMillis === "function"
+          ? rawCreatedAt.toMillis()
+          : typeof rawCreatedAt?.seconds === "number"
+          ? rawCreatedAt.seconds * 1000
+          : typeof rawCreatedAt === "number"
+          ? rawCreatedAt
+          : null;
+
+      if (docCreatedAtMs !== null && docCreatedAtMs !== createdAtMs) {
+        console.warn(
+          `Stale place creation generation detected. Request createdAtMs: ${createdAtMs}, doc createdAtMs: ${docCreatedAtMs}. Aborting.`
+        );
+        return res.status(200).json({
+          success: true,
+          skipped: true,
+          reason: "STALE_GENERATION",
+        });
+      }
+
+      // If document has notificationBatchId, route through batch processor using canonical eventId
+      if (placeData.notificationBatchId) {
+        const overrideEventId = `evt_${roomId}_${requestingUid}_${placeData.notificationBatchId}`;
+        const result = await notificationService.processFriendPlaceAddedBatch({
+          roomId,
+          notificationBatchId: placeData.notificationBatchId,
+          requestingUid,
+          executionId,
+          overrideEventId,
+        });
+
+        return res.status(200).json({
+          success: true,
+          result,
+        });
+      }
+
+      const confirmedMs = docCreatedAtMs || createdAtMs;
+      const cloudEventId = `vcl_${confirmedMs}`;
+      const overrideEventId = `evt_${roomId}_${requestingUid}_${kakaoPlaceId}_${confirmedMs}`;
+
+      const result = await notificationService.processFriendPlaceAddedBatch({
+        roomId,
+        notificationBatchId: `single_${kakaoPlaceId}_${confirmedMs}`,
+        requestingUid,
+        executionId,
+        fallbackPlaceId: kakaoPlaceId,
+        fallbackPlaceData: placeData,
+        overrideEventId,
+      });
+
+      return res.status(200).json({
+        success: true,
+        result,
+      });
+    }
+
+    return res.status(400).json({ error: "Bad Request. Must supply notificationBatchId or kakaoPlaceId + createdAtMs." });
   } catch (error: any) {
     console.error("Error processing friend place added notification in Vercel API:", error);
     return res.status(500).json({
       error: "Internal Server Error",
-      message: error?.message || String(error),
     });
   }
 }

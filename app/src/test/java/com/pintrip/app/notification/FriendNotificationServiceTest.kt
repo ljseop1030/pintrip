@@ -134,8 +134,8 @@ class FriendNotificationServiceTest {
             "type" to "PLACE_ADDED",
             "eventId" to "evt_100",
             "recipientUid" to "user_123",
-            "roomId" to "room_abc",
-            "kakaoPlaceId" to ""
+            "roomId" to "",
+            "kakaoPlaceId" to "place_123"
         )
         val result2 = NotificationMessageParser.parse(payload2, currentUserUid = "user_123")
         assertEquals(NotificationParseResult.MissingRoomOrPlaceId, result2)

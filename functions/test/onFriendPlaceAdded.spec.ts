@@ -60,14 +60,20 @@ class FakeDocRef {
 class FakeCollectionRef {
   public path: string;
   public dbMap: Map<string, any>;
+  private fieldFilter?: { field: string; val: any };
 
-  constructor(path: string, dbMap: Map<string, any>) {
+  constructor(path: string, dbMap: Map<string, any>, filter?: { field: string; val: any }) {
     this.path = path;
     this.dbMap = dbMap;
+    this.fieldFilter = filter;
   }
 
   doc(id: string) {
     return new FakeDocRef(`${this.path}/${id}`, this.dbMap);
+  }
+
+  where(field: string, op: string, value: any) {
+    return new FakeCollectionRef(this.path, this.dbMap, { field, val: value });
   }
 
   async get() {
@@ -77,10 +83,12 @@ class FakeCollectionRef {
         key.startsWith(this.path + "/") &&
         key.substring(this.path.length + 1).indexOf("/") === -1
       ) {
-        docs.push({
-          id: key.split("/").pop() || "",
-          data: () => (value !== undefined ? { ...value } : undefined),
-        });
+        if (!this.fieldFilter || value?.[this.fieldFilter.field] === this.fieldFilter.val) {
+          docs.push({
+            id: key.split("/").pop() || "",
+            data: () => (value !== undefined ? { ...value } : undefined),
+          });
+        }
       }
     }
     return {

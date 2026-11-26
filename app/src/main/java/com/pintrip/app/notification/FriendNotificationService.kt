@@ -93,7 +93,7 @@ object ProcessedEventCache {
 }
 
 object NotificationMessageParser {
-    fun parse(payload: Map<String, String>, currentUserUid: String?): NotificationParseResult {
+    fun parse(payload: Map<String, String>, currentUserUid: String?, context: Context? = null): NotificationParseResult {
         val type = payload["type"]
         if (type != FriendNotificationService.TYPE_PLACE_ADDED) {
             return NotificationParseResult.InvalidType
@@ -114,9 +114,29 @@ object NotificationMessageParser {
         }
 
         val roomId = payload["roomId"]
-        val kakaoPlaceId = payload["kakaoPlaceId"]
-        if (roomId.isNullOrBlank() || kakaoPlaceId.isNullOrBlank()) {
+        if (roomId.isNullOrBlank()) {
             return NotificationParseResult.MissingRoomOrPlaceId
+        }
+
+        val kakaoPlaceId = payload["kakaoPlaceId"].orEmpty()
+        val addedByNickname = payload["addedByNickname"].orEmpty()
+        val roomName = payload["roomName"].orEmpty()
+        val addedCount = payload["addedCount"]?.toIntOrNull() ?: 1
+
+        val title = if (context != null && addedByNickname.isNotBlank() && roomName.isNotBlank()) {
+            if (addedCount <= 1) {
+                context.getString(R.string.notification_friend_place_added_title_single, addedByNickname, roomName)
+            } else {
+                context.getString(R.string.notification_friend_place_added_title_multi, addedByNickname, roomName, addedCount)
+            }
+        } else {
+            payload["title"]
+        }
+
+        val body = if (context != null && addedByNickname.isNotBlank()) {
+            context.getString(R.string.notification_friend_place_added_body_formatted)
+        } else {
+            payload["body"]
         }
 
         return NotificationParseResult.Success(
@@ -124,8 +144,8 @@ object NotificationMessageParser {
             recipientUid = recipientUid,
             roomId = roomId,
             kakaoPlaceId = kakaoPlaceId,
-            title = payload["title"],
-            body = payload["body"]
+            title = title,
+            body = body
         )
     }
 }
@@ -196,7 +216,7 @@ class FriendNotificationService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
 
         val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
-        when (val result = NotificationMessageParser.parse(remoteMessage.data, currentUserUid)) {
+        when (val result = NotificationMessageParser.parse(remoteMessage.data, currentUserUid, applicationContext)) {
             is NotificationParseResult.Success -> {
                 if (ProcessedEventCache.isProcessed(applicationContext, result.recipientUid, result.eventId)) {
                     Log.d(TAG, "Ignoring duplicate eventId: ${result.eventId} for uid: ${result.recipientUid}")

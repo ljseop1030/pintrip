@@ -289,11 +289,12 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'kakaoPlaceId', 'kakaoPlaceUrl', 'searchKeyword', 'searchRegion',
             'matchType', 'sourceType', 'sourceUrl', 'addedBy', 'addedByNickname',
-            'likedBy', 'likeCount', 'createdAt'
+            'likedBy', 'likeCount', 'notificationBatchId', 'createdAt'
           ])
           // 선택 필드 검사 (생략, null, 또는 문자열 허용)
           && (!('searchRegion' in request.resource.data) || request.resource.data.searchRegion == null || request.resource.data.searchRegion is string)
           && (!('sourceUrl' in request.resource.data) || request.resource.data.sourceUrl == null || request.resource.data.sourceUrl is string)
+          && (!('notificationBatchId' in request.resource.data) || request.resource.data.notificationBatchId == null || (request.resource.data.notificationBatchId is string && request.resource.data.notificationBatchId.size() > 0))
           // 트랜잭션 동시 실행 검증: 같은 트랜잭션 요청에서 부모 방의 placeCount도 함께 증가했는지 getAfter로 확인
           && getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount > get(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount;
 
@@ -308,7 +309,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'kakaoPlaceId', 'kakaoPlaceUrl', 'searchKeyword', 'searchRegion',
             'matchType', 'sourceType', 'sourceUrl', 'addedBy', 'addedByNickname',
-            'likedBy', 'likeCount', 'createdAt'
+            'likedBy', 'likeCount', 'notificationBatchId', 'createdAt'
           ])
           // 3. 보호 필드 불변성 검증
           && request.resource.data.kakaoPlaceId == resource.data.kakaoPlaceId
@@ -320,6 +321,7 @@ service cloud.firestore {
           && ((!('sourceUrl' in resource.data) && !('sourceUrl' in request.resource.data)) || (request.resource.data.sourceUrl == resource.data.sourceUrl))
           && request.resource.data.addedBy == resource.data.addedBy
           && request.resource.data.addedByNickname == resource.data.addedByNickname
+          && ((!('notificationBatchId' in resource.data) && !('notificationBatchId' in request.resource.data)) || (request.resource.data.notificationBatchId == resource.data.notificationBatchId))
           && request.resource.data.createdAt == resource.data.createdAt
           // 4. likedBy, likeCount 타입 및 기존/신규 likedBy 중복 금지 검증
           && resource.data.likedBy is list

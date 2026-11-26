@@ -319,19 +319,16 @@ class SelectPlacesViewModel(
                 val result = placeRepository.addPlaces(currentRoomId, placesToSave)
                 Log.d(TAG, "Saved places successfully: added=${result.addedCount}, skipped=${result.skippedCount}, excluded=$excludedCount, notFound=$notFoundCount")
 
-                result.addedPlaces.forEach { addedPlace ->
-                    if (context != null) {
-                        try {
-                            com.pintrip.app.notification.FriendPlaceNotificationWorker.enqueueWork(
-                                context = context.applicationContext,
-                                roomId = currentRoomId,
-                                kakaoPlaceId = addedPlace.kakaoPlaceId,
-                                createdAtMs = addedPlace.createdAtMs,
-                                requestingUid = uid
-                            )
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Failed to enqueue notification work for ${addedPlace.kakaoPlaceId}: ${e.message}")
-                        }
+                if (result.addedCount > 0 && !result.notificationBatchId.isNullOrBlank() && context != null) {
+                    try {
+                        com.pintrip.app.notification.FriendPlaceNotificationWorker.enqueueWork(
+                            context = context.applicationContext,
+                            roomId = currentRoomId,
+                            notificationBatchId = result.notificationBatchId,
+                            requestingUid = uid
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to enqueue notification work for batch ${result.notificationBatchId}: ${e.message}")
                     }
                 }
 

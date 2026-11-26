@@ -9,6 +9,7 @@ export interface PlaceDocument {
   addedByNickname: string;
   likedBy: string[];
   likeCount: number;
+  notificationBatchId?: string | null;
   createdAt: any;
 }
 

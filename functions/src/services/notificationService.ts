@@ -22,6 +22,16 @@ export interface ProcessNotificationResult {
   skippedInFlight: number;
 }
 
+export interface BatchNotificationParams {
+  roomId: string;
+  notificationBatchId: string;
+  requestingUid: string;
+  executionId?: string;
+  fallbackPlaceId?: string;
+  fallbackPlaceData?: PlaceDocument;
+  overrideEventId?: string;
+}
+
 const PERMANENT_ERROR_CODES = new Set([
   "messaging/registration-token-not-registered",
   "messaging/invalid-registration-token",
@@ -115,29 +125,25 @@ export class NotificationService {
   }
 
   /**
-   * 친구 장소 추가 이벤트를 원자적 트랜잭션 처리 권한 획득(Lease)과 멱등성 보장 하에 전송합니다.
+   * 저장 배치 ID (notificationBatchId) 또는 단일 placeId 단위로 장소 생성 알림을 발송합니다.
    */
-  async processFriendPlaceAdded(
-    roomId: string,
-    placeId: string,
-    cloudEventId: string,
-    placeData: PlaceDocument,
-    executionId: string = crypto.randomUUID()
+  async processFriendPlaceAddedBatch(
+    params: BatchNotificationParams
   ): Promise<ProcessNotificationResult> {
-    const eventId = `evt_${roomId}_${placeId}_${cloudEventId}`;
-    const addedBy = placeData?.addedBy;
+    const {
+      roomId,
+      notificationBatchId,
+      requestingUid,
+      executionId = crypto.randomUUID(),
+      fallbackPlaceId,
+      fallbackPlaceData,
+      overrideEventId,
+    } = params;
 
-    // 1. 입력 파라미터 및 경로 일치 검증
-    if (
-      !roomId ||
-      !placeId ||
-      !addedBy ||
-      typeof roomId !== "string" ||
-      typeof placeId !== "string" ||
-      typeof addedBy !== "string" ||
-      (placeData.kakaoPlaceId && placeData.kakaoPlaceId !== placeId)
-    ) {
-      console.warn("Invalid notification input parameters or path ID mismatch. Aborting.");
+    const eventId = overrideEventId || `evt_${roomId}_${requestingUid}_${notificationBatchId}`;
+
+    if (!roomId || !requestingUid || (!notificationBatchId && !fallbackPlaceId)) {
+      console.warn("Invalid notification batch input parameters. Aborting.");
       return {
         eventId,
         totalRecipients: 0,
@@ -149,7 +155,7 @@ export class NotificationService {
       };
     }
 
-    // 2. 부모 방 문서 존재 및 작성자 멤버십 검증
+    // 1. 부모 방 문서 존재 및 멤버십 검증
     const roomDocRef = this.db.collection("rooms").doc(roomId);
     const roomSnap = await roomDocRef.get();
     if (!roomSnap.exists) {
@@ -166,8 +172,8 @@ export class NotificationService {
     }
 
     const roomData = roomSnap.data() as RoomDocument;
-    if (!Array.isArray(roomData.memberIds) || !roomData.memberIds.includes(addedBy)) {
-      console.warn(`Author ${addedBy} is not a valid member of room ${roomId}. Aborting.`);
+    if (!Array.isArray(roomData.memberIds) || !roomData.memberIds.includes(requestingUid)) {
+      console.warn(`Requesting user ${requestingUid} is not a valid member of room ${roomId}. Aborting.`);
       return {
         eventId,
         totalRecipients: 0,
@@ -179,9 +185,50 @@ export class NotificationService {
       };
     }
 
+    // 2. 해당 batchId 또는 fallbackPlaceId로 장소 문서들 조회 및 작성자 검증
+    let rawPlaceDocs: { id: string; data: PlaceDocument }[] = [];
+    if (notificationBatchId) {
+      const placesSnap = await roomDocRef
+        .collection("places")
+        .where("notificationBatchId", "==", notificationBatchId)
+        .get();
+      rawPlaceDocs = placesSnap.docs.map((doc) => ({ id: doc.id, data: doc.data() as PlaceDocument }));
+    }
+
+    if (rawPlaceDocs.length === 0 && fallbackPlaceId) {
+      const singleSnap = await roomDocRef.collection("places").doc(fallbackPlaceId).get();
+      if (singleSnap.exists) {
+        rawPlaceDocs = [{ id: singleSnap.id, data: singleSnap.data() as PlaceDocument }];
+      } else if (fallbackPlaceData) {
+        rawPlaceDocs = [{ id: fallbackPlaceId, data: fallbackPlaceData }];
+      }
+    }
+
+    // 작성자가 일치하는 장소만 엄격하게 필터링 (혼합 작성자 오염 차단)
+    const placeDataList = rawPlaceDocs.filter((p) => p.data.addedBy === requestingUid);
+
+    if (placeDataList.length === 0) {
+      console.warn(`No valid places matching author ${requestingUid} found for notificationBatchId ${notificationBatchId} in room ${roomId}. Aborting.`);
+      return {
+        eventId,
+        totalRecipients: 0,
+        totalDevices: 0,
+        succeededDevices: 0,
+        failedDevices: 0,
+        skippedAlreadySucceeded: 0,
+        skippedInFlight: 0,
+      };
+    }
+
+    const firstPlaceData = placeDataList[0].data;
+    const addedCount = placeDataList.length;
+    const addedByNickname = firstPlaceData.addedByNickname || "";
+    const roomName = roomData.name || "";
+    const kakaoPlaceId = addedCount === 1 ? placeDataList[0].id : "";
+
     // 3. 수신 대상 선정 (작성자 제외, 중복 없는 memberIds)
     const recipientUids = Array.from(
-      new Set(roomData.memberIds.filter((uid) => uid && uid !== addedBy))
+      new Set(roomData.memberIds.filter((uid) => uid && uid !== requestingUid))
     );
 
     if (recipientUids.length === 0) {
@@ -301,7 +348,6 @@ export class NotificationService {
       if (acquireResult === "ACQUIRED") {
         acquiredTargets.push(target);
       } else if (acquireResult === "TERMINAL") {
-        // Count actual terminal successes vs failures
         const termSnap = await deliveriesRef.doc(target.deliveryId).get();
         if (termSnap.data()?.status === "success") {
           skippedAlreadySucceeded++;
@@ -312,16 +358,15 @@ export class NotificationService {
     }
 
     if (acquiredTargets.length === 0) {
-      console.log(`No pending targets acquired for event ${eventId}. Skipped ${skippedAlreadySucceeded} succeeded, ${skippedInFlight} in-flight.`);
+      console.log(`No pending targets acquired for event ${eventId}. Skipped ${skippedAlreadySucceeded} terminal, ${skippedInFlight} in-flight.`);
 
-      // Heal parent status in transaction even on fast return
       const parentSync = await this.syncParentEventStatus(
         eventRef,
         deliveriesRef,
         eventId,
         roomId,
-        placeData.kakaoPlaceId || placeId,
-        addedBy
+        kakaoPlaceId,
+        requestingUid
       );
 
       if (skippedInFlight > 0 || !parentSync.isAllTerminal) {
@@ -347,7 +392,10 @@ export class NotificationService {
         eventId,
         recipientUid: target.recipientUid,
         roomId,
-        kakaoPlaceId: placeData.kakaoPlaceId || placeId,
+        kakaoPlaceId,
+        addedByNickname,
+        roomName,
+        addedCount: String(addedCount),
       },
       android: {
         priority: "high",
@@ -378,7 +426,6 @@ export class NotificationService {
 
         // 7. 단일 결과 트랜잭션 (중첩 트랜잭션 제거 및 순수 트랜잭션 콜백 사용)
         const commitResult = await this.db.runTransaction(async (transaction) => {
-          // ALL READS FIRST
           const deliverySnap = await transaction.get(deliveryDocRef);
           const deviceSnap = await transaction.get(deviceDocRef);
 
@@ -390,7 +437,6 @@ export class NotificationService {
             return "STALE_OWNER";
           }
 
-          // ALL WRITES AFTER READS
           if (resp.success) {
             transaction.update(deliveryDocRef, {
               status: "success",
@@ -419,8 +465,10 @@ export class NotificationService {
               });
               return "FAILED_PERMANENT";
             } else {
+              // 일시 실패 시 Lease를 즉시 만료(leaseExpiresAt = now)시켜 재시도가 가능하도록 처리
               transaction.update(deliveryDocRef, {
                 status: "failed_transient",
+                leaseExpiresAt: Date.now(),
                 errorCode,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
               });
@@ -449,8 +497,8 @@ export class NotificationService {
       deliveriesRef,
       eventId,
       roomId,
-      placeData.kakaoPlaceId || placeId,
-      addedBy
+      kakaoPlaceId,
+      requestingUid
     );
 
     if (!parentSync.isAllTerminal || hasTransientFailure || skippedInFlight > 0) {
@@ -466,5 +514,28 @@ export class NotificationService {
       skippedAlreadySucceeded,
       skippedInFlight,
     };
+  }
+
+  /**
+   * 단일 장소 추가 이벤트 호환성 래퍼 메서드 (Cloud Functions 트리거 및 기존 단일 장소 테스트용)
+   */
+  async processFriendPlaceAdded(
+    roomId: string,
+    placeId: string,
+    cloudEventId: string,
+    placeData: PlaceDocument,
+    executionId: string = crypto.randomUUID()
+  ): Promise<ProcessNotificationResult> {
+    const notificationBatchId = placeData.notificationBatchId || `cf_${placeId}_${cloudEventId}`;
+    const overrideEventId = `evt_${roomId}_${placeId}_${cloudEventId}`;
+    return this.processFriendPlaceAddedBatch({
+      roomId,
+      notificationBatchId,
+      requestingUid: placeData.addedBy,
+      executionId,
+      fallbackPlaceId: placeId,
+      fallbackPlaceData: placeData,
+      overrideEventId,
+    });
   }
 }

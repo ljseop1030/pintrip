@@ -107,11 +107,11 @@ class MainActivity : AppCompatActivity() {
         val action = intent.action
         val type = intent.getStringExtra(FriendNotificationService.EXTRA_TYPE)
         val roomId = intent.getStringExtra(FriendNotificationService.EXTRA_ROOM_ID)
-        val kakaoPlaceId = intent.getStringExtra(FriendNotificationService.EXTRA_KAKAO_PLACE_ID)
+        val kakaoPlaceId = intent.getStringExtra(FriendNotificationService.EXTRA_KAKAO_PLACE_ID).orEmpty()
         val recipientUid = intent.getStringExtra(FriendNotificationService.EXTRA_RECIPIENT_UID)
 
         if ((action == FriendNotificationService.ACTION_FRIEND_PLACE_ADDED || type == FriendNotificationService.TYPE_PLACE_ADDED) &&
-            !roomId.isNullOrBlank() && !kakaoPlaceId.isNullOrBlank() && !recipientUid.isNullOrBlank()) {
+            !roomId.isNullOrBlank() && !recipientUid.isNullOrBlank()) {
 
             val destination = PendingNotificationDestination(
                 roomId = roomId,
@@ -194,8 +194,12 @@ class MainActivity : AppCompatActivity() {
                     override.invoke(this, result.roomId, result.kakaoPlaceId)
                 } else {
                     val roomMapIntent = RoomMapActivity.newIntent(this, result.roomId)
-                    val placeDetailIntent = PlaceDetailActivity.newIntent(this, result.roomId, result.kakaoPlaceId)
-                    startActivities(arrayOf(roomMapIntent, placeDetailIntent))
+                    if (result.kakaoPlaceId.isNotBlank()) {
+                        val placeDetailIntent = PlaceDetailActivity.newIntent(this, result.roomId, result.kakaoPlaceId)
+                        startActivities(arrayOf(roomMapIntent, placeDetailIntent))
+                    } else {
+                        startActivity(roomMapIntent)
+                    }
                 }
                 finish()
             }

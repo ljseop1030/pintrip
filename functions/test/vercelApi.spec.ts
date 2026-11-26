@@ -39,7 +39,7 @@ describe("Vercel Serverless API /api/friend-place-added Tests", () => {
     const req: any = {
       method: "POST",
       headers: {},
-      body: { roomId: "room_1", kakaoPlaceId: "place_1", createdAtMs: 1000 },
+      body: { roomId: "room_1", notificationBatchId: "batch_123" },
     };
 
     const res: any = {
@@ -58,14 +58,14 @@ describe("Vercel Serverless API /api/friend-place-added Tests", () => {
     expect(jsonResult.error).to.include("Unauthorized");
   });
 
-  it("handles Bad Request for missing createdAtMs parameter", async () => {
+  it("handles Unauthorized for invalid Bearer token", async () => {
     let statusCode = 0;
     let jsonResult: any = null;
 
     const req: any = {
       method: "POST",
-      headers: { authorization: "Bearer invalid_token" },
-      body: { roomId: "room_1", kakaoPlaceId: "place_1" }, // missing createdAtMs
+      headers: { authorization: "Bearer invalid_mock_token_123" },
+      body: { roomId: "room_1", notificationBatchId: "batch_123" },
     };
 
     const res: any = {
@@ -80,6 +80,7 @@ describe("Vercel Serverless API /api/friend-place-added Tests", () => {
     };
 
     await handler(req, res);
-    expect(statusCode).to.equal(401); // Header verification fails first on invalid token
+    expect(statusCode).to.equal(401);
+    expect(jsonResult.error).to.include("Unauthorized");
   });
 });

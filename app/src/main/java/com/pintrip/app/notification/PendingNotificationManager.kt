@@ -36,7 +36,7 @@ object PendingNotificationManager {
 
     @Synchronized
     fun savePendingDestination(context: Context?, destination: PendingNotificationDestination) {
-        if (destination.roomId.isBlank() || destination.kakaoPlaceId.isBlank() || destination.recipientUid.isBlank()) return
+        if (destination.roomId.isBlank() || destination.recipientUid.isBlank()) return
         val prefs = getPrefs(context) ?: return
         prefs.edit()
             .putString(KEY_ROOM_ID, destination.roomId)
@@ -52,12 +52,12 @@ object PendingNotificationManager {
     fun getPendingDestination(context: Context?): PendingNotificationDestination? {
         val prefs = getPrefs(context) ?: return null
         val roomId = prefs.getString(KEY_ROOM_ID, null)
-        val kakaoPlaceId = prefs.getString(KEY_KAKAO_PLACE_ID, null)
+        val kakaoPlaceId = prefs.getString(KEY_KAKAO_PLACE_ID, "") ?: ""
         val recipientUid = prefs.getString(KEY_RECIPIENT_UID, null)
         val requestId = prefs.getString(KEY_REQUEST_ID, null) ?: UUID.randomUUID().toString()
         val timestamp = prefs.getLong(KEY_TIMESTAMP, 0L)
 
-        if (roomId.isNullOrBlank() || kakaoPlaceId.isNullOrBlank() || recipientUid.isNullOrBlank()) {
+        if (roomId.isNullOrBlank() || recipientUid.isNullOrBlank()) {
             return null
         }
 

@@ -32,8 +32,7 @@ class FriendPlaceNotificationWorker(
         private const val TAG = "FriendPlaceNotifWorker"
 
         const val KEY_ROOM_ID = "key_room_id"
-        const val KEY_KAKAO_PLACE_ID = "key_kakao_place_id"
-        const val KEY_CREATED_AT_MS = "key_created_at_ms"
+        const val KEY_NOTIFICATION_BATCH_ID = "key_notification_batch_id"
         const val KEY_REQUESTING_UID = "key_requesting_uid"
 
         @Volatile
@@ -42,16 +41,14 @@ class FriendPlaceNotificationWorker(
         fun enqueueWork(
             context: Context,
             roomId: String,
-            kakaoPlaceId: String,
-            createdAtMs: Long,
+            notificationBatchId: String,
             requestingUid: String
         ) {
-            if (roomId.isBlank() || kakaoPlaceId.isBlank() || requestingUid.isBlank()) return
+            if (roomId.isBlank() || notificationBatchId.isBlank() || requestingUid.isBlank()) return
 
             val inputData = Data.Builder()
                 .putString(KEY_ROOM_ID, roomId)
-                .putString(KEY_KAKAO_PLACE_ID, kakaoPlaceId)
-                .putLong(KEY_CREATED_AT_MS, createdAtMs)
+                .putString(KEY_NOTIFICATION_BATCH_ID, notificationBatchId)
                 .putString(KEY_REQUESTING_UID, requestingUid)
                 .build()
 
@@ -71,7 +68,7 @@ class FriendPlaceNotificationWorker(
 
             try {
                 WorkManager.getInstance(context.applicationContext).enqueue(workRequest)
-                Log.d(TAG, "Enqueued notification work for room: $roomId, place: $kakaoPlaceId")
+                Log.d(TAG, "Enqueued notification work for room: $roomId, batch: $notificationBatchId")
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to enqueue WorkManager notification task: ${e.message}")
             }
@@ -80,11 +77,10 @@ class FriendPlaceNotificationWorker(
 
     override suspend fun doWork(): ListenableWorker.Result {
         val roomId = inputData.getString(KEY_ROOM_ID)
-        val kakaoPlaceId = inputData.getString(KEY_KAKAO_PLACE_ID)
-        val createdAtMs = inputData.getLong(KEY_CREATED_AT_MS, System.currentTimeMillis())
+        val notificationBatchId = inputData.getString(KEY_NOTIFICATION_BATCH_ID)
         val requestingUid = inputData.getString(KEY_REQUESTING_UID)
 
-        if (roomId.isNullOrBlank() || kakaoPlaceId.isNullOrBlank() || requestingUid.isNullOrBlank()) {
+        if (roomId.isNullOrBlank() || notificationBatchId.isNullOrBlank() || requestingUid.isNullOrBlank()) {
             Log.w(TAG, "Invalid work input parameters. Marking work as failed.")
             return ListenableWorker.Result.failure()
         }
@@ -119,8 +115,7 @@ class FriendPlaceNotificationWorker(
         val endpointUrl = "$baseUrl/api/friend-place-added"
         val jsonBody = JSONObject().apply {
             put("roomId", roomId)
-            put("kakaoPlaceId", kakaoPlaceId)
-            put("createdAtMs", createdAtMs)
+            put("notificationBatchId", notificationBatchId)
         }.toString()
 
         val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -141,8 +136,11 @@ class FriendPlaceNotificationWorker(
             client.newCall(request).execute().use { response ->
                 val code = response.code
                 if (response.isSuccessful) {
-                    Log.d(TAG, "Notification API call succeeded with code $code for place: $kakaoPlaceId")
+                    Log.d(TAG, "Notification API call succeeded with code $code for batch: $notificationBatchId")
                     ListenableWorker.Result.success()
+                } else if (code == 429) {
+                    Log.w(TAG, "Notification API call rate-limited (HTTP 429). Retrying work.")
+                    ListenableWorker.Result.retry()
                 } else if (code in 400..499) {
                     Log.w(TAG, "Notification API call rejected with permanent client error code $code")
                     ListenableWorker.Result.failure()

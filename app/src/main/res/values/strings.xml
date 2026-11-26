@@ -97,6 +97,25 @@
     <string name="sample_email_hint">travel@email.com</string>
     <string name="sample_password_hint">••••••••</string>
     <string name="btn_login">Login</string>
+    <string name="login_status_signing_in">Signing in…</string>
+    <string name="login_error_empty_email">Please enter your email.</string>
+    <string name="login_error_empty_password">Please enter your password.</string>
+    <string name="login_error_empty_nickname">Please enter a nickname.</string>
+    <string name="login_error_check_credentials">Please check your email and password.</string>
+    <string name="login_error_generic">Unable to sign in. Please try again.</string>
+    <string name="login_error_profile_title">Profile error</string>
+    <string name="login_error_profile_load">Unable to load your profile. Please try again.</string>
+    <string name="login_error_profile_save">Unable to save your profile. Please try again.</string>
+    <string name="login_dialog_profile_title">Set Profile Nickname</string>
+    <string name="login_dialog_profile_message">No profile found for this account. Please enter a nickname to use.</string>
+    <string name="login_dialog_profile_corrupted_title">Profile Data Error</string>
+    <string name="login_dialog_profile_corrupted_message">Your profile data is corrupted. Please sign out and try again.</string>
+    <string name="login_btn_save">Save Profile</string>
+    <string name="login_btn_retry">Retry</string>
+    <string name="login_btn_sign_out">Sign out</string>
+    <string name="login_signup_link_action">Sign up</string>
+
+    <!-- Legacy / Shared (preserved for other screens) -->
     <string name="btn_logout">로그아웃</string>
     <string name="status_logged_out">상태: 미로그인</string>
     <string name="status_logged_in">상태: 로그인 성공\nUID: %1$s</string>
@@ -119,6 +138,35 @@
     <string name="btn_signup">Sign Up</string>
     <string name="signup_link_prefix">Don\'t have an account?</string>
     <string name="signup_link_action">join membership</string>
+    <string name="signup_cd_back">Back</string>
+    <string name="signup_header_title">Sign up</string>
+
+    <!-- Sign Up Dedicated English Resources -->
+    <string name="signup_error_empty_nickname">Please enter a nickname.</string>
+    <string name="signup_error_empty_email">Please enter your email.</string>
+    <string name="signup_error_invalid_email">Please enter a valid email address.</string>
+    <string name="signup_error_empty_password">Please enter your password.</string>
+    <string name="signup_error_password_too_short">Use at least 8 characters.</string>
+    <string name="signup_error_empty_confirm_password">Please confirm your password.</string>
+    <string name="signup_error_password_mismatch">Passwords do not match.</string>
+    <string name="signup_error_terms_required">Please agree to the Terms of Service.</string>
+    <string name="signup_error_generic">Unable to sign up. Please try again.</string>
+    <string name="signup_error_email_already_in_use">Please check your details or sign in.</string>
+    <string name="signup_error_profile_title">Profile error</string>
+    <string name="signup_error_profile_load">Unable to load your profile. Please try again.</string>
+    <string name="signup_error_profile_save">Unable to save your profile. Please try again.</string>
+    <string name="signup_status_signing_up">Signing up…</string>
+    <string name="signup_btn_get_started">Get Started</string>
+    <string name="signup_btn_retry">Retry</string>
+    <string name="signup_btn_sign_out">Sign out</string>
+    <string name="signup_complete_title">Welcome to PinTrip!</string>
+    <string name="signup_complete_message">Your account and profile are ready.\nCreate a trip room and share places with friends!</string>
+    <string name="signup_restored_title">Account Restored</string>
+    <string name="signup_restored_message">Welcome back! Your existing account profile has been loaded.</string>
+    <string name="signup_dialog_corrupted_title">Profile Data Error</string>
+    <string name="signup_dialog_corrupted_message">Your profile data is corrupted. Please sign out and try again.</string>
+
+    <!-- Legacy / Shared (preserved for other screens) -->
 
     <string name="error_empty_nickname">닉네임을 입력해 주세요.</string>
     <string name="error_invalid_email">올바른 이메일 형식이 아닙니다.</string>
@@ -337,6 +385,9 @@
     <string name="channel_friend_place_added_description">방에 친구가 새로운 장소를 추가했을 때 받는 알림입니다.</string>
     <string name="notification_friend_place_added_title">새로운 장소 핀 추가</string>
     <string name="notification_friend_place_added_body">방에 새로운 장소가 추가되었습니다.</string>
+    <string name="notification_friend_place_added_title_single">%1$s님이 \'%2$s\'에 장소를 추가했어요.</string>
+    <string name="notification_friend_place_added_title_multi">%1$s님이 \'%2$s\'에 %3$d곳을 추가했어요.</string>
+    <string name="notification_friend_place_added_body_formatted">클릭하여 방에서 장소를 확인해 보세요.</string>
     <string name="btn_notification_settings">친구 알림 설정</string>
     <string name="notice_notification_enabled">친구 장소 추가 알림이 활성화되어 있습니다.</string>
     <string name="notice_notification_granted">친구 장소 추가 알림이 활성화되었습니다.</string>

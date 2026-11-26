@@ -51,4 +51,17 @@ class MainActivityNotificationTest {
         assertEquals("extra_type", FriendNotificationService.EXTRA_TYPE)
         assertEquals("PLACE_ADDED", FriendNotificationService.TYPE_PLACE_ADDED)
     }
+
+    @Test
+    fun pendingNotificationDestination_emptyKakaoPlaceId_forMultiPlace() {
+        val data = PendingNotificationDestination(
+            roomId = "room_123",
+            kakaoPlaceId = "",
+            recipientUid = "user_789"
+        )
+
+        assertEquals("room_123", data.roomId)
+        assertEquals("", data.kakaoPlaceId)
+        assertEquals("user_789", data.recipientUid)
+    }
 }
