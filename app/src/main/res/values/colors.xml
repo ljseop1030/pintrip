@@ -25,6 +25,8 @@
     <color name="place_list_empty_text">#7B7A88</color>
     <!-- Design System Colors (UI v2) -->
     <color name="pintrip_blue">#4B60C0</color>
+    <color name="tagline_text">#5A6AB8</color>
+    <color name="start_signup_prefix_text">#4A4F63</color>
     <color name="pintrip_surface">#F3F6FE</color>
     <color name="pintrip_bg_gray">#F5F6FA</color>
     <color name="text_dark">#1A1C26</color>

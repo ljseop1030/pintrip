@@ -23,9 +23,9 @@
 
         <ImageView
             android:id="@+id/ivLogo"
-            android:layout_width="229dp"
-            android:layout_height="81dp"
-            android:layout_marginTop="110dp"
+            android:layout_width="@dimen/start_logo_width"
+            android:layout_height="@dimen/start_logo_height"
+            android:layout_marginTop="@dimen/start_logo_margin_top"
             android:contentDescription="@string/app_name"
             android:src="@drawable/img_logo_wordmark"
             app:layout_constraintEnd_toEndOf="parent"
@@ -37,9 +37,9 @@
             style="@style/Widget.Pintrip.TextView.Tagline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/start_tagline_margin_top"
             android:text="@string/start_tagline"
-            android:textColor="#5A6AB8"
+            android:textColor="@color/tagline_text"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/ivLogo" />
@@ -48,9 +48,9 @@
             android:id="@+id/llBottomContainer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="52dp"
-            android:layout_marginEnd="52dp"
-            android:layout_marginBottom="64dp"
+            android:layout_marginStart="@dimen/start_bottom_margin_horizontal"
+            android:layout_marginEnd="@dimen/start_bottom_margin_horizontal"
+            android:layout_marginBottom="@dimen/start_bottom_margin_bottom"
             android:gravity="center_horizontal"
             android:orientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -60,25 +60,42 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnTestLogin"
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
+                android:layout_height="@dimen/start_btn_height"
                 android:backgroundTint="@color/pintrip_blue"
                 android:text="@string/start_btn_login"
                 android:textColor="@color/white"
-                android:textSize="17sp"
-                app:cornerRadius="27dp" />
+                android:textSize="@dimen/text_btn"
+                app:cornerRadius="@dimen/start_btn_corner_radius" />
 
-            <TextView
-                android:id="@+id/tvSignUp"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="8dp"
-                android:text="@string/start_signup_prompt"
-                android:textColor="@color/text_dark"
-                android:textSize="14sp" />
+                android:layout_marginTop="@dimen/start_signup_margin_top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/start_signup_prefix"
+                    android:textColor="@color/start_signup_prefix_text"
+                    android:textSize="@dimen/text_signup" />
+
+                <TextView
+                    android:id="@+id/tvSignUp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/start_signup_action_margin_start"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="@dimen/start_signup_padding"
+                    android:text="@string/start_signup_action"
+                    android:textColor="@color/pintrip_blue"
+                    android:textSize="@dimen/text_signup"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

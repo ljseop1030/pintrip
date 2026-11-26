@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.text.HtmlCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -64,12 +63,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        // Parse HTML formatted text for signup link
-        binding.tvSignUp.text = HtmlCompat.fromHtml(
-            getString(R.string.start_signup_prompt),
-            HtmlCompat.FROM_HTML_MODE_LEGACY
-        )
-
         binding.btnTestLogin.setOnClickListener {
             val intent = Intent(this, TestLoginActivity::class.java)
             startActivity(intent)
@@ -110,7 +103,7 @@ class MainActivity : AppCompatActivity() {
     private fun getInitialLogoScale(): Float {
         val splashWidth = resources.getDimension(R.dimen.splash_logo_width)
         val startWidth = resources.getDimension(R.dimen.start_logo_width)
-        return if (startWidth > 0f) splashWidth / startWidth else 0.582f
+        return splashWidth / startWidth
     }
 
     private fun showStartScreen(savedInstanceState: Bundle?) {
