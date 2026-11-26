@@ -4,6 +4,7 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.Source
 import com.pintrip.app.R
 import com.pintrip.app.data.model.User
 import com.pintrip.app.data.repository.UserRepository
@@ -491,4 +492,65 @@ class LoginViewModelTest {
             com.pintrip.app.data.repository.DeviceTokenRepository.setLoggingOut(false)
         }
     }
+
+    private fun verifyReentryBlocked(autoLogin: Boolean) {
+        var activeUid: String? = "account_A"
+        var signInCalls = 0
+        var profileCalls = 0
+        val user = org.mockito.Mockito.mock(FirebaseUser::class.java)
+        org.mockito.Mockito.`when`(user.uid).thenReturn("account_A")
+        val auth = org.mockito.Mockito.mock(FirebaseAuth::class.java)
+        org.mockito.Mockito.`when`(auth.currentUser).thenAnswer { if (activeUid == null) null else user }
+        org.mockito.Mockito.doAnswer { activeUid = null; null }.`when`(auth).signOut()
+        val profiles = object : UserRepository(null, null) {
+            override suspend fun getUserProfile(uid: String, source: Source): User? {
+                profileCalls++
+                return User(nickname = "Synthetic A", email = "a@example.com")
+            }
+        }
+        val cleanupGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val tokens = object : com.pintrip.app.data.repository.DeviceTokenRepository() {
+            override suspend fun cleanupTokenOnLogout(previousUid: String): Boolean {
+                cleanupGate.await()
+                return true
+            }
+        }
+        val viewModel = LoginViewModel(
+            auth = auth,
+            userRepository = profiles,
+            currentUidProvider = { activeUid },
+            signInAction = { _, _ -> signInCalls++; activeUid = "account_A"; user }
+        )
+        viewModel.performLogout(tokens)
+        testDispatcher.scheduler.runCurrent()
+
+        if (autoLogin) {
+            viewModel.checkExistingSession()
+        } else {
+            viewModel.performLogin("a@example.com", "synthetic_password")
+        }
+        testDispatcher.scheduler.runCurrent()
+
+        val eventBeforeCleanup = viewModel.events.value?.peekContent()
+        cleanupGate.complete(Unit)
+        testDispatcher.scheduler.runCurrent()
+
+        if (autoLogin) {
+            assertEquals("Auto-login must not fetch a profile during logout", 0, profileCalls)
+        } else {
+            assertEquals("Login action must be ignored during logout", 0, signInCalls)
+        }
+        assertNull("No navigation event should be emitted during logout", eventBeforeCleanup)
+
+        // After logout completes, a new login request can proceed normally
+        viewModel.performLogin("a@example.com", "synthetic_password")
+        testDispatcher.scheduler.runCurrent()
+        assertEquals("Login action is allowed after logout completes", 1, signInCalls)
+    }
+
+    @Test
+    fun `sameAccountLogin_isBlockedWhileLogoutWaits`() = verifyReentryBlocked(false)
+
+    @Test
+    fun `recreationAutoLogin_isBlockedWhileLogoutWaits`() = verifyReentryBlocked(true)
 }

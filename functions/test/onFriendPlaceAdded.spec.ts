@@ -716,7 +716,7 @@ describe("S02 Friend Place Added FCM Notification Tests", () => {
     expect(sentData.addedByNickname).to.equal("Minji");
   });
 
-  it("deduplicates re-requests for same batch and legacy single-place requests targeting a batch place", async () => {
+  it("deduplicates re-requests for same batch and processFriendPlaceAdded wrapper calls targeting a batch place", async () => {
     const roomData: RoomDocument = {
       name: "Gangneung Trip",
       region: "강릉",

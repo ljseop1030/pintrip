@@ -60,7 +60,7 @@ class LoginViewModel(
      * 앱 시작 시 기존 Auth 세션 자동 확인
      */
     fun checkExistingSession() {
-        if (isSessionChecked) return
+        if (isSessionChecked || isLogoutInProgress) return
         val current = try { firebaseAuth.currentUser } catch (_: Exception) { null }
         if (current != null) {
             isSessionChecked = true
@@ -72,7 +72,7 @@ class LoginViewModel(
      * 이메일/비밀번호 로그인 수행
      */
     fun performLogin(emailRaw: String, passwordRaw: String) {
-        if (_uiState.value is LoginUiState.Loading) return
+        if (_uiState.value is LoginUiState.Loading || isLogoutInProgress) return
 
         val email = emailRaw.trim()
         val password = passwordRaw
@@ -319,7 +319,7 @@ class LoginViewModel(
                                 // cleanup error or cancellation should not block sign out
                             }
                         }
-                        if (getCurrentAuthUid() == previousUid) {
+                        if (token == sessionToken && getCurrentAuthUid() == previousUid) {
                             try { firebaseAuth.signOut() } catch (_: Exception) {}
                         }
                     } finally {

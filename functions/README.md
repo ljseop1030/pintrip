@@ -43,7 +43,7 @@ The test suite validates:
 4. Repro B Fix: Mixed `success` and `in_progress` lease targets keep parent status as `in_progress` / `failed_transient` and throw error to trigger Cloud Functions retry pipeline.
 5. Batch processing (`notificationBatchId`): 3 places added in a batch send 1 FCM message per recipient device with `addedCount = "3"`, `addedByNickname`, `roomName`, and `kakaoPlaceId = ""`.
 6. Mixed author filtering: only places belonging to the requesting author in a batch are counted.
-7. Deduplication of identical batch requests and legacy single place requests targeting batch places.
+7. Deduplication of identical batch requests and processFriendPlaceAdded wrapper calls targeting batch places.
 8. Recovery of expired in-flight leases (`now >= leaseExpiresAt`) and stale lease owner late result rejection.
 9. Error classification: permanent errors marked `failed_permanent`; transient errors marked `failed_transient` and leased for immediate retry.
 10. Atomic token cleanup in transaction ONLY IF current document token matches failed token.
