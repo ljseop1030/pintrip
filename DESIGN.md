@@ -11,10 +11,14 @@
 | Token | Value | Resource |
 |---|---|---|
 | Primary | #4B60C0 | `colorPrimary` → `@color/pintrip_blue` (themes.xml) |
-| Surface | #F3F6FE (screen background) | colors.xml |
-| Title | NanumSquareRound ExtraBold, 22sp (screens), 20sp (bottom sheets, dialogs) | `TextAppearance.Pintrip.Title` |
+| Surface | #F3F6FE (screen background) | `@color/pintrip_surface` |
+| Title | NanumSquareRound ExtraBold, 22sp (screens), 20sp (bottom sheets, dialogs) | `style="@style/Widget.Pintrip.TextView.Title"` (sheets, dialogs: `Widget.Pintrip.TextView.Title.Sheet`) |
+| Tagline | NanumSquareRound Bold, 17sp | `style="@style/Widget.Pintrip.TextView.Tagline"` |
 | Body | Pretendard, 15sp | `TextAppearance.Pintrip.Body` |
 | Corner | card 20dp, bottom sheet 28dp | `ShapeAppearance.Pintrip.*` |
+
+- Title and Tagline must use the `Widget.Pintrip.TextView.*` style, not only `textAppearance`.
+- If Figma uses a different color for the same role, change the existing color's value. Add a new color only when no existing one fits.
 
 ## Fonts (Figma shows fallback fonts)
 Bundle in `res/font/`.
