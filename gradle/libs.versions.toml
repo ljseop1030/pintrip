@@ -18,6 +18,7 @@ jsoup = "1.18.3"
 coreTesting = "2.2.0"
 kakaoMaps = "2.12.18"
 playServicesLocation = "21.4.0"
+mockito = "5.24.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ org-json = { module = "org.json:json", version.ref = "json" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 kakao-maps = { module = "com.kakao.maps.open:android", version.ref = "kakaoMaps" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

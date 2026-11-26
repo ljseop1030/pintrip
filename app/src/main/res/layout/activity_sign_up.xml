@@ -14,9 +14,9 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="48dp"
+        android:layout_marginTop="36dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/btn_logout"
+        android:contentDescription="@string/signup_cd_back"
         android:padding="4dp"
         android:src="@android:drawable/ic_menu_revert"
         app:layout_constraintStart_toStartOf="parent"
@@ -27,7 +27,7 @@
         android:id="@+id/tvHeaderTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/title_join_membership"
+        android:text="@string/signup_header_title"
         android:textColor="@color/text_dark"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -38,6 +38,7 @@
 
     <!-- 2. 회원가입 스크롤 폼 -->
     <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
@@ -190,27 +191,41 @@
                 android:textColor="@color/text_sub_gray"
                 android:textSize="13sp" />
 
+            <TextView
+                android:id="@+id/tvTermsError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorError"
+                android:textSize="13sp"
+                android:visibility="gone"
+                tools:text="Please agree to the Terms of Service."
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/tvFormError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="?attr/colorError"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="Unable to sign up. Please try again."
+                tools:visibility="visible" />
+
             <!-- 회원가입 버튼 -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSignUp"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 android:backgroundTint="@color/pintrip_blue"
                 android:text="@string/btn_signup"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 app:cornerRadius="12dp" />
-
-            <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="14sp"
-                tools:text="상태 메세지" />
 
         </LinearLayout>
     </ScrollView>
