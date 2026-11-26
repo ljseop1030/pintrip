@@ -80,11 +80,16 @@ FIREBASE_PRIVATE_KEY=<service-account-private-key>
 vercel --prod
 ```
 
-### Step 4: Android App Client API URL Setup
-Add the deployed Vercel domain URL to `secrets.properties` in your Android project:
+### Step 4: Android App Client API URL (Default Included)
+The Android build uses `https://pintrip-notifications.vercel.app` by default. Team members do not need to add a notification URL to `secrets.properties` to use the shared server.
+
+To use a different server, optionally set a nonblank URL in the project root's `secrets.properties` and rebuild:
 ```properties
 NOTIFICATION_API_URL=https://<your-vercel-project>.vercel.app
 ```
+A missing, empty, or whitespace-only value uses the shared default. Set only the domain URL; the Worker appends `/api/friend-place-added`.
+
+Devices must still log in, join the same room, and allow notifications. Actual device FCM delivery remains to be verified.
 
 ---
 

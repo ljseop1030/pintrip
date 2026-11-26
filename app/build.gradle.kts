@@ -11,6 +11,10 @@ val secrets = Properties().apply {
     if (file.exists()) load(file.inputStream())
 }
 
+val notificationApiUrl = secrets.getProperty("NOTIFICATION_API_URL", "")
+    .trim()
+    .ifBlank { "https://pintrip-notifications.vercel.app" }
+
 android {
     namespace = "com.pintrip.app"
     compileSdk {
@@ -29,7 +33,7 @@ android {
         // kakao keys
         buildConfigField("String", "KAKAO_REST_API_KEY", "\"${secrets.getProperty("KAKAO_REST_API_KEY", "")}\"")
         buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"${secrets.getProperty("KAKAO_NATIVE_APP_KEY", "")}\"")
-        buildConfigField("String", "NOTIFICATION_API_URL", "\"${secrets.getProperty("NOTIFICATION_API_URL", "")}\"")
+        buildConfigField("String", "NOTIFICATION_API_URL", "\"$notificationApiUrl\"")
     }
 
     buildFeatures {
