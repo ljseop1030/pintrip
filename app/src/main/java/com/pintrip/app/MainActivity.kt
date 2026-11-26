@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -37,8 +38,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val userRepository: UserRepository by lazy { UserRepository(auth = auth) }
+    private var isCheckingAuth = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { isCheckingAuth }
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -60,6 +65,7 @@ class MainActivity : AppCompatActivity() {
 
         val currentUser = auth.currentUser
         if (currentUser == null) {
+            isCheckingAuth = false
             navigateToLogin()
         } else {
             binding.btnTestLogin.isEnabled = false
@@ -90,14 +96,17 @@ class MainActivity : AppCompatActivity() {
             try {
                 binding.btnTestLogin.isEnabled = false
                 val profile = userRepository.getUserProfile(user.uid, source = Source.SERVER)
+                isCheckingAuth = false
                 if (profile != null && profile.nickname.isNotBlank()) {
                     navigateToRoomList()
                 } else {
                     navigateToLogin()
                 }
             } catch (e: CancellationException) {
+                isCheckingAuth = false
                 throw e
             } catch (e: Exception) {
+                isCheckingAuth = false
                 if (BuildConfig.DEBUG) {
                     Log.e(TAG, "Failed to verify user profile on app entry", e)
                 }
