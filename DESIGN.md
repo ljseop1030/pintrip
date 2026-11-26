@@ -57,6 +57,7 @@ Bundle in `res/font/`.
 ### Behavior
 | Screen | Change |
 |---|---|
+| 02 Start | Logged out: show Start (do not finish); 로그인 → TestLoginActivity, 회원가입 → SignUpActivity. Logged in with profile: go to Room list without releasing the splash. Missing profile: go to Login directly. Profile check failed: release splash, keep the error dialog; its log out signs out and stays on Start. Reuse `btnTestLogin` as the login button. `img_start_bg` covers the whole screen under the system bars; apply insets only to content. Keep deep link handling as is |
 | 06 Room list | Logout moves into 20 My info (avatar). Link bar and photo button start the share flow |
 | 07 Create room | Theme stays "healing" during the UI migration. The rename to "abroad" is done separately later |
 | 11 Room home | Invite and travel mode become buttons. `menu_room_home.xml` then has no items, so remove the menu. Add button opens 15 Add place for this room. If travel mode logic does not exist yet, build only the button states and leave a TODO |
@@ -70,6 +71,7 @@ Bundle in `res/font/`.
 ### Motion
 - Splash → Start (logged out): logo moves up from the center, then background, tagline and buttons fade in one after another. The SplashScreen theme only shows the icon, so this motion is implemented in `activity_main.xml`, not in the splash theme.
 - Travel mode button (11 → 11-C → 11-B): shrunk icon → tap to extend "여행 모드 켜기" → tap to start (11-B) → tap again to turn off (confirm first).
+- Play the Start motion only on first launch (savedInstanceState == null); after recreation show the final state.
 
 ## Frame ↔ file
 | Figma | File |
