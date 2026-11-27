@@ -51,12 +51,12 @@
     <color name="badge_blue_bg">#EBF0FF</color>
     <color name="badge_blue_text">@color/pintrip_blue</color>
     <color name="icon_bg_light">#F0F3FA</color>
-    <color name="badge_check_bg">#FFF7ED</color>
-    <color name="badge_check_text">#D97706</color>
-    <color name="badge_exception_bg">#FFF1F0</color>
-    <color name="badge_exception_text">#F09C6B</color>
-    <color name="item_check_border">#FDBA74</color>
-    <color name="item_check_bg">#FFFBEB</color>
+    <color name="badge_check_bg">#FFEDE3</color>
+    <color name="badge_check_text">#A85628</color>
+    <color name="badge_exception_bg">#F0F1F5</color>
+    <color name="badge_exception_text">#646C8F</color>
+    <color name="item_check_border">#F6CDB5</color>
+    <color name="item_check_bg">#FFFFFF</color>
 
     <!-- Map Label Colors -->
     <color name="map_label_text">#1A1C26</color>
