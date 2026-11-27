@@ -2,6 +2,7 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Material3.CardView.Elevated"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     app:cardBackgroundColor="@color/white"
@@ -12,16 +13,17 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="24dp">
+        android:paddingHorizontal="22dp"
+        android:paddingTop="26dp"
+        android:paddingBottom="22dp">
 
         <TextView
             android:id="@+id/tvDialogTitle"
+            style="@style/Widget.Pintrip.TextView.Title.Sheet"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/join_code_dialog_title"
-            android:textColor="@color/text_dark"
-            android:textSize="20sp"
-            android:textStyle="bold"
+            android:textColor="@color/text_dark_navy"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -31,9 +33,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:fontFamily="@font/pretendard"
             android:text="@string/join_code_dialog_subtext"
-            android:textColor="@color/text_sub_gray"
-            android:textSize="13sp"
+            android:textColor="@color/text_link_hint"
+            android:textSize="@dimen/text_greeting"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvDialogTitle" />
@@ -43,9 +46,15 @@
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
+            app:boxBackgroundColor="@color/white"
+            app:boxCornerRadiusBottomEnd="@dimen/input_box_corner_radius"
+            app:boxCornerRadiusBottomStart="@dimen/input_box_corner_radius"
+            app:boxCornerRadiusTopEnd="@dimen/input_box_corner_radius"
+            app:boxCornerRadiusTopStart="@dimen/input_box_corner_radius"
             app:boxStrokeColor="@color/pintrip_blue"
-            app:hintTextColor="@color/pintrip_blue"
+            app:boxStrokeWidth="2dp"
+            app:hintEnabled="false"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvDialogSubtitle">
@@ -53,15 +62,20 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etInviteCode"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
+                android:fontFamily="@font/pretendard_bold"
+                android:gravity="center"
                 android:hint="@string/join_code_hint"
                 android:imeOptions="actionDone"
                 android:inputType="textCapCharacters|textNoSuggestions"
+                android:letterSpacing="0.2"
                 android:maxLength="30"
                 android:maxLines="1"
+                android:paddingHorizontal="16dp"
                 android:singleLine="true"
-                android:textColor="@color/text_dark"
-                android:textSize="16sp"
+                android:textColor="@color/text_dark_navy"
+                android:textColorHint="#757575"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -70,7 +84,7 @@
             android:id="@+id/pbLoading"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             android:indeterminateTint="@color/pintrip_blue"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
@@ -82,7 +96,7 @@
             android:id="@+id/layoutButtons"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -90,23 +104,40 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancel"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:backgroundTint="@color/white"
+                android:fontFamily="@font/pretendard_bold"
+                app:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_cancel"
-                android:textColor="@color/text_sub_gray" />
+                android:textColor="@color/button_outlined_text"
+                android:textSize="14.8sp"
+                android:textStyle="bold"
+                app:cornerRadius="24dp"
+                app:strokeColor="@color/button_outlined_stroke"
+                app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnJoin"
+                style="@style/Widget.Pintrip.Button.Primary"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="4dp"
                 android:layout_weight="1"
-                android:backgroundTint="@color/pintrip_blue"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:fontFamily="@font/pretendard_bold"
+                app:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_join_action"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                android:textSize="14.6sp"
+                android:textStyle="bold"
+                app:cornerRadius="24dp" />
 
         </LinearLayout>
 

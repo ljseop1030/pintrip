@@ -287,12 +287,13 @@
     <!-- Join Result Notices & Dialogs -->
     <string name="notice_join_own_room">직접 만든 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
     <string name="notice_already_joined_room">이미 참여 중인 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
-    <string name="notice_join_own_room_format">‘%1$s’ 방은 내가 만든 여행방입니다.</string>
-    <string name="notice_already_joined_room_format">‘%1$s’ 방은 이미 참여 중인 여행방입니다.</string>
-    <string name="notice_join_room_success_format">‘%1$s’ 방에 참여했습니다.</string>
-    <string name="notice_join_room_rechecked_format">‘%1$s’ 방 참여가 확인되었습니다.</string>
-    <string name="btn_view_places">장소 목록 보기</string>
-    <string name="btn_go_to_list">목록으로</string>
+    <string name="notice_join_own_room_format">‘%1$s’ 방은\n내가 만든 여행방입니다.</string>
+    <string name="notice_already_joined_room_format">‘%1$s’ 방은\n이미 참여 중인 여행방입니다.</string>
+    <string name="notice_join_room_success_format">‘%1$s’ 여행방에\n참여했어요!</string>
+    <string name="notice_join_room_rechecked_format">‘%1$s’ 여행방 참여가\n확인되었어요!</string>
+    <string name="join_success_subtext">친구들이 모은 장소를 확인해 보세요</string>
+    <string name="btn_view_places">여행방 들어가기</string>
+    <string name="btn_go_to_list">닫기</string>
     <string name="btn_close">닫기</string>
     <string name="error_profile_check_required">프로필 정보를 확인해 주세요.</string>
     <string name="place_list_error_cannot_open">장소 목록 화면을 열 수 없습니다.</string>
