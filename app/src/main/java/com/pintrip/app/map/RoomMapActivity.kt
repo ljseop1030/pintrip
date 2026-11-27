@@ -63,6 +63,10 @@ class RoomMapActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "RoomMapActivity"
+        /** 강조 마커는 주변 핀과 같은 언어를 유지하도록 좌표를 밑변에 둔다 */
+        private const val FOCUS_MARKER_ANCHOR_Y = 1.0f
+        private const val DEFAULT_LABEL_RANK = 0L
+        private const val FOCUSED_LABEL_RANK = 100L
         const val EXTRA_ROOM_ID = "extra_room_id"
 
         fun newIntent(context: Context, roomId: String): Intent {
@@ -78,7 +82,10 @@ class RoomMapActivity : AppCompatActivity() {
 
     private var kakaoMapInstance: KakaoMap? = null
     private var labelStyles: LabelStyles? = null
+    private var focusLabelStyles: LabelStyles? = null
     private val labelPlaceMap = mutableMapOf<Label, String>()
+    /** "지도에서 보기"로 강조 중인 장소. 카테고리 필터로 라벨이 다시 만들어져도 유지한다 */
+    private var focusedPlaceId: String? = null
     private var currentSuccessState: RoomMapUiState.Success? = null
     private var bottomSheetBehavior: BottomSheetBehavior<*>? = null
     private lateinit var roomPlaceAdapter: RoomPlaceAdapter
@@ -412,7 +419,26 @@ class RoomMapActivity : AppCompatActivity() {
             map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(foundPlace.lat, foundPlace.lng), 15))
         }
 
+        applyFocusedMarker(kakaoPlaceId)
+
         bottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+    }
+
+    /**
+     * 강조할 장소의 라벨만 마스코트 마커로 바꾸고 맨 앞으로 올린다.
+     * 나머지는 기본 핀으로 되돌린다.
+     */
+    private fun applyFocusedMarker(kakaoPlaceId: String?) {
+        focusedPlaceId = kakaoPlaceId
+        val defaultStyles = labelStyles ?: return
+        val highlightStyles = focusLabelStyles
+
+        labelPlaceMap.forEach { (label, placeId) ->
+            val isFocused = placeId == kakaoPlaceId && highlightStyles != null
+            label.setStyles(if (isFocused) highlightStyles else defaultStyles)
+            label.changeRank(if (isFocused) FOCUSED_LABEL_RANK else DEFAULT_LABEL_RANK)
+            label.invalidate()
+        }
     }
 
     private fun setupMapView() {
@@ -462,6 +488,13 @@ class RoomMapActivity : AppCompatActivity() {
     private fun initLabelStyles(kakaoMap: KakaoMap) {
         if (labelStyles != null) return
         labelStyles = KakaoMapHelper.createLabelStyles(this, kakaoMap)
+        focusLabelStyles = KakaoMapHelper.createMascotLabelStyles(
+            context = this,
+            kakaoMap = kakaoMap,
+            widthDimenResId = R.dimen.map_marker_mascot_focus_width,
+            anchorY = FOCUS_MARKER_ANCHOR_Y,
+            withText = true,
+        )
     }
 
     override fun onResume() {
@@ -1005,6 +1038,9 @@ class RoomMapActivity : AppCompatActivity() {
         }
 
         Log.d(TAG, "foundPlaces: ${foundPlaces.size}, addedLabels: $addedLabelCount, isStyleNull: ${labelStyles == null}")
+
+        // 라벨을 모두 지우고 다시 만들었으므로 강조 상태를 복원한다
+        focusedPlaceId?.let { applyFocusedMarker(it) }
 
         when (val cmd = success.cameraCommand) {
             is CameraCommand.FitPoints -> {

@@ -69,4 +69,17 @@
     <color name="shake_arc">#7D94FE</color>
     <!-- 11-B 여행 모드 켜짐: Primary 배경 위에 올라가는 상태 점 -->
     <color name="travel_dot_active">#8EE0BE</color>
+
+    <!--
+      아바타 팔레트 (시안 12 좋아요 스택). 파스텔 배경 + 어두운 글자 4쌍을 순환한다.
+      배경 hex는 UserRepository.AVATAR_COLORS 와 같은 순서여야 한다.
+    -->
+    <color name="avatar_bg_blue">#E5EBFE</color>
+    <color name="avatar_text_blue">#334BB1</color>
+    <color name="avatar_bg_green">#DDF3EA</color>
+    <color name="avatar_text_green">#1E7A5C</color>
+    <color name="avatar_bg_purple">#EDE7FB</color>
+    <color name="avatar_text_purple">#5B45A8</color>
+    <color name="avatar_bg_orange">#FFEDE3</color>
+    <color name="avatar_text_orange">#A85628</color>
 </resources>

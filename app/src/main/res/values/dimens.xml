@@ -72,4 +72,9 @@
     <dimen name="checkbox_place_corner_radius">8dp</dimen>
     <dimen name="checkbox_place_stroke">2dp</dimen>
     <dimen name="checkbox_place_check_size">16dp</dimen>
+    <!-- 지도 마커 -->
+    <dimen name="map_marker_mascot_detail_width">110dp</dimen> <!-- 12 장소 상세 (시안 110px) -->
+    <dimen name="map_marker_mascot_focus_width">56dp</dimen> <!-- 11 "지도에서 보기" 강조 -->
+    <!-- 11 -> 12 진입 연출: 콘텐츠가 올라오는 거리 -->
+    <dimen name="place_detail_enter_translation">160dp</dimen>
 </resources>

@@ -1,7 +1,6 @@
 package com.pintrip.app.room
 
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.pintrip.app.R
 import com.pintrip.app.data.model.Room
 import com.pintrip.app.databinding.ItemRoomCardBinding
+import com.pintrip.app.ui.common.AvatarPalette
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -74,22 +74,14 @@ class RoomAdapter(
             binding.ivRoomIcon.setImageResource(iconRes)
 
             // 실제 멤버 프로필 닉네임 첫 글자 및 아바타 색상 반영
-            val firstMember = room.members.values.firstOrNull()
-            if (firstMember != null && firstMember.nickname.isNotBlank()) {
+            val firstMemberEntry = room.members.entries.firstOrNull { it.value.nickname.isNotBlank() }
+            if (firstMemberEntry != null) {
+                val (memberUid, firstMember) = firstMemberEntry
                 binding.tvMemberAvatar.text = firstMember.nickname.take(1).uppercase()
-                val colorHex = firstMember.avatarColor
-                if (colorHex.isNotBlank()) {
-                    try {
-                        val parsedColor = Color.parseColor(colorHex)
-                        binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
-                    } catch (_: Exception) {
-                        val defaultBlue = ContextCompat.getColor(context, R.color.pintrip_blue)
-                        binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(defaultBlue)
-                    }
-                } else {
-                    val defaultBlue = ContextCompat.getColor(context, R.color.pintrip_blue)
-                    binding.tvMemberAvatar.backgroundTintList = ColorStateList.valueOf(defaultBlue)
-                }
+                val colors = AvatarPalette.colorsFor(firstMember.avatarColor, memberUid)
+                binding.tvMemberAvatar.backgroundTintList =
+                    ColorStateList.valueOf(ContextCompat.getColor(context, colors.backgroundRes))
+                binding.tvMemberAvatar.setTextColor(ContextCompat.getColor(context, colors.textRes))
                 binding.tvMemberAvatar.visibility = View.VISIBLE
             } else {
                 binding.tvMemberAvatar.visibility = View.GONE
