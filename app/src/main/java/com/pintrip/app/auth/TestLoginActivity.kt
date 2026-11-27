@@ -47,19 +47,29 @@ class TestLoginActivity : AppCompatActivity(),
         binding = ActivityTestLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
 
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
             val bottomPadding = maxOf(systemBars.bottom, ime.bottom)
-            binding.scrollView.setPadding(0, 0, 0, bottomPadding)
+            binding.clContent.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding)
+
+            val backMarginTop = (8 * resources.displayMetrics.density).toInt() + systemBars.top
+            val lp = binding.ivBack.layoutParams as android.view.ViewGroup.MarginLayoutParams
+            if (lp.topMargin != backMarginTop) {
+                lp.topMargin = backMarginTop
+                binding.ivBack.layoutParams = lp
+            }
 
             insets
         }
 
         setupInputListeners()
         observeViewModel()
+
+        binding.ivBack.setOnClickListener {
+            finish()
+        }
 
         binding.btnLogin.setOnClickListener {
             viewModel.performLogin(

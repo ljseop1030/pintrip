@@ -91,33 +91,34 @@
     <string name="manual_search_error">장소 검색 중 오류가 발생했습니다.</string>
     <string name="btn_manual_search">직접 검색</string>
     <string name="common_confirm">확인</string>
+    <string name="common_back">뒤로 가기</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>
 
     <!-- S01 Login -->
-    <string name="test_login_title">Login</string>
-    <string name="email_hint">Email</string>
-    <string name="password_hint">Password</string>
+    <string name="test_login_title">로그인</string>
+    <string name="email_hint">이메일</string>
+    <string name="password_hint">비밀번호</string>
     <string name="sample_email_hint">travel@email.com</string>
-    <string name="sample_password_hint">••••••••</string>
-    <string name="btn_login">Login</string>
-    <string name="login_status_signing_in">Signing in…</string>
-    <string name="login_error_empty_email">Please enter your email.</string>
-    <string name="login_error_empty_password">Please enter your password.</string>
-    <string name="login_error_empty_nickname">Please enter a nickname.</string>
-    <string name="login_error_check_credentials">Please check your email and password.</string>
-    <string name="login_error_generic">Unable to sign in. Please try again.</string>
-    <string name="login_error_profile_title">Profile error</string>
-    <string name="login_error_profile_load">Unable to load your profile. Please try again.</string>
-    <string name="login_error_profile_save">Unable to save your profile. Please try again.</string>
-    <string name="login_dialog_profile_title">Set Profile Nickname</string>
-    <string name="login_dialog_profile_message">No profile found for this account. Please enter a nickname to use.</string>
-    <string name="login_dialog_profile_corrupted_title">Profile Data Error</string>
-    <string name="login_dialog_profile_corrupted_message">Your profile data is corrupted. Please sign out and try again.</string>
-    <string name="login_btn_save">Save Profile</string>
-    <string name="login_btn_retry">Retry</string>
-    <string name="login_btn_sign_out">Sign out</string>
-    <string name="login_signup_link_action">Sign up</string>
+    <string name="sample_password_hint">비밀번호</string>
+    <string name="btn_login">로그인하기</string>
+    <string name="login_status_signing_in">로그인 중…</string>
+    <string name="login_error_empty_email">이메일을 입력해 주세요.</string>
+    <string name="login_error_empty_password">비밀번호를 입력해 주세요.</string>
+    <string name="login_error_empty_nickname">닉네임을 입력해 주세요.</string>
+    <string name="login_error_check_credentials">이메일과 비밀번호를 확인해 주세요.</string>
+    <string name="login_error_generic">로그인할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="login_error_profile_title">프로필 오류</string>
+    <string name="login_error_profile_load">프로필을 불러올 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="login_error_profile_save">프로필을 저장할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="login_dialog_profile_title">프로필 닉네임 설정</string>
+    <string name="login_dialog_profile_message">프로필 정보가 없습니다. 사용할 닉네임을 입력해 주세요.</string>
+    <string name="login_dialog_profile_corrupted_title">프로필 정보 오류</string>
+    <string name="login_dialog_profile_corrupted_message">프로필 정보가 손상되었습니다. 로그아웃 후 다시 시도해 주세요.</string>
+    <string name="login_btn_save">프로필 저장</string>
+    <string name="login_btn_retry">재시도</string>
+    <string name="login_btn_sign_out">로그아웃</string>
+    <string name="login_signup_link_action">회원가입하기</string>
 
     <!-- Legacy / Shared (preserved for other screens) -->
     <string name="btn_logout">로그아웃</string>

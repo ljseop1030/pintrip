@@ -28,6 +28,7 @@
     <color name="tagline_text">#5A6AB8</color>
     <color name="start_signup_prefix_text">#4A4F63</color>
     <color name="pintrip_surface">#F3F6FE</color>
+    <color name="input_border">#DDE3F3</color>
     <color name="pintrip_bg_gray">#F5F6FA</color>
     <color name="text_dark">#1A1C26</color>
     <color name="text_sub_gray">#7B7A88</color>
