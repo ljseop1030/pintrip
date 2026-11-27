@@ -5,58 +5,83 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pintrip_bg_gray">
+    android:background="@color/pintrip_surface">
 
-    <!-- 1. 상단 파란색 헤더 영역 (Figma S03) -->
+    <!-- 1. 상단 파란색 헤더 영역 (Figma Frame 06) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutHeader"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/pintrip_blue"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="48dp"
-        android:paddingBottom="24dp"
+        android:background="@drawable/bg_room_header"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="56dp"
+        android:paddingBottom="40dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tvHeaderAvatar"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@color/white"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_avatar_white"
+            android:fontFamily="@font/pretendard_bold"
             android:gravity="center"
             android:textColor="@color/pintrip_blue"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="M" />
+
+        <ImageView
+            android:id="@+id/ivChevronDown"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="2dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_chevron_down"
+            app:layout_constraintBottom_toBottomOf="@id/tvHeaderAvatar"
+            app:layout_constraintStart_toEndOf="@id/tvHeaderAvatar"
+            app:layout_constraintTop_toTopOf="@id/tvHeaderAvatar"
+            app:tint="@color/white" />
 
         <TextView
             android:id="@+id/tvGreeting"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:textColor="@color/white"
-            android:textSize="13sp"
+            android:fontFamily="@font/pretendard"
+            android:textColor="#E3E9FF"
+            android:textSize="12sp"
             app:layout_constraintEnd_toStartOf="@id/btnLogout"
-            app:layout_constraintStart_toEndOf="@id/tvHeaderAvatar"
+            app:layout_constraintStart_toEndOf="@id/ivChevronDown"
             app:layout_constraintTop_toTopOf="@id/tvHeaderAvatar"
-            tools:text="Hello, Minji" />
+            tools:text="안녕하세요, Minji 님" />
 
         <TextView
             android:id="@+id/tvHeaderTitle"
+            style="@style/Widget.Pintrip.TextView.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
+            android:layout_marginTop="2dp"
             android:text="@string/my_travel_room_title"
             android:textColor="@color/white"
-            android:textSize="20sp"
-            android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@id/btnLogout"
-            app:layout_constraintStart_toEndOf="@id/tvHeaderAvatar"
+            app:layout_constraintStart_toEndOf="@id/ivChevronDown"
             app:layout_constraintTop_toBottomOf="@id/tvGreeting" />
+
+        <!-- 마스코트 행성 일러스트 -->
+        <ImageView
+            android:id="@+id/ivHeaderIllustration"
+            android:layout_width="121dp"
+            android:layout_height="76dp"
+            android:contentDescription="@null"
+            android:src="@drawable/img_mascot_white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"
@@ -64,48 +89,130 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/btn_logout"
-            android:textColor="@color/white"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:textColor="#E3E9FF"
+            android:textSize="12sp"
+            android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 2. 하단 액션 버튼 바 (코드로 참여 / + 방 만들기) -->
+    <!-- 2. 장소 추가 공유/링크 입력줄 (Figma Frame 06 - node 14:2) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutLinkBar"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_link_bar"
+        android:elevation="4dp"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutHeader">
+
+        <ImageView
+            android:id="@+id/ivLinkIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_link"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#646C8F" />
+
+        <TextView
+            android:id="@+id/tvLinkHint"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:fontFamily="@font/pretendard"
+            android:text="@string/link_input_hint"
+            android:textColor="#646C8F"
+            android:textSize="14sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnPhotoAdd"
+            app:layout_constraintStart_toEndOf="@id/ivLinkIcon"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnPhotoAdd"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardBackgroundColor="#E5EBFE"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:strokeWidth="0dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_image"
+                app:tint="@color/pintrip_blue" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/tvScreenshotHint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="36dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/pretendard"
+        android:text="@string/screenshot_add_hint"
+        android:textColor="#646C8F"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutLinkBar" />
+
+    <!-- 3. 하단 액션 버튼 바 (코드로 참여 / + 방 만들기) -->
     <LinearLayout
         android:id="@+id/layoutActionBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginBottom="24dp"
         android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutHeader">
+        app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnJoinCode"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginEnd="8dp"
+            android:layout_height="54dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
+            android:fontFamily="@font/pretendard_bold"
             android:text="@string/btn_join_code"
             android:textColor="@color/pintrip_blue"
-            app:strokeColor="@color/pintrip_blue" />
+            android:textSize="15.5sp"
+            android:textStyle="bold"
+            app:cornerRadius="27dp"
+            app:strokeColor="#C9D3F5"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCreateRoom"
+            style="@style/Widget.Pintrip.Button.Primary"
             android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginStart="8dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:backgroundTint="@color/pintrip_blue"
-            android:text="@string/btn_new_room"
-            android:textColor="@color/white" />
+            android:text="@string/btn_new_room" />
     </LinearLayout>
 
-    <!-- 3. 상태별 로딩 / 에러 / 빈 목록 / 리사이클러뷰 -->
+    <!-- 4. 상태별 로딩 / 에러 / 빈 목록 / 리사이클러뷰 -->
 
     <ProgressBar
         android:id="@+id/pbLoading"
@@ -113,10 +220,10 @@
         android:layout_height="wrap_content"
         android:indeterminateTint="@color/pintrip_blue"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:visibility="gone" />
 
     <TextView
@@ -129,10 +236,10 @@
         android:textColor="@color/text_sub_gray"
         android:textSize="15sp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:visibility="visible" />
 
     <LinearLayout
@@ -143,10 +250,10 @@
         android:gravity="center"
         android:orientation="vertical"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:visibility="gone">
 
         <TextView
@@ -160,12 +267,11 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
+            style="@style/Widget.Pintrip.Button.Primary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:backgroundTint="@color/pintrip_blue"
-            android:text="@string/btn_retry"
-            android:textColor="@color/white" />
+            android:text="@string/btn_retry" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -173,11 +279,11 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingVertical="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:paddingVertical="12dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:listitem="@layout/item_room_card" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

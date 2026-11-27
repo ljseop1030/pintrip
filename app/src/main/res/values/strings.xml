@@ -236,6 +236,8 @@
 
     <string name="btn_join_code">코드로 참여</string>
     <string name="btn_new_room">+ 방 만들기</string>
+    <string name="link_input_hint">블로그·지도 링크를 붙여 넣어 보세요</string>
+    <string name="screenshot_add_hint">스크린샷은 사진 버튼으로 추가할 수 있어요</string>
     <string name="room_list_empty">아직 참여 중인 여행방이 없습니다.\n새로운 여행방을 만들어 보세요!</string>
     <string name="room_list_load_error">방 목록을 불러오지 못했습니다.\n원인: %1$s</string>
     <string name="notice_join_code_feature_later">초대 코드로 참여하기 기능은 다음 업데이트에서 제공됩니다.</string>
