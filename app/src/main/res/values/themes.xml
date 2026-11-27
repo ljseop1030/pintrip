@@ -2,14 +2,62 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.Pintrip" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/pintrip_blue</item>
+        <!-- App-wide default font -->
+        <item name="android:fontFamily">@font/pretendard</item>
+        <item name="fontFamily">@font/pretendard</item>
     </style>
 
     <style name="Theme.Pintrip" parent="Base.Theme.Pintrip" />
+
+    <!-- Splash screen theme using AndroidX SplashScreen -->
+    <style name="Theme.Pintrip.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Pintrip</item>
+    </style>
 
     <style name="ShapeAppearance.Pintrip.TopRounded" parent="ShapeAppearance.Material3.Corner.None">
         <item name="cornerSizeTopLeft">24dp</item>
         <item name="cornerSizeTopRight">24dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <!-- Text appearances (size and font only; set text color in layouts) -->
+    <style name="TextAppearance.Pintrip.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/nanum_square_round_eb</item>
+        <item name="fontFamily">@font/nanum_square_round_eb</item>
+        <item name="android:textSize">@dimen/text_title</item>
+    </style>
+
+    <style name="TextAppearance.Pintrip.Title.Sheet">
+        <item name="android:textSize">@dimen/text_title_sheet</item>
+    </style>
+
+    <style name="TextAppearance.Pintrip.Tagline" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/nanum_square_round_b</item>
+        <item name="fontFamily">@font/nanum_square_round_b</item>
+        <item name="android:textSize">@dimen/text_tagline</item>
+    </style>
+
+    <style name="TextAppearance.Pintrip.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/pretendard</item>
+        <item name="fontFamily">@font/pretendard</item>
+        <item name="android:textSize">@dimen/text_body</item>
+    </style>
+
+    <!-- Widget styles: apply with style="..." so the font is not overridden by the theme default -->
+    <style name="Widget.Pintrip.TextView.Title" parent="">
+        <item name="android:textAppearance">@style/TextAppearance.Pintrip.Title</item>
+        <item name="android:fontFamily">@font/nanum_square_round_eb</item>
+    </style>
+
+    <style name="Widget.Pintrip.TextView.Title.Sheet">
+        <item name="android:textAppearance">@style/TextAppearance.Pintrip.Title.Sheet</item>
+    </style>
+
+    <style name="Widget.Pintrip.TextView.Tagline" parent="">
+        <item name="android:textAppearance">@style/TextAppearance.Pintrip.Tagline</item>
+        <item name="android:fontFamily">@font/nanum_square_round_b</item>
     </style>
 </resources>

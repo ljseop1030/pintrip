@@ -5,19 +5,100 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
+    android:background="@color/white"
     tools:context=".MainActivity">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnTestLogin"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/btn_open_test_login"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="visible" />
+    <ImageView
+        android:id="@+id/ivBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/img_start_bg" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="@dimen/start_logo_width"
+            android:layout_height="@dimen/start_logo_height"
+            android:layout_marginTop="@dimen/start_logo_margin_top"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/img_logo_wordmark"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvTagline"
+            style="@style/Widget.Pintrip.TextView.Tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/start_tagline_margin_top"
+            android:text="@string/start_tagline"
+            android:textColor="@color/tagline_text"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ivLogo" />
+
+        <LinearLayout
+            android:id="@+id/llBottomContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/start_bottom_margin_horizontal"
+            android:layout_marginEnd="@dimen/start_bottom_margin_horizontal"
+            android:layout_marginBottom="@dimen/start_bottom_margin_bottom"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTestLogin"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/start_btn_height"
+                android:backgroundTint="@color/pintrip_blue"
+                android:text="@string/start_btn_login"
+                android:textColor="@color/white"
+                android:textSize="@dimen/text_btn"
+                app:cornerRadius="@dimen/start_btn_corner_radius" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/start_signup_margin_top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/start_signup_prefix"
+                    android:textColor="@color/start_signup_prefix_text"
+                    android:textSize="@dimen/text_signup" />
+
+                <TextView
+                    android:id="@+id/tvSignUp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/start_signup_action_margin_start"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="@dimen/start_signup_padding"
+                    android:text="@string/start_signup_action"
+                    android:textColor="@color/pintrip_blue"
+                    android:textSize="@dimen/text_signup"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

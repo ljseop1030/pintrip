@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">pintrip</string>
+    <string name="start_tagline">한 번의 공유로 함께 채우는 여행 지도</string>
+    <string name="start_btn_login">로그인하기</string>
+    <string name="start_signup_prefix">계정이 없나요?</string>
+    <string name="start_signup_action">회원가입하기</string>
     <string name="title_activity_share_receive">PinTrip</string>
 
     <string name="share_receive_header">PinTrip 공유</string>
