@@ -704,6 +704,7 @@ class RoomMapActivity : AppCompatActivity() {
 
                 val actualCategoryEnum = com.pintrip.app.place.PlaceCategory.fromCode(place.category)
                 val actualCategoryName = getString(actualCategoryEnum.labelResId())
+                dialogBinding.tvResultCategoryBadge.text = actualCategoryName
                 val address = place.address.orEmpty()
                 val addedBy = place.place.addedByNickname.orEmpty()
 
