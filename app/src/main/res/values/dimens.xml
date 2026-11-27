@@ -28,4 +28,6 @@
     <dimen name="text_signup">14sp</dimen>
     <dimen name="text_caption">12sp</dimen>
     <dimen name="text_badge">11sp</dimen>
+    <dimen name="input_box_corner_radius">14dp</dimen>
+    <dimen name="text_chip">13sp</dimen>
 </resources>

@@ -32,6 +32,7 @@
     <color name="text_greeting">#E3E9FF</color>
     <color name="text_link_hint">#646C8F</color>
     <color name="icon_bg_blue">#E5EBFE</color>
+    <color name="icon_chip_bg">#F0F3FD</color>
     <color name="button_outlined_stroke">#C9D3F5</color>
     <color name="button_outlined_text">#334BB1</color>
     <color name="text_dark_navy">#1F2440</color>
