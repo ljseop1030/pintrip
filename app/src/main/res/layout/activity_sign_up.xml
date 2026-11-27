@@ -30,7 +30,7 @@
                 android:layout_marginEnd="28dp"
                 android:text="@string/signup_headline"
                 android:textColor="#1F2440"
-                android:textSize="22sp"
+                android:textSize="@dimen/text_headline_large"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -44,7 +44,7 @@
                 android:layout_marginEnd="28dp"
                 android:text="@string/signup_subtext"
                 android:textColor="#646C8F"
-                android:textSize="13sp"
+                android:textSize="@dimen/text_signup"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tvHeadline" />
@@ -59,7 +59,7 @@
                 android:layout_marginEnd="28dp"
                 android:text="@string/nickname_hint"
                 android:textColor="#4A4F63"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -95,7 +95,7 @@
                     android:paddingEnd="16dp"
                     android:textColor="@color/text_dark"
                     android:textColorHint="@color/text_sub_gray"
-                    android:textSize="14sp" />
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 이메일 입력 -->
@@ -108,7 +108,7 @@
                 android:layout_marginEnd="28dp"
                 android:text="@string/email_hint"
                 android:textColor="#4A4F63"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -144,7 +144,7 @@
                     android:paddingEnd="16dp"
                     android:textColor="@color/text_dark"
                     android:textColorHint="@color/text_sub_gray"
-                    android:textSize="14sp" />
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 비밀번호 입력 -->
@@ -157,7 +157,7 @@
                 android:layout_marginEnd="28dp"
                 android:text="@string/password_hint"
                 android:textColor="#4A4F63"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -194,7 +194,7 @@
                     android:paddingEnd="16dp"
                     android:textColor="@color/text_dark"
                     android:textColorHint="@color/text_sub_gray"
-                    android:textSize="14sp" />
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 비밀번호 확인 입력 -->
@@ -207,7 +207,7 @@
                 android:layout_marginEnd="28dp"
                 android:text="@string/confirm_password_hint"
                 android:textColor="#4A4F63"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -244,7 +244,7 @@
                     android:paddingEnd="16dp"
                     android:textColor="@color/text_dark"
                     android:textColorHint="@color/text_sub_gray"
-                    android:textSize="14sp" />
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 약관 동의 체크박스 & 보기 링크 -->
@@ -266,7 +266,7 @@
                     android:buttonTint="@color/pintrip_blue"
                     android:text="@string/terms_agreement"
                     android:textColor="#4A4F63"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_label"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/tvTermsLink"
                     app:layout_constraintStart_toStartOf="parent"

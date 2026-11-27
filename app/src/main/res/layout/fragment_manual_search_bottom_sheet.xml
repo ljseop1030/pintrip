@@ -36,7 +36,7 @@
         android:layout_marginTop="4dp"
         android:fontFamily="@font/pretendard"
         android:textColor="@color/text_link_hint"
-        android:textSize="12.5sp"
+        android:textSize="@dimen/text_greeting"
         tools:text="방 지역(부산) 안에서 검색합니다" />
 
     <!-- Search Input Field -->
@@ -70,7 +70,7 @@
             android:maxLines="1"
             android:textColor="@color/text_dark_navy"
             android:textColorHint="@color/text_sub_gray"
-            android:textSize="14.5sp" />
+            android:textSize="@dimen/text_body" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <ProgressBar

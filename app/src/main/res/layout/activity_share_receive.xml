@@ -33,7 +33,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/share_receive_header"
                 android:textColor="@color/tagline_text"
-                android:textSize="12.5sp"
+                android:textSize="@dimen/text_greeting"
                 android:textStyle="bold" />
 
             <!-- Header Main Title -->
@@ -45,7 +45,7 @@
                 android:layout_marginTop="4dp"
                 android:text="@string/share_receive_title_in_progress"
                 android:textColor="@color/text_dark_navy"
-                android:textSize="@dimen/text_title"
+                android:textSize="@dimen/text_headline_large"
                 tools:text="장소 찾는 중…" />
 
             <!-- Mascot Illustration -->
@@ -105,7 +105,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/pretendard_bold"
                             android:textColor="@color/text_dark_navy"
-                            android:textSize="14.5sp"
+                            android:textSize="@dimen/text_body"
                             android:textStyle="bold"
                             tools:text="스크린샷 1장" />
 
@@ -116,7 +116,7 @@
                             android:layout_marginTop="2dp"
                             android:fontFamily="@font/pretendard"
                             android:textColor="@color/text_link_hint"
-                            android:textSize="12.5sp"
+                            android:textSize="@dimen/text_greeting"
                             tools:text="갤러리에서 공유됨" />
                     </LinearLayout>
                 </LinearLayout>
@@ -172,7 +172,7 @@
                             android:layout_marginStart="12dp"
                             android:fontFamily="@font/pretendard_bold"
                             android:textColor="@color/text_dark_navy"
-                            android:textSize="14.5sp"
+                            android:textSize="@dimen/text_body"
                             android:textStyle="bold"
                             tools:text="@string/share_receive_step1_image_completed" />
                     </LinearLayout>
@@ -212,7 +212,7 @@
                             android:layout_marginStart="12dp"
                             android:fontFamily="@font/pretendard_bold"
                             android:textColor="@color/button_outlined_text"
-                            android:textSize="14.5sp"
+                            android:textSize="@dimen/text_body"
                             android:textStyle="bold"
                             tools:text="@string/share_receive_step2_in_progress" />
                     </LinearLayout>
@@ -252,7 +252,7 @@
                             android:layout_marginStart="12dp"
                             android:fontFamily="@font/pretendard"
                             android:textColor="@color/text_link_hint"
-                            android:textSize="14.5sp"
+                            android:textSize="@dimen/text_body"
                             tools:text="@string/share_receive_step3_pending" />
                     </LinearLayout>
 
@@ -339,7 +339,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/share_receive_room_label"
                 android:textColor="@color/start_signup_prefix_text"
-                android:textSize="12.5sp"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.card.MaterialCardView

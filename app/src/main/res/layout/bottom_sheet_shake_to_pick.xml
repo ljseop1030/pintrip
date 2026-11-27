@@ -143,7 +143,7 @@
 
             <TextView
                 android:id="@+id/tv_ready_heading"
-                style="@style/Widget.Pintrip.TextView.Title.Sheet"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -158,7 +158,7 @@
                 android:fontFamily="@font/pretendard_semibold"
                 android:gravity="center"
                 android:textColor="@color/pintrip_blue"
-                android:textSize="13sp"
+                android:textSize="@dimen/text_signup"
                 android:textStyle="bold"
                 tools:text="부산 24곳 중에서 하나를 골라 드려요" />
 
@@ -188,7 +188,7 @@
                 android:lineSpacingExtra="4dp"
                 android:text="@string/shake_ready_guide_sensor"
                 android:textColor="@color/text_link_hint"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_greeting" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_touch_pick"
@@ -211,7 +211,7 @@
 
             <TextView
                 android:id="@+id/tv_result_headline"
-                style="@style/Widget.Pintrip.TextView.Title.Sheet"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
@@ -261,7 +261,7 @@
 
                         <TextView
                             android:id="@+id/tv_result_place_name"
-                            style="@style/Widget.Pintrip.TextView.Title.Sheet"
+                            style="@style/Widget.Pintrip.TextView.Title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
@@ -277,7 +277,7 @@
                             android:fontFamily="@font/pretendard"
                             android:gravity="center"
                             android:textColor="@color/text_link_hint"
-                            android:textSize="12sp"
+                            android:textSize="@dimen/text_greeting"
                             tools:text="관광지 · 부산 해운대구 · Minji 님이 추가" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

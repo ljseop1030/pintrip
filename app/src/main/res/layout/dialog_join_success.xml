@@ -50,7 +50,7 @@
             android:gravity="center"
             android:text="@string/join_success_subtext"
             android:textColor="@color/text_link_hint"
-            android:textSize="@dimen/text_greeting"
+            android:textSize="@dimen/text_signup"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTitle" />
@@ -79,7 +79,7 @@
                 app:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_go_to_list"
                 android:textColor="@color/button_outlined_text"
-                android:textSize="14.4sp"
+                android:textSize="@dimen/text_btn_small"
                 android:textStyle="bold"
                 app:cornerRadius="24dp"
                 app:strokeColor="@color/button_outlined_stroke"
@@ -98,7 +98,7 @@
                 app:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_view_places"
                 android:textColor="@color/white"
-                android:textSize="14.5sp"
+                android:textSize="@dimen/text_btn_small"
                 android:textStyle="bold"
                 app:cornerRadius="24dp" />
 

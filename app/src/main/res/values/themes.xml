@@ -60,7 +60,7 @@
     <style name="Widget.Pintrip.TextView.Tagline" parent="">
         <item name="android:textAppearance">@style/TextAppearance.Pintrip.Tagline</item>
         <item name="android:fontFamily">@font/nanum_square_round_b</item>
-        <item name="fontFamily">@font/nanum_square_round_eb</item>
+        <item name="fontFamily">@font/nanum_square_round_b</item>
     </style>
 
     <style name="Widget.Pintrip.Button.Primary" parent="Widget.Material3.Button">

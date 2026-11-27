@@ -86,7 +86,7 @@
                         android:fontFamily="@font/pretendard_bold"
                         android:text="@string/confirm_location_recognized_text_label"
                         android:textColor="@color/badge_check_text"
-                        android:textSize="11.5sp"
+                        android:textSize="@dimen/text_caption"
                         android:textStyle="bold" />
 
                     <TextView
@@ -172,7 +172,7 @@
                         android:fontFamily="@font/pretendard_bold"
                         android:text="@string/confirm_location_manual_search_placeholder"
                         android:textColor="@color/button_outlined_text"
-                        android:textSize="13.5sp"
+                        android:textSize="@dimen/text_signup"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

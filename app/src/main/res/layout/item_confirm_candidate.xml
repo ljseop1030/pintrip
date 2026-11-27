@@ -23,13 +23,18 @@
         android:paddingHorizontal="18dp"
         android:paddingVertical="16dp">
 
+        <!-- 기본 버튼 드로어블(32dp)이 잘리지 않도록 크기는 드로어블이 정하게 둔다 -->
         <RadioButton
             android:id="@+id/rbCandidateSelect"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:buttonTint="@color/pintrip_blue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:button="@drawable/btn_radio_candidate"
             android:clickable="false"
-            android:focusable="false" />
+            android:focusable="false"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            app:buttonTint="@null" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -44,7 +49,7 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/pretendard_bold"
                 android:textColor="@color/text_dark_navy"
-                android:textSize="14.5sp"
+                android:textSize="@dimen/text_body"
                 android:textStyle="bold"
                 tools:text="모모스커피 본점" />
 
@@ -55,7 +60,7 @@
                 android:layout_marginTop="2dp"
                 android:fontFamily="@font/pretendard"
                 android:textColor="@color/text_link_hint"
-                android:textSize="11.5sp"
+                android:textSize="@dimen/text_caption"
                 tools:text="부산 금정구 오시게로 20" />
 
             <TextView
@@ -66,7 +71,7 @@
                 android:fontFamily="@font/pretendard"
                 android:text="@string/confirm_location_candidate_outside_region"
                 android:textColor="@color/badge_exception_text"
-                android:textSize="11.5sp"
+                android:textSize="@dimen/text_caption"
                 android:visibility="gone"
                 tools:visibility="visible" />
         </LinearLayout>

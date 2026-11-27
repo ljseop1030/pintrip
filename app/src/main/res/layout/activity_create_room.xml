@@ -42,7 +42,7 @@
             android:fontFamily="@font/pretendard_bold"
             android:text="@string/title_create_room"
             android:textColor="@color/text_dark_navy"
-            android:textSize="@dimen/text_card_title"
+            android:textSize="@dimen/text_btn"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@id/ivBack"
             app:layout_constraintEnd_toEndOf="parent"
@@ -88,7 +88,7 @@
                 android:fontFamily="@font/pretendard"
                 android:text="@string/create_room_subtext"
                 android:textColor="@color/text_link_hint"
-                android:textSize="@dimen/text_greeting" />
+                android:textSize="@dimen/text_signup" />
 
             <!-- Room Name Field -->
             <TextView
@@ -98,7 +98,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_travel_room_name"
                 android:textColor="@color/start_signup_prefix_text"
-                android:textSize="@dimen/text_caption"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -126,7 +126,7 @@
                     android:singleLine="true"
                     android:textColor="@color/text_dark_navy"
                     android:textColorHint="#757575"
-                    android:textSize="@dimen/text_signup" />
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Region Field -->
@@ -137,7 +137,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_travel_region"
                 android:textColor="@color/start_signup_prefix_text"
-                android:textSize="@dimen/text_caption"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -165,7 +165,7 @@
                     android:singleLine="true"
                     android:textColor="@color/text_dark_navy"
                     android:textColorHint="#757575"
-                    android:textSize="@dimen/text_signup" />
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Travel Period Field -->
@@ -176,7 +176,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_travel_period"
                 android:textColor="@color/start_signup_prefix_text"
-                android:textSize="@dimen/text_caption"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -196,7 +196,7 @@
                     android:fontFamily="@font/pretendard"
                     android:text="@string/date_to_be_determined"
                     android:textColor="@color/text_link_hint"
-                    android:textSize="@dimen/text_signup"
+                    android:textSize="@dimen/text_body"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/ivCalendarIcon"
                     app:layout_constraintStart_toStartOf="parent"
@@ -240,7 +240,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_main_icon"
                 android:textColor="@color/start_signup_prefix_text"
-                android:textSize="@dimen/text_caption"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.chip.ChipGroup
@@ -260,7 +260,7 @@
                     android:fontFamily="@font/pretendard_bold"
                     android:text="@string/icon_sea"
                     android:textColor="@color/chip_text_color"
-                    android:textSize="@dimen/text_chip"
+                    android:textSize="@dimen/text_chip_room_icon"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="18dp"
                     app:chipIconVisible="false"
@@ -275,7 +275,7 @@
                     android:fontFamily="@font/pretendard_bold"
                     android:text="@string/icon_food"
                     android:textColor="@color/chip_text_color"
-                    android:textSize="@dimen/text_signup"
+                    android:textSize="@dimen/text_chip_room_icon"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="18dp"
                     app:chipIconVisible="false"
@@ -290,7 +290,7 @@
                     android:fontFamily="@font/pretendard_bold"
                     android:text="@string/icon_nature"
                     android:textColor="@color/chip_text_color"
-                    android:textSize="@dimen/text_signup"
+                    android:textSize="@dimen/text_chip_room_icon"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="18dp"
                     app:chipIconVisible="false"
@@ -305,7 +305,7 @@
                     android:fontFamily="@font/pretendard_bold"
                     android:text="@string/icon_city"
                     android:textColor="@color/chip_text_color"
-                    android:textSize="@dimen/text_signup"
+                    android:textSize="@dimen/text_chip_room_icon"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="18dp"
                     app:chipIconVisible="false"
@@ -320,7 +320,7 @@
                     android:fontFamily="@font/pretendard_bold"
                     android:text="@string/icon_healing"
                     android:textColor="@color/chip_text_color"
-                    android:textSize="@dimen/text_signup"
+                    android:textSize="@dimen/text_chip_room_icon"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="18dp"
                     app:chipIconVisible="false"
@@ -362,7 +362,7 @@
                         android:fontFamily="@font/pretendard"
                         android:text="@string/notice_invite_code_auto"
                         android:textColor="@color/button_outlined_text"
-                        android:textSize="@dimen/text_caption" />
+                        android:textSize="@dimen/text_greeting" />
 
                 </LinearLayout>
 

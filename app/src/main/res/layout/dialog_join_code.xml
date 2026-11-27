@@ -36,7 +36,7 @@
             android:fontFamily="@font/pretendard"
             android:text="@string/join_code_dialog_subtext"
             android:textColor="@color/text_link_hint"
-            android:textSize="@dimen/text_greeting"
+            android:textSize="@dimen/text_signup"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvDialogTitle" />
@@ -116,7 +116,7 @@
                 app:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_cancel"
                 android:textColor="@color/button_outlined_text"
-                android:textSize="14.8sp"
+                android:textSize="@dimen/text_btn_small"
                 android:textStyle="bold"
                 app:cornerRadius="24dp"
                 app:strokeColor="@color/button_outlined_stroke"
@@ -135,7 +135,7 @@
                 app:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_join_action"
                 android:textColor="@color/white"
-                android:textSize="14.6sp"
+                android:textSize="@dimen/text_btn_small"
                 android:textStyle="bold"
                 app:cornerRadius="24dp" />
 

@@ -50,7 +50,7 @@
             android:gravity="center"
             android:text="@string/created_room_code_subtext"
             android:textColor="@color/text_link_hint"
-            android:textSize="@dimen/text_greeting"
+            android:textSize="@dimen/text_signup"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTitle" />
@@ -180,7 +180,7 @@
                     app:fontFamily="@font/pretendard_bold"
                     android:text="@string/btn_copy_code"
                     android:textColor="@color/button_outlined_text"
-                    android:textSize="14.5sp"
+                    android:textSize="@dimen/text_btn_small"
                     android:textStyle="bold"
                     app:cornerRadius="24dp"
                     app:icon="@drawable/ic_copy"
@@ -203,7 +203,7 @@
                     app:fontFamily="@font/pretendard_bold"
                     android:text="@string/btn_share_link"
                     android:textColor="@color/white"
-                    android:textSize="14.8sp"
+                    android:textSize="@dimen/text_btn_small"
                     android:textStyle="bold"
                     app:cornerRadius="24dp"
                     app:icon="@drawable/ic_share"
@@ -237,7 +237,7 @@
                 android:fontFamily="@font/pretendard_bold"
                 android:text="@string/btn_close"
                 android:textColor="@color/text_link_hint"
-                android:textSize="13.6sp" />
+                android:textSize="@dimen/text_signup" />
 
         </LinearLayout>
 

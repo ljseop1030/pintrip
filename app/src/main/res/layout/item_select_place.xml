@@ -18,11 +18,16 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="14dp">
 
+        <!-- 기본 버튼 드로어블(32dp)이 잘리지 않도록 크기는 드로어블이 정하게 둔다 -->
         <CheckBox
             android:id="@+id/cbSelectPlace"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:buttonTint="@color/pintrip_blue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:button="@drawable/btn_checkbox_place"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            app:buttonTint="@null"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -35,7 +40,7 @@
             android:layout_marginEnd="8dp"
             android:fontFamily="@font/pretendard_bold"
             android:textColor="@color/text_dark_navy"
-            android:textSize="14.5sp"
+            android:textSize="@dimen/text_body"
             android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@id/tvStatusBadge"
             app:layout_constraintStart_toEndOf="@id/cbSelectPlace"
@@ -66,7 +71,7 @@
             android:paddingHorizontal="10dp"
             android:paddingVertical="4dp"
             android:textColor="@color/badge_blue_text"
-            android:textSize="11.5sp"
+            android:textSize="@dimen/text_badge"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"

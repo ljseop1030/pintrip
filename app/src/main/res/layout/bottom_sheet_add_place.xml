@@ -48,7 +48,7 @@
                 android:layout_marginTop="4dp"
                 android:fontFamily="@font/pretendard"
                 android:textColor="@color/text_link_hint"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_greeting"
                 tools:text="'부산' 여행방에 바로 추가돼요" />
         </LinearLayout>
 
@@ -131,7 +131,7 @@
                     android:fontFamily="@font/pretendard_bold"
                     android:text="@string/add_place_photo_title"
                     android:textColor="@color/text_dark_navy"
-                    android:textSize="15.5sp"
+                    android:textSize="@dimen/text_card_title"
                     android:textStyle="bold" />
 
                 <TextView
@@ -142,7 +142,7 @@
                     android:fontFamily="@font/pretendard"
                     android:text="@string/add_place_photo_subtitle"
                     android:textColor="@color/text_link_hint"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_greeting" />
 
             </LinearLayout>
 
@@ -204,7 +204,7 @@
                         android:fontFamily="@font/pretendard_bold"
                         android:text="@string/add_place_link_title"
                         android:textColor="@color/text_dark_navy"
-                        android:textSize="15.5sp"
+                        android:textSize="@dimen/text_card_title"
                         android:textStyle="bold" />
 
                     <TextView
@@ -215,7 +215,7 @@
                         android:fontFamily="@font/pretendard"
                         android:text="@string/add_place_link_subtitle"
                         android:textColor="@color/text_link_hint"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_greeting" />
 
                 </LinearLayout>
 
@@ -242,7 +242,7 @@
                     android:singleLine="true"
                     android:textColor="@color/text_dark"
                     android:textColorHint="@color/text_sub_gray"
-                    android:textSize="14sp" />
+                    android:textSize="@dimen/text_body" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSearchLink"
