@@ -11,17 +11,17 @@
     <string name="share_receive_title_in_progress">장소 찾는 중…</string>
     <string name="share_receive_title_error">공유 내용을 확인할 수 없습니다</string>
 
-    <string name="share_receive_step1_image_completed">이미지 받기 완료</string>
+    <string name="share_receive_step1_image_completed">스크린샷 받기 완료</string>
     <string name="share_receive_step1_text_completed">링크 받기 완료</string>
     <string name="share_receive_step1_empty">공유 데이터 없음</string>
 
-    <string name="share_receive_step2_in_progress">텍스트 추출 (Gemini)</string>
-    <string name="share_receive_step2_completed">텍스트 추출 완료</string>
-    <string name="share_receive_step2_pending">텍스트 추출 대기 중</string>
+    <string name="share_receive_step2_in_progress">글자 읽는 중…</string>
+    <string name="share_receive_step2_completed">글자 읽기 완료</string>
+    <string name="share_receive_step2_pending">글자 읽기 대기 중</string>
 
-    <string name="share_receive_step3_in_progress">장소 매칭 중…</string>
-    <string name="share_receive_step3_completed_format">장소 매칭 완료 (%1$d개 장소 발견)</string>
-    <string name="share_receive_step3_pending">장소 매칭 대기 중</string>
+    <string name="share_receive_step3_in_progress">지도에서 위치 찾는 중…</string>
+    <string name="share_receive_step3_completed_format">위치 찾기 완료 (%1$d개 장소)</string>
+    <string name="share_receive_step3_pending">지도에서 위치 찾기</string>
 
     <string name="share_receive_room_label">여행 방</string>
     <string name="share_receive_room_name_format">%1$s</string>

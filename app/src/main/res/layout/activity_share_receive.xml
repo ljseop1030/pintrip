@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pintrip_bg_gray"
+    android:background="@drawable/bg_login_gradient"
     tools:context=".extract.ShareReceiveActivity">
 
     <androidx.core.widget.NestedScrollView
@@ -21,68 +21,81 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
-
-            <!-- Drag Handle Bar -->
-            <View
-                android:layout_width="40dp"
-                android:layout_height="4dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                android:background="@color/divider_line" />
+            android:paddingHorizontal="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="24dp">
 
             <!-- Header Subtitle -->
             <TextView
                 android:id="@+id/tvHeaderSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/share_receive_header"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="14sp" />
+                android:textColor="@color/tagline_text"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
 
             <!-- Header Main Title -->
             <TextView
                 android:id="@+id/tvHeaderTitle"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/share_receive_title_initial"
-                android:textColor="@color/text_dark"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:text="@string/share_receive_title_in_progress"
+                android:textColor="@color/text_dark_navy"
+                android:textSize="@dimen/text_title"
+                tools:text="장소 찾는 중…" />
+
+            <!-- Mascot Illustration -->
+            <ImageView
+                android:id="@+id/ivMascot"
+                android:layout_width="150dp"
+                android:layout_height="88dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp"
+                android:adjustViewBounds="true"
+                android:contentDescription="@null"
+                android:src="@drawable/img_mascot_blue" />
 
             <!-- Shared Item Preview Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
                 app:cardBackgroundColor="@color/card_background"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/card_stroke"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:baselineAligned="false"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="16dp">
+                    android:padding="12dp">
 
-                    <ImageView
-                        android:id="@+id/ivItemIcon"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:background="@color/badge_blue_bg"
-                        android:contentDescription="@null"
-                        android:padding="12dp"
-                        android:src="@drawable/ic_image"
-                        app:tint="@color/pintrip_blue" />
+                    <FrameLayout
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:background="@drawable/bg_icon_container_rounded">
+
+                        <ImageView
+                            android:id="@+id/ivItemIcon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_image"
+                            app:tint="@color/pintrip_blue" />
+                    </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
+                        android:layout_marginStart="12dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -90,8 +103,9 @@
                             android:id="@+id/tvItemTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/text_dark"
-                            android:textSize="16sp"
+                            android:fontFamily="@font/pretendard_bold"
+                            android:textColor="@color/text_dark_navy"
+                            android:textSize="14.5sp"
                             android:textStyle="bold"
                             tools:text="스크린샷 1장" />
 
@@ -100,8 +114,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textColor="@color/text_sub_gray"
-                            android:textSize="13sp"
+                            android:fontFamily="@font/pretendard"
+                            android:textColor="@color/text_link_hint"
+                            android:textSize="12.5sp"
                             tools:text="갤러리에서 공유됨" />
                     </LinearLayout>
                 </LinearLayout>
@@ -111,18 +126,18 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="10dp"
                 app:cardBackgroundColor="@color/card_background"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/card_stroke"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="16dp">
 
                     <!-- Step 1: Image / Content receive -->
                     <LinearLayout
@@ -132,8 +147,8 @@
                         android:orientation="horizontal">
 
                         <FrameLayout
-                            android:layout_width="24dp"
-                            android:layout_height="24dp">
+                            android:layout_width="26dp"
+                            android:layout_height="26dp">
 
                             <ImageView
                                 android:id="@+id/ivStep1Status"
@@ -155,31 +170,24 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:textColor="@color/text_dark"
-                            android:textSize="15sp"
+                            android:fontFamily="@font/pretendard_bold"
+                            android:textColor="@color/text_dark_navy"
+                            android:textSize="14.5sp"
                             android:textStyle="bold"
                             tools:text="@string/share_receive_step1_image_completed" />
                     </LinearLayout>
-
-                    <!-- Connector line 1 -> 2 -->
-                    <View
-                        android:layout_width="2dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="11dp"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="4dp"
-                        android:background="@color/divider_line" />
 
                     <!-- Step 2: OCR Extraction -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
                         <FrameLayout
-                            android:layout_width="24dp"
-                            android:layout_height="24dp">
+                            android:layout_width="26dp"
+                            android:layout_height="26dp">
 
                             <ImageView
                                 android:id="@+id/ivStep2Status"
@@ -202,30 +210,24 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:textColor="@color/text_dark"
-                            android:textSize="15sp"
+                            android:fontFamily="@font/pretendard_bold"
+                            android:textColor="@color/button_outlined_text"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold"
                             tools:text="@string/share_receive_step2_in_progress" />
                     </LinearLayout>
-
-                    <!-- Connector line 2 -> 3 -->
-                    <View
-                        android:layout_width="2dp"
-                        android:layout_height="20dp"
-                        android:layout_marginStart="11dp"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="4dp"
-                        android:background="@color/divider_line" />
 
                     <!-- Step 3: Location Matching -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
                         <FrameLayout
-                            android:layout_width="24dp"
-                            android:layout_height="24dp">
+                            android:layout_width="26dp"
+                            android:layout_height="26dp">
 
                             <ImageView
                                 android:id="@+id/ivStep3Status"
@@ -233,14 +235,14 @@
                                 android:layout_height="match_parent"
                                 android:contentDescription="@null"
                                 android:src="@drawable/ic_pending_circle"
-                                android:visibility="gone" />
+                                android:visibility="visible" />
 
                             <ProgressBar
                                 android:id="@+id/pbStep3Loading"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:indeterminateTint="@color/pintrip_blue"
-                                android:visibility="visible" />
+                                android:visibility="gone" />
                         </FrameLayout>
 
                         <TextView
@@ -248,9 +250,10 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:textColor="@color/text_dark"
-                            android:textSize="15sp"
-                            tools:text="@string/share_receive_step3_in_progress" />
+                            android:fontFamily="@font/pretendard"
+                            android:textColor="@color/text_link_hint"
+                            android:textSize="14.5sp"
+                            tools:text="@string/share_receive_step3_pending" />
                     </LinearLayout>
 
                 </LinearLayout>
@@ -261,12 +264,12 @@
                 android:id="@+id/cardExtractFailure"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
                 app:cardBackgroundColor="@color/card_background"
-                app:strokeColor="@color/card_stroke"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/input_border"
                 app:strokeWidth="1dp"
                 tools:visibility="visible">
 
@@ -280,7 +283,7 @@
                         android:id="@+id/tvFailureMessage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_dark"
+                        android:textColor="@color/text_dark_navy"
                         android:textSize="14sp"
                         tools:text="장소를 찾을 수 없습니다." />
 
@@ -294,47 +297,36 @@
                         <!-- Select Other Photos Button (for NoPlaces) -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSelectOtherPhotos"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            style="@style/Widget.Pintrip.Button.Secondary"
                             android:layout_width="0dp"
                             android:layout_height="44dp"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:paddingHorizontal="8dp"
                             android:text="@string/share_receive_btn_select_other_photos"
-                            android:textColor="@color/text_dark"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            app:cornerRadius="8dp"
-                            app:strokeColor="@color/card_stroke"
-                            app:strokeWidth="1dp" />
+                            android:textSize="13sp" />
 
                         <!-- Direct Search Button (for NoPlaces) -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFailureManualSearch"
+                            style="@style/Widget.Pintrip.Button.Primary"
                             android:layout_width="0dp"
                             android:layout_height="44dp"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:paddingHorizontal="8dp"
                             android:text="@string/btn_manual_search"
-                            android:textColor="@color/white"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            app:backgroundTint="@color/btn_primary_bg"
-                            app:cornerRadius="8dp" />
+                            android:textSize="13sp" />
 
                         <!-- Retry Button (for Error) -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRetryExtraction"
+                            style="@style/Widget.Pintrip.Button.Primary"
                             android:layout_width="match_parent"
                             android:layout_height="44dp"
                             android:text="@string/share_receive_btn_retry"
-                            android:textColor="@color/white"
                             android:textSize="14sp"
-                            android:textStyle="bold"
-                            android:visibility="gone"
-                            app:backgroundTint="@color/btn_primary_bg"
-                            app:cornerRadius="8dp" />
+                            android:visibility="gone" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -344,37 +336,40 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/share_receive_room_label"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="14sp" />
+                android:textColor="@color/start_signup_prefix_text"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardRoomSelect"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="52dp"
                 android:layout_marginTop="8dp"
                 app:cardBackgroundColor="@color/card_background"
-                app:cardCornerRadius="12dp"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/card_stroke"
+                app:strokeColor="@color/input_border"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="16dp">
+                    android:paddingHorizontal="16dp">
 
                     <TextView
                         android:id="@+id/tvRoomName"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:textColor="@color/text_dark"
-                        android:textSize="16sp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:textColor="@color/text_dark_navy"
+                        android:textSize="15sp"
                         android:textStyle="bold"
-                        tools:text="부산 여행방" />
+                        tools:text="부산" />
 
                     <ImageView
                         android:id="@+id/ivRoomSelectArrow"
@@ -392,15 +387,12 @@
     <!-- Bottom Action Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCheckPlaces"
+        style="@style/Widget.Pintrip.Button.Primary"
         android:layout_width="0dp"
         android:layout_height="54dp"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="24dp"
         android:text="@string/share_receive_button_check_places"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:backgroundTint="@color/btn_primary_bg"
-        app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
