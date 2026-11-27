@@ -241,6 +241,7 @@
     <string name="btn_new_room">+ 방 만들기</string>
     <string name="link_input_hint">블로그·지도 링크를 붙여 넣어 보세요</string>
     <string name="screenshot_add_hint">스크린샷은 사진 버튼으로 추가할 수 있어요</string>
+    <string name="cd_add_from_photo">사진에서 장소 추가</string>
     <string name="room_list_empty">아직 참여 중인 여행방이 없습니다.\n새로운 여행방을 만들어 보세요!</string>
 
     <!-- Empty Room Onboarding -->

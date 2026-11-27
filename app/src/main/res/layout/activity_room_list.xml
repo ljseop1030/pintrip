@@ -115,15 +115,22 @@
             app:layout_constraintTop_toTopOf="parent"
             app:tint="@color/text_link_hint" />
 
-        <TextView
-            android:id="@+id/tvLinkHint"
+        <!-- 링크 입력칸: 붙여 넣고 키보드의 이동(Go)을 누르면 16 공유 수신으로 넘어감 -->
+        <EditText
+            android:id="@+id/etLink"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
+            android:background="@null"
             android:fontFamily="@font/pretendard"
-            android:text="@string/link_input_hint"
-            android:textColor="@color/text_link_hint"
+            android:hint="@string/link_input_hint"
+            android:imeOptions="actionGo"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:maxLines="1"
+            android:textColor="@color/text_dark_navy"
+            android:textColorHint="@color/text_link_hint"
             android:textSize="@dimen/text_signup"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btnPhotoAdd"
@@ -134,6 +141,9 @@
             android:id="@+id/btnPhotoAdd"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:clickable="true"
+            android:contentDescription="@string/cd_add_from_photo"
+            android:focusable="true"
             app:cardBackgroundColor="@color/icon_bg_blue"
             app:cardCornerRadius="20dp"
             app:cardElevation="0dp"

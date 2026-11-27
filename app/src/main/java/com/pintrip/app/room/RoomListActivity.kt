@@ -4,12 +4,17 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Patterns
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,6 +28,7 @@ import com.pintrip.app.auth.TestLoginActivity
 import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.databinding.ActivityRoomListBinding
+import com.pintrip.app.extract.ShareLauncher
 import com.pintrip.app.map.RoomMapActivity
 import com.pintrip.app.notification.PendingNotificationManager
 import com.pintrip.app.place.PlaceDetailActivity
@@ -56,6 +62,15 @@ class RoomListActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult(),
     ) { _ ->
         viewModel.loadRooms(forceRefresh = true)
+    }
+
+    // 사진 버튼: 포토피커로 스크린샷을 고르면 16 공유 수신으로 넘김 (방은 16에서 선택)
+    private val pickPhotosLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ShareLauncher.MAX_IMAGES),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            ShareLauncher.openImages(this, uris)
+        }
     }
 
     companion object {
@@ -207,6 +222,37 @@ class RoomListActivity : AppCompatActivity() {
         binding.ivChevronDown.setOnClickListener {
             showMyInfoBottomSheet()
         }
+
+        binding.btnPhotoAdd.setOnClickListener {
+            pickPhotosLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+            )
+        }
+
+        binding.etLink.setOnEditorActionListener { _, actionId, event ->
+            val isGo = actionId == EditorInfo.IME_ACTION_GO ||
+                    (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            if (isGo) {
+                submitLink()
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    /** 링크바에 입력한 텍스트를 16 공유 수신으로 넘긴다. 링크가 없으면 여기서 바로 알려준다. */
+    private fun submitLink() {
+        val text = binding.etLink.text?.toString()?.trim().orEmpty()
+        if (text.isEmpty()) return
+        if (!Patterns.WEB_URL.matcher(text).find()) {
+            Toast.makeText(this, R.string.share_receive_error_no_url, Toast.LENGTH_SHORT).show()
+            return
+        }
+        WindowCompat.getInsetsController(window, binding.etLink).hide(WindowInsetsCompat.Type.ime())
+        binding.etLink.text = null
+        binding.etLink.clearFocus()
+        ShareLauncher.openLink(this, text)
     }
 
     private fun showMyInfoBottomSheet() {
