@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기타 카테고리: 22dp 칸 가운데 12dp 점 (캔버스 11 방 홈). Tint in layout/code. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="22"
+    android:viewportHeight="22">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M11,5a6,6 0,1 1,0 12a6,6 0,1 1,0 -12z" />
+</vector>
