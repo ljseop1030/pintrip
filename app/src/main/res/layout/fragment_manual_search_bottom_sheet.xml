@@ -4,10 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/card_background"
+    android:background="@drawable/bg_bottom_sheet"
     android:orientation="vertical"
     android:paddingHorizontal="20dp"
-    android:paddingTop="12dp"
+    android:paddingTop="10dp"
     android:paddingBottom="24dp">
 
     <!-- Drag Handle Bar -->
@@ -15,18 +15,18 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:background="@color/divider_line" />
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_drag_handle" />
 
     <!-- Sheet Title -->
     <TextView
         android:id="@+id/tvManualSearchTitle"
+        style="@style/Widget.Pintrip.TextView.Title.Sheet"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/manual_search_title"
-        android:textColor="@color/text_dark"
-        android:textSize="20sp"
-        android:textStyle="bold" />
+        android:textColor="@color/text_dark_navy"
+        android:textSize="@dimen/text_title_sheet" />
 
     <!-- Room Region Notice -->
     <TextView
@@ -34,8 +34,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="@color/text_sub_gray"
-        android:textSize="13sp"
+        android:fontFamily="@font/pretendard"
+        android:textColor="@color/text_link_hint"
+        android:textSize="12.5sp"
         tools:text="방 지역(부산) 안에서 검색합니다" />
 
     <!-- Search Input Field -->
@@ -45,27 +46,31 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        app:boxCornerRadiusBottomEnd="12dp"
-        app:boxCornerRadiusBottomStart="12dp"
-        app:boxCornerRadiusTopEnd="12dp"
-        app:boxCornerRadiusTopStart="12dp"
+        app:boxBackgroundColor="@color/pintrip_surface"
+        app:boxCornerRadiusBottomEnd="26dp"
+        app:boxCornerRadiusBottomStart="26dp"
+        app:boxCornerRadiusTopEnd="26dp"
+        app:boxCornerRadiusTopStart="26dp"
         app:boxStrokeColor="@color/pintrip_blue"
+        app:boxStrokeWidth="2dp"
         app:endIconMode="clear_text"
+        app:endIconTint="@color/text_sub_gray"
         app:hintEnabled="false"
         app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="@color/text_sub_gray">
+        app:startIconTint="@color/pintrip_blue">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etSearchQuery"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/pretendard"
             android:hint="@string/manual_search_input_hint"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:maxLines="1"
-            android:textColor="@color/text_dark"
+            android:textColor="@color/text_dark_navy"
             android:textColorHint="@color/text_sub_gray"
-            android:textSize="15sp" />
+            android:textSize="14.5sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <ProgressBar
@@ -83,8 +88,9 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="24dp"
+        android:fontFamily="@font/pretendard"
         android:text="@string/manual_search_empty_result"
-        android:textColor="@color/text_sub_gray"
+        android:textColor="@color/text_link_hint"
         android:textSize="14sp"
         android:visibility="gone" />
 
