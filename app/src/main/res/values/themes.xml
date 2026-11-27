@@ -75,4 +75,21 @@
         <item name="fontFamily">@font/pretendard_bold</item>
         <item name="android:textStyle">bold</item>
     </style>
+
+    <!-- 보조 버튼 (흰 배경 + 테두리). 06 "코드로 참여"와 같은 값. 버튼에는 높이·색·글꼴을 따로 넣지 않는다 -->
+    <style name="Widget.Pintrip.Button.Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_height">@dimen/start_btn_height</item>
+        <item name="cornerRadius">@dimen/start_btn_corner_radius</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@color/white</item>
+        <item name="strokeColor">@color/button_outlined_stroke</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textColor">@color/button_outlined_text</item>
+        <item name="iconTint">@color/button_outlined_text</item>
+        <item name="android:textSize">@dimen/text_card_title</item>
+        <item name="android:fontFamily">@font/pretendard_bold</item>
+        <item name="fontFamily">@font/pretendard_bold</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

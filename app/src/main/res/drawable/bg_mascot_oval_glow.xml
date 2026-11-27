@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 캔버스 13: 가운데 #E5EBFE에서 바깥쪽 투명으로 사라지는 글로우 (단색 타원이 아님) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <solid android:color="#E5EBFE" />
+    android:shape="rectangle">
+    <corners android:radius="55dp" />
+    <gradient
+        android:type="radial"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:gradientRadius="68dp"
+        android:startColor="@color/icon_bg_blue"
+        android:endColor="@android:color/transparent" />
 </shape>

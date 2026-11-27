@@ -64,4 +64,5 @@
     <!-- 11 Room home header button -->
     <color name="header_btn_bg">#29FFFFFF</color>
     <color name="header_btn_stroke">#73FFFFFF</color>
+    <color name="shake_arc">#7D94FE</color>
 </resources>

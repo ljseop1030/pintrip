@@ -96,47 +96,51 @@
             android:paddingVertical="8dp"
             android:visibility="visible">
 
-            <!-- Shake Illustration Container -->
-            <RelativeLayout
+            <!-- Shake Illustration (캔버스 13): 200x150 영역, 글로우 · 기울인 마스코트 · 양옆 흔들림 선 -->
+            <FrameLayout
                 android:layout_width="200dp"
-                android:layout_height="130dp">
+                android:layout_height="150dp"
+                android:layout_marginTop="10dp">
 
-                <!-- Background Glow Oval -->
+                <!-- 가운데에서 바깥으로 사라지는 원형 글로우 -->
                 <View
                     android:layout_width="160dp"
                     android:layout_height="110dp"
-                    android:layout_centerInParent="true"
+                    android:layout_gravity="top|start"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="20dp"
                     android:background="@drawable/bg_mascot_oval_glow" />
 
-                <!-- Left Shake Arc -->
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_shake_arcs_left" />
-
-                <!-- Right Shake Arc -->
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_shake_arcs_right" />
-
-                <!-- 3D Mascot Image -->
+                <!-- 마스코트: 원본 비율(617x361) 그대로 156dp 폭, -8도 기울임 -->
                 <ImageView
                     android:id="@+id/iv_dice_ready"
-                    android:layout_width="140dp"
-                    android:layout_height="90dp"
-                    android:layout_centerInParent="true"
+                    android:layout_width="156dp"
+                    android:layout_height="91dp"
+                    android:layout_gravity="top|start"
+                    android:layout_marginStart="22dp"
+                    android:layout_marginTop="18dp"
+                    android:adjustViewBounds="true"
                     android:contentDescription="@string/cd_random_pick"
                     android:rotation="-8"
                     android:scaleType="fitCenter"
                     android:src="@drawable/img_mascot_blue" />
-            </RelativeLayout>
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="top|start"
+                    android:layout_marginTop="40dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_shake_arcs_left" />
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="40dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_shake_arcs_right" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/tv_ready_heading"
@@ -189,18 +193,10 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_touch_pick"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Pintrip.Button.Secondary"
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
                 android:layout_marginTop="24dp"
-                android:fontFamily="@font/pretendard_bold"
-                android:text="@string/btn_touch_pick"
-                android:textColor="@color/button_outlined_text"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:cornerRadius="27dp"
-                app:strokeColor="@color/input_border"
-                app:strokeWidth="1dp" />
+                android:text="@string/btn_touch_pick" />
         </LinearLayout>
 
         <!-- Result State Layout (Frame 14) -->
@@ -304,23 +300,14 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_pick_again"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.Pintrip.Button.Secondary"
                     android:layout_width="0dp"
-                    android:layout_height="54dp"
                     android:layout_marginEnd="5dp"
                     android:layout_weight="1"
-                    android:fontFamily="@font/pretendard_bold"
                     android:text="@string/btn_pick_again"
-                    android:textColor="@color/button_outlined_text"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="27dp"
                     app:icon="@drawable/ic_refresh"
                     app:iconGravity="textStart"
-                    app:iconPadding="6dp"
-                    app:iconTint="@color/button_outlined_text"
-                    app:strokeColor="@color/input_border"
-                    app:strokeWidth="1dp" />
+                    app:iconPadding="6dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_view_on_map"
@@ -362,18 +349,10 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_empty_close"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Pintrip.Button.Secondary"
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
                 android:layout_marginTop="20dp"
-                android:fontFamily="@font/pretendard_bold"
-                android:text="@string/btn_close"
-                android:textColor="@color/button_outlined_text"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                app:cornerRadius="27dp"
-                app:strokeColor="@color/input_border"
-                app:strokeWidth="1dp" />
+                android:text="@string/btn_close" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
