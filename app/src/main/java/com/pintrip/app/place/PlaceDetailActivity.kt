@@ -148,7 +148,12 @@ class PlaceDetailActivity : AppCompatActivity() {
             binding.btnLike.contentDescription = getString(R.string.place_detail_like)
         }
 
-        // overflow menu 설정
+        // 카카오맵 자세히 보기
+        binding.layoutKakaoMapDetail.setOnClickListener {
+            openKakaoPlaceUrl(detail.place.kakaoPlaceUrl)
+        }
+
+        // overflow menu 설정 (하위 호환성 유지)
         binding.btnMenu.setOnClickListener {
             showOverflowMenu(detail.place.kakaoPlaceUrl)
         }
@@ -210,7 +215,7 @@ class PlaceDetailActivity : AppCompatActivity() {
             if (index < state.likedUsers.size) {
                 val user = state.likedUsers[index]
                 tv.text = user.nickname.take(1).uppercase()
-                val bg = ContextCompat.getDrawable(this, R.drawable.bg_circle_avatar)?.mutate()
+                val bg = ContextCompat.getDrawable(this, R.drawable.bg_circle_avatar_border)?.mutate()
                 bg?.setTint(parseColorSafely(user.avatarColor, ContextCompat.getColor(this, R.color.pintrip_blue)))
                 tv.background = bg
                 tv.isVisible = true
@@ -225,12 +230,16 @@ class PlaceDetailActivity : AppCompatActivity() {
         when (sourceType) {
             "screenshot" -> {
                 binding.tvSourceBadge.text = "IMG"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#E5EBFE"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#4B60C0"))
                 binding.tvSourceText.text = getString(R.string.place_detail_source_screenshot)
                 binding.tvSourceOpen.isVisible = false
                 binding.cardSource.setOnClickListener(null)
             }
             "text" -> {
                 binding.tvSourceBadge.text = "TXT"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#EDE7FB"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#5B45A8"))
                 binding.tvSourceText.text = getString(R.string.place_detail_source_text)
                 binding.tvSourceOpen.isVisible = false
                 binding.cardSource.setOnClickListener(null)
@@ -238,6 +247,8 @@ class PlaceDetailActivity : AppCompatActivity() {
             "link" -> {
                 val domain = extractDomain(sourceUrl)
                 binding.tvSourceBadge.text = "LINK"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DDF3EA"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#1E7A5C"))
                 binding.tvSourceText.text = if (domain.isNotBlank()) {
                     getString(R.string.place_detail_source_link_format, domain)
                 } else {
@@ -248,6 +259,8 @@ class PlaceDetailActivity : AppCompatActivity() {
             }
             else -> {
                 binding.tvSourceBadge.text = "PIN"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFEDE3"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#A85628"))
                 binding.tvSourceText.text = detail.place.searchKeyword
                 binding.tvSourceOpen.isVisible = false
                 binding.cardSource.setOnClickListener(null)

@@ -5,13 +5,13 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pintrip_bg_gray">
+    android:background="@color/pintrip_surface">
 
     <!-- 지도 영역 컨테이너 -->
     <FrameLayout
         android:id="@+id/layout_map_container"
         android:layout_width="0dp"
-        android:layout_height="240dp"
+        android:layout_height="250dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -34,32 +34,31 @@
             android:visibility="gone" />
     </FrameLayout>
 
-    <!-- 상단 뒤로가기 버튼 -->
+    <!-- 상단 플로팅 뒤로가기 버튼 -->
     <ImageButton
         android:id="@+id/btn_back"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_btn_circle_white"
         android:contentDescription="@string/btn_close"
         android:elevation="4dp"
+        android:padding="12dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_back"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/text_dark_navy" />
 
-    <!-- 상단 더보기 메뉴 (⋮) -->
+    <!-- 상단 더보기 메뉴 (⋮) (뷰 바인딩 유지용, UI v2 미표시) -->
     <ImageButton
         android:id="@+id/btn_menu"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/place_detail_open_kakao_map"
-        android:elevation="4dp"
-        android:src="@drawable/ic_more_vert"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@null"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- 상세 스크롤 영역 -->
@@ -67,6 +66,7 @@
         android:id="@+id/scroll_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="-24dp"
         android:fillViewport="true"
         app:layout_constraintBottom_toTopOf="@id/layout_bottom_bar"
         app:layout_constraintEnd_toEndOf="parent"
@@ -77,7 +77,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="16dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="16dp">
 
             <!-- Card 1: 장소 기본 정보 -->
             <com.google.android.material.card.MaterialCardView
@@ -86,37 +88,39 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/place_card_stroke"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingHorizontal="18dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp">
 
                     <TextView
                         android:id="@+id/tv_category"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_source_badge"
+                        android:backgroundTint="@color/icon_bg_blue"
+                        android:fontFamily="@font/pretendard_semibold"
                         android:paddingHorizontal="10dp"
-                        android:paddingVertical="4dp"
+                        android:paddingVertical="3dp"
                         android:text="@string/category_sights"
-                        android:textColor="@color/badge_blue_text"
+                        android:textColor="@color/pintrip_blue"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_place_name"
+                        style="@style/Widget.Pintrip.TextView.Title.Sheet"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:textColor="@color/text_dark"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
+                        android:textColor="@color/text_dark_navy"
                         tools:text="해운대 블루라인파크" />
 
                     <TextView
@@ -124,7 +128,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:textColor="@color/text_sub_gray"
+                        android:fontFamily="@font/pretendard"
+                        android:textColor="@color/text_link_hint"
                         android:textSize="13sp"
                         tools:text="부산 해운대구 달맞이길62번길 13" />
 
@@ -141,41 +146,70 @@
                             android:layout_height="16dp"
                             android:contentDescription="@null"
                             android:src="@drawable/ic_phone"
-                            app:tint="@color/text_sub_gray" />
+                            app:tint="@color/text_dark_navy" />
 
                         <TextView
                             android:id="@+id/tv_phone"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="6dp"
-                            android:textColor="@color/text_dark"
+                            android:fontFamily="@font/pretendard"
+                            android:textColor="@color/text_dark_navy"
                             android:textSize="13sp"
                             tools:text="051-701-5548" />
+                    </LinearLayout>
+
+                    <!-- 카카오맵에서 자세히 보기 -->
+                    <LinearLayout
+                        android:id="@+id/layout_kakao_map_detail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tv_open_kakao_map_detail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/pretendard_bold"
+                            android:text="@string/place_detail_open_kakao_map_detail"
+                            android:textColor="@color/pintrip_blue"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginStart="4dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/pintrip_blue" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Card 2: 좋아요 카트 -->
+            <!-- Card 2: 좋아요 카드 -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_likes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/place_likes_bg"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/place_likes_bg"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
                 app:strokeWidth="0dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp">
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="14dp">
 
                     <ImageView
                         android:id="@+id/iv_like_heart"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:layout_alignParentStart="true"
                         android:layout_alignTop="@id/tv_likes_count"
                         android:contentDescription="@null"
@@ -186,12 +220,13 @@
                         android:id="@+id/tv_likes_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
+                        android:layout_marginStart="6dp"
                         android:layout_toEndOf="@id/iv_like_heart"
-                        android:textColor="@color/place_like_count"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:textColor="@color/text_dark_navy"
                         android:textSize="15sp"
                         android:textStyle="bold"
-                        tools:text="좋아요 4개" />
+                        tools:text="좋아요 4" />
 
                     <TextView
                         android:id="@+id/tv_liked_nicknames"
@@ -201,7 +236,8 @@
                         android:layout_alignStart="@id/tv_likes_count"
                         android:layout_marginTop="2dp"
                         android:layout_toStartOf="@id/layout_avatars"
-                        android:textColor="@color/text_sub_gray"
+                        android:fontFamily="@font/pretendard"
+                        android:textColor="@color/text_link_hint"
                         android:textSize="12sp"
                         tools:text="Minji, Junho, Seoyeon, Narae" />
 
@@ -215,9 +251,10 @@
 
                         <TextView
                             android:id="@+id/tv_avatar_1"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/bg_circle_avatar"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:background="@drawable/bg_circle_avatar_border"
+                            android:fontFamily="@font/pretendard_bold"
                             android:gravity="center"
                             android:textColor="@color/white"
                             android:textSize="12sp"
@@ -226,10 +263,11 @@
 
                         <TextView
                             android:id="@+id/tv_avatar_2"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:layout_marginStart="-6dp"
-                            android:background="@drawable/bg_circle_avatar"
+                            android:background="@drawable/bg_circle_avatar_border"
+                            android:fontFamily="@font/pretendard_bold"
                             android:gravity="center"
                             android:textColor="@color/white"
                             android:textSize="12sp"
@@ -238,10 +276,11 @@
 
                         <TextView
                             android:id="@+id/tv_avatar_3"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:layout_marginStart="-6dp"
-                            android:background="@drawable/bg_circle_avatar"
+                            android:background="@drawable/bg_circle_avatar_border"
+                            android:fontFamily="@font/pretendard_bold"
                             android:gravity="center"
                             android:textColor="@color/white"
                             android:textSize="12sp"
@@ -250,10 +289,11 @@
 
                         <TextView
                             android:id="@+id/tv_avatar_4"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:layout_marginStart="-6dp"
-                            android:background="@drawable/bg_circle_avatar"
+                            android:background="@drawable/bg_circle_avatar_border"
+                            android:fontFamily="@font/pretendard_bold"
                             android:gravity="center"
                             android:textColor="@color/white"
                             android:textSize="12sp"
@@ -270,24 +310,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/place_card_stroke"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="14dp">
 
                     <TextView
                         android:id="@+id/tv_source_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/pretendard_semibold"
                         android:text="@string/place_detail_source_title"
-                        android:textColor="@color/text_sub_gray"
-                        android:textSize="13sp"
+                        android:textColor="@color/text_link_hint"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
@@ -300,33 +341,37 @@
 
                         <TextView
                             android:id="@+id/tv_source_badge"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="26dp"
                             android:background="@drawable/bg_source_badge"
+                            android:backgroundTint="#DDF3EA"
+                            android:fontFamily="@font/pretendard_bold"
                             android:gravity="center"
-                            android:textColor="@color/pintrip_blue"
-                            android:textSize="11sp"
+                            android:paddingHorizontal="9dp"
+                            android:textColor="#1E7A5C"
+                            android:textSize="12sp"
                             android:textStyle="bold"
-                            tools:text="IMG" />
+                            tools:text="블로그" />
 
                         <TextView
                             android:id="@+id/tv_source_text"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="10dp"
                             android:layout_weight="1"
-                            android:textColor="@color/text_dark"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            tools:text="스크린샷" />
+                            android:fontFamily="@font/pretendard"
+                            android:textColor="@color/text_dark_navy"
+                            android:textSize="13sp"
+                            tools:text="블로그 글" />
 
                         <TextView
                             android:id="@+id/tv_source_open"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/pretendard_semibold"
                             android:text="@string/place_detail_source_open"
                             android:textColor="@color/pintrip_blue"
-                            android:textSize="14sp"
+                            android:textSize="13sp"
                             android:textStyle="bold"
                             android:visibility="gone" />
                     </LinearLayout>
@@ -340,24 +385,25 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/place_card_stroke"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="14dp">
 
                     <TextView
                         android:id="@+id/tv_added_by_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/pretendard_semibold"
                         android:text="@string/place_detail_added_by_title"
-                        android:textColor="@color/text_sub_gray"
-                        android:textSize="13sp"
+                        android:textColor="@color/text_link_hint"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
@@ -369,12 +415,13 @@
 
                         <TextView
                             android:id="@+id/tv_added_by_avatar"
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
                             android:background="@drawable/bg_circle_avatar"
+                            android:fontFamily="@font/pretendard_bold"
                             android:gravity="center"
                             android:textColor="@color/white"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             tools:text="M" />
 
@@ -382,18 +429,19 @@
                             android:id="@+id/tv_added_by_nickname"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
+                            android:layout_marginStart="10dp"
                             android:layout_weight="1"
-                            android:textColor="@color/text_dark"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
+                            android:fontFamily="@font/pretendard"
+                            android:textColor="@color/text_dark_navy"
+                            android:textSize="13sp"
                             tools:text="Minji" />
 
                         <TextView
                             android:id="@+id/tv_created_at"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/text_sub_gray"
+                            android:fontFamily="@font/pretendard"
+                            android:textColor="@color/text_link_hint"
                             android:textSize="12sp"
                             tools:text="10/05" />
                     </LinearLayout>
@@ -408,9 +456,8 @@
                 android:layout_marginBottom="12dp"
                 android:visibility="gone"
                 app:cardBackgroundColor="@color/badge_exception_bg"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/badge_exception_bg"
                 app:strokeWidth="0dp">
 
                 <TextView
@@ -448,11 +495,12 @@
                     android:id="@+id/tv_error_message"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/text_sub_gray"
+                    android:textColor="@color/text_link_hint"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_retry"
+                    style="@style/Widget.Pintrip.Button.Primary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -467,10 +515,12 @@
         android:id="@+id/layout_bottom_bar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/white"
+        android:background="@drawable/bg_bottom_bar_top_rounded"
         android:elevation="8dp"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="28dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -478,34 +528,29 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_like"
             style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_marginEnd="12dp"
+            android:layout_width="64dp"
+            android:layout_height="54dp"
+            android:layout_marginEnd="10dp"
             android:contentDescription="@string/place_detail_like"
             android:enabled="true"
-            android:insetLeft="0dp"
             android:insetTop="0dp"
-            android:insetRight="0dp"
             android:insetBottom="0dp"
             android:padding="0dp"
-            app:cornerRadius="12dp"
+            app:cornerRadius="27dp"
             app:icon="@drawable/ic_heart_outline"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
             app:iconTint="@color/place_heart_unliked_tint"
-            app:strokeColor="@color/place_card_stroke" />
+            app:strokeColor="@color/input_border"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_directions"
+            style="@style/Widget.Pintrip.Button.Primary"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="54dp"
             android:layout_weight="1"
-            android:text="@string/place_detail_find_directions"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:backgroundTint="@color/pintrip_blue"
-            app:cornerRadius="12dp" />
+            android:text="@string/place_detail_find_directions" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

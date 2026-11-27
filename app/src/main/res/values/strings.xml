@@ -401,6 +401,7 @@
     <string name="place_detail_added_by_title">추가한 사람</string>
     <string name="place_detail_find_directions">카카오맵에서 길찾기</string>
     <string name="place_detail_open_kakao_map">카카오맵에서 열기</string>
+    <string name="place_detail_open_kakao_map_detail">카카오맵에서 자세히 보기</string>
     <string name="place_detail_not_found_notice">카카오맵에서 장소를 찾을 수 없어요</string>
     <string name="place_detail_deleted_toast">삭제되었거나 존재하지 않는 장소입니다.</string>
     <string name="place_detail_error_cannot_dial">전화 연결을 열 수 있는 앱이 없습니다.</string>
