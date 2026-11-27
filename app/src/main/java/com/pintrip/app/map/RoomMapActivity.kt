@@ -95,6 +95,23 @@ class RoomMapActivity : AppCompatActivity() {
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
 
+    private var addPlaceBottomSheetDialog: com.google.android.material.bottomsheet.BottomSheetDialog? = null
+    private var addPlaceDialogBinding: com.pintrip.app.databinding.BottomSheetAddPlaceBinding? = null
+
+    private val pickPhotoLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        if (uri != null) {
+            val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+            val intent = com.pintrip.app.extract.ShareReceiveActivity.newIntent(this, roomId).apply {
+                action = Intent.ACTION_SEND
+                type = "image/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+            dismissAddPlaceBottomSheet()
+        }
+    }
+
     private val requestLocationPermissionsLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
@@ -215,6 +232,8 @@ class RoomMapActivity : AppCompatActivity() {
         inviteCodeDialog?.dismiss()
         inviteCodeDialog = null
         inviteCodeDialogBinding = null
+
+        dismissAddPlaceBottomSheet()
     }
 
     private fun setupHeader() {
@@ -463,6 +482,67 @@ class RoomMapActivity : AppCompatActivity() {
         binding.btnRetry.setOnClickListener {
             viewModel.retry(roomId)
         }
+        binding.btnAddPlace.setOnClickListener {
+            val roomName = currentSuccessState?.roomName
+                ?: binding.tvTitle.text.toString().ifBlank { roomId }
+            showAddPlaceBottomSheet(roomId, roomName)
+        }
+    }
+
+    private fun showAddPlaceBottomSheet(roomId: String, roomName: String) {
+        if (addPlaceBottomSheetDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.BottomSheetAddPlaceBinding.inflate(layoutInflater)
+        addPlaceDialogBinding = dialogBinding
+
+        dialogBinding.tvSheetTitle.setText(R.string.title_add_place)
+        dialogBinding.tvSheetSubtitle.text = getString(R.string.add_place_subtitle_format, roomName)
+
+        dialogBinding.btnClose.setOnClickListener {
+            dismissAddPlaceBottomSheet()
+        }
+
+        dialogBinding.cardAddFromPhoto.setOnClickListener {
+            pickPhotoLauncher.launch(
+                androidx.activity.result.PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                )
+            )
+        }
+
+        dialogBinding.btnSearchLink.setOnClickListener {
+            val linkText = dialogBinding.etLinkInput.text.toString().trim()
+            if (linkText.isNotBlank()) {
+                val intent = com.pintrip.app.extract.ShareReceiveActivity.newIntent(this, roomId).apply {
+                    action = Intent.ACTION_SEND
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, linkText)
+                }
+                startActivity(intent)
+                dismissAddPlaceBottomSheet()
+            }
+        }
+
+        addPlaceBottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this).apply {
+            setContentView(dialogBinding.root)
+            setCancelable(true)
+
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            behavior.skipCollapsed = true
+
+            setOnDismissListener {
+                addPlaceDialogBinding = null
+                addPlaceBottomSheetDialog = null
+            }
+            show()
+        }
+    }
+
+    private fun dismissAddPlaceBottomSheet() {
+        addPlaceBottomSheetDialog?.setOnDismissListener(null)
+        addPlaceBottomSheetDialog?.dismiss()
+        addPlaceBottomSheetDialog = null
+        addPlaceDialogBinding = null
     }
 
     private fun observeViewModel() {

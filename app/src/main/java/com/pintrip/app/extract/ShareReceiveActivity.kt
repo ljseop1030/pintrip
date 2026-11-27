@@ -70,7 +70,8 @@ class ShareReceiveActivity : AppCompatActivity() {
         observeViewModel()
         setupFragmentResultListeners()
 
-        viewModel.fetchRooms()
+        val preselectedRoomId = intent.getStringExtra(EXTRA_PRESELECTED_ROOM_ID)
+        viewModel.fetchRooms(preselectedRoomId = preselectedRoomId)
         viewModel.processIntent(intent)
     }
 
@@ -123,6 +124,8 @@ class ShareReceiveActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        val preselectedRoomId = intent.getStringExtra(EXTRA_PRESELECTED_ROOM_ID)
+        viewModel.fetchRooms(forceRefresh = true, preselectedRoomId = preselectedRoomId)
         viewModel.processNewIntent(intent)
     }
 
@@ -431,5 +434,12 @@ class ShareReceiveActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "SHARETEST"
+        const val EXTRA_PRESELECTED_ROOM_ID = "EXTRA_PRESELECTED_ROOM_ID"
+
+        fun newIntent(context: Context, preselectedRoomId: String? = null): Intent {
+            return Intent(context, ShareReceiveActivity::class.java).apply {
+                preselectedRoomId?.let { putExtra(EXTRA_PRESELECTED_ROOM_ID, it) }
+            }
+        }
     }
 }

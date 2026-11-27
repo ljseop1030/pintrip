@@ -455,4 +455,14 @@
     <string name="travel_mode_btn_go_to_settings">설정으로 이동</string>
 
     <string name="travel_mode_notification_permission_denied_toast">알림을 허용하면 근처 장소를 알려드려요</string>
+
+    <!-- 15 Add Place Bottom Sheet -->
+    <string name="title_add_place">장소 추가</string>
+    <string name="add_place_subtitle_format">\'%1$s\' 여행방에 바로 추가돼요</string>
+    <string name="add_place_photo_title">사진에서 찾기</string>
+    <string name="add_place_photo_subtitle">스크린샷 속 장소를 자동으로 찾아요</string>
+    <string name="add_place_link_title">링크로 찾기</string>
+    <string name="add_place_link_subtitle">블로그·지도 링크를 붙여 넣어요</string>
+    <string name="add_place_link_hint">https://</string>
+    <string name="add_place_btn_search">찾기</string>
 </resources>
