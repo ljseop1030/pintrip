@@ -5,28 +5,28 @@
     android:id="@+id/cardCandidateContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="10dp"
     android:clickable="true"
     android:focusable="true"
     app:cardBackgroundColor="@color/card_background"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="0dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
     app:strokeColor="@color/card_stroke"
-    app:strokeWidth="1dp">
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:baselineAligned="false"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="16dp">
 
         <RadioButton
             android:id="@+id/rbCandidateSelect"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="24dp"
-            android:minHeight="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:buttonTint="@color/pintrip_blue"
             android:clickable="false"
             android:focusable="false" />
@@ -42,8 +42,9 @@
                 android:id="@+id/tvCandidateName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_dark"
-                android:textSize="16sp"
+                android:fontFamily="@font/pretendard_bold"
+                android:textColor="@color/text_dark_navy"
+                android:textSize="14.5sp"
                 android:textStyle="bold"
                 tools:text="모모스커피 본점" />
 
@@ -51,9 +52,10 @@
                 android:id="@+id/tvCandidateAddress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="13sp"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/pretendard"
+                android:textColor="@color/text_link_hint"
+                android:textSize="11.5sp"
                 tools:text="부산 금정구 오시게로 20" />
 
             <TextView
@@ -61,9 +63,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
+                android:fontFamily="@font/pretendard"
                 android:text="@string/confirm_location_candidate_outside_region"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="12sp"
+                android:textColor="@color/badge_exception_text"
+                android:textSize="11.5sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
         </LinearLayout>
