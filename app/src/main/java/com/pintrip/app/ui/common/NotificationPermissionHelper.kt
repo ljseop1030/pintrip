@@ -1,6 +1,6 @@
 package com.pintrip.app.ui.common
 
-// Reused from PR #34 (feature/travel-mode commit: ba18fd4f00455cf9e78712f8498804963f0d49ab)
+
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager

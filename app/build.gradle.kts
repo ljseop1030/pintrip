@@ -82,6 +82,7 @@ dependencies {
 
     implementation(libs.jsoup)
     implementation(libs.kakao.maps)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.core.testing)

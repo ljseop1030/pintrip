@@ -11,4 +11,8 @@
         android:icon="@drawable/ic_link"
         android:title="@string/btn_view_invite_code"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_travel_mode"
+        android:title="@string/menu_travel_mode_turn_on"
+        app:showAsAction="never" />
 </menu>
