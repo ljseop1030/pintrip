@@ -233,18 +233,24 @@ class RoomListActivity : AppCompatActivity() {
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = false
+                    binding.layoutLinkBar.isVisible = false
+                    binding.tvScreenshotHint.isVisible = false
                 }
                 is RoomListUiState.Empty -> {
                     binding.pbLoading.isVisible = false
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = true
                     binding.layoutError.isVisible = false
+                    binding.layoutLinkBar.isVisible = false
+                    binding.tvScreenshotHint.isVisible = false
                 }
                 is RoomListUiState.Success -> {
                     binding.pbLoading.isVisible = false
                     binding.rvRooms.isVisible = true
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = false
+                    binding.layoutLinkBar.isVisible = true
+                    binding.tvScreenshotHint.isVisible = true
                     roomAdapter.submitList(state.rooms)
                 }
                 is RoomListUiState.Error -> {
@@ -252,6 +258,8 @@ class RoomListActivity : AppCompatActivity() {
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = true
+                    binding.layoutLinkBar.isVisible = false
+                    binding.tvScreenshotHint.isVisible = false
                     binding.tvErrorMessage.text = getString(state.messageResId)
                 }
             }

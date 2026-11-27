@@ -239,6 +239,19 @@
     <string name="link_input_hint">블로그·지도 링크를 붙여 넣어 보세요</string>
     <string name="screenshot_add_hint">스크린샷은 사진 버튼으로 추가할 수 있어요</string>
     <string name="room_list_empty">아직 참여 중인 여행방이 없습니다.\n새로운 여행방을 만들어 보세요!</string>
+
+    <!-- Empty Room Onboarding -->
+    <string name="empty_room_title">아직 여행방이 없어요</string>
+    <string name="empty_room_subtitle">이렇게 시작해 보세요</string>
+    <string name="empty_step_1_tag">STEP 1</string>
+    <string name="empty_step_1_title">여행방 만들기</string>
+    <string name="empty_step_1_desc">친구와 함께할 여행방을 만들어요</string>
+    <string name="empty_step_2_tag">STEP 2</string>
+    <string name="empty_step_2_title">스크린샷·링크 공유하기</string>
+    <string name="empty_step_2_desc">PinTrip으로 공유하면 장소를 찾아 줘요</string>
+    <string name="empty_step_3_tag">STEP 3</string>
+    <string name="empty_step_3_title">함께 지도 채우기</string>
+    <string name="empty_step_3_desc">모두가 모은 장소가 한 지도에 쌓여요</string>
     <string name="room_list_load_error">방 목록을 불러오지 못했습니다.\n원인: %1$s</string>
     <string name="notice_join_code_feature_later">초대 코드로 참여하기 기능은 다음 업데이트에서 제공됩니다.</string>
 

@@ -34,6 +34,7 @@
     <color name="icon_bg_blue">#E5EBFE</color>
     <color name="button_outlined_stroke">#C9D3F5</color>
     <color name="button_outlined_text">#334BB1</color>
+    <color name="text_dark_navy">#1F2440</color>
 
     <!-- Design System Colors (UI v2) -->
     <color name="pintrip_blue">#4B60C0</color>
