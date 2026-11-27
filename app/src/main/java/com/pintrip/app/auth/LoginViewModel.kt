@@ -60,7 +60,7 @@ class LoginViewModel(
      * 앱 시작 시 기존 Auth 세션 자동 확인
      */
     fun checkExistingSession() {
-        if (isSessionChecked) return
+        if (isSessionChecked || isLogoutInProgress) return
         val current = try { firebaseAuth.currentUser } catch (_: Exception) { null }
         if (current != null) {
             isSessionChecked = true
@@ -72,7 +72,7 @@ class LoginViewModel(
      * 이메일/비밀번호 로그인 수행
      */
     fun performLogin(emailRaw: String, passwordRaw: String) {
-        if (_uiState.value is LoginUiState.Loading) return
+        if (_uiState.value is LoginUiState.Loading || isLogoutInProgress) return
 
         val email = emailRaw.trim()
         val password = passwordRaw
@@ -285,17 +285,57 @@ class LoginViewModel(
         }
     }
 
+    private var isLogoutInProgress = false
+
     /**
      * 로그아웃 처리 및 세션 토큰 무효화
      */
     fun signOut() {
-        sessionToken++
+        performLogout()
+    }
+
+    fun performLogout(tokenRepo: com.pintrip.app.data.repository.DeviceTokenRepository? = null, onComplete: (() -> Unit)? = null) {
+        if (isLogoutInProgress) return
+        isLogoutInProgress = true
+
+        val token = ++sessionToken
         isSessionChecked = false
         pendingUser = null
         pendingUid = null
         _events.value = null
-        try { firebaseAuth.signOut() } catch (_: Exception) {}
         _uiState.value = LoginUiState.Idle
+
+        val previousUid = getCurrentAuthUid()
+        val targetSessionGen = com.pintrip.app.data.repository.DeviceTokenRepository.invalidateSession()
+
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    try {
+                        if (!previousUid.isNullOrBlank() && tokenRepo != null) {
+                            try {
+                                tokenRepo.cleanupTokenOnLogout(previousUid)
+                            } catch (e: Exception) {
+                                // cleanup error or cancellation should not block sign out
+                            }
+                        }
+                        if (token == sessionToken && getCurrentAuthUid() == previousUid) {
+                            try { firebaseAuth.signOut() } catch (_: Exception) {}
+                        }
+                    } finally {
+                        if (com.pintrip.app.data.repository.DeviceTokenRepository.currentSessionGeneration() == targetSessionGen) {
+                            com.pintrip.app.data.repository.DeviceTokenRepository.setLoggingOut(false)
+                        }
+                        if (token == sessionToken) {
+                            _uiState.value = LoginUiState.Idle
+                        }
+                        onComplete?.invoke()
+                    }
+                }
+            } finally {
+                isLogoutInProgress = false
+            }
+        }
     }
 
     fun clearEmailError() {

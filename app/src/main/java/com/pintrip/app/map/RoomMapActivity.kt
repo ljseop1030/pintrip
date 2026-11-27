@@ -1,19 +1,31 @@
 package com.pintrip.app.map
 
+import android.Manifest
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.LatLng
@@ -25,11 +37,21 @@ import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
+import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.databinding.ActivityRoomMapBinding
+import com.pintrip.app.notification.FriendNotificationService
 import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
 import com.pintrip.app.place.PlaceDetailActivity
 import com.pintrip.app.room.DeepLinkUtils
+import com.pintrip.app.travel.TravelModeService
+import com.pintrip.app.travel.TravelModeState
+import com.pintrip.app.travel.TravelState
+import com.pintrip.app.ui.common.LocationPermissionHelper
+import com.pintrip.app.ui.common.NotificationPermissionAction
+import com.pintrip.app.ui.common.NotificationPermissionFlow
+import com.pintrip.app.ui.common.NotificationPermissionHelper
+import kotlinx.coroutines.launch
 
 class RoomMapActivity : AppCompatActivity() {
 
@@ -62,6 +84,42 @@ class RoomMapActivity : AppCompatActivity() {
     private var isCleaningUpForDestroy = false
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
+
+    private val friendNotificationPermissionLauncher = NotificationPermissionHelper.registerNotificationPermissionLauncher(this) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(this, R.string.notice_notification_granted, Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch {
+                DeviceTokenRepository.getInstance(applicationContext).syncToken()
+            }
+        } else {
+            Toast.makeText(this, R.string.notice_notification_denied, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val requestLocationPermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+            val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+            if (fineGranted || coarseGranted) {
+                checkNotificationPermissionAndStartService()
+            } else {
+                val showRationaleFine = shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+                val showRationaleCoarse = shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (!showRationaleFine && !showRationaleCoarse) {
+                    showLocationPermissionSettingsDialog()
+                } else {
+                    Toast.makeText(this, R.string.travel_mode_location_permission_required, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+    private val requestNotificationPermissionLauncher =
+        NotificationPermissionHelper.registerNotificationPermissionLauncher(this) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, R.string.travel_mode_notification_permission_denied_toast, Toast.LENGTH_SHORT).show()
+            }
+            startTravelModeService()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -166,13 +224,176 @@ class RoomMapActivity : AppCompatActivity() {
         binding.toolbar.inflateMenu(R.menu.menu_room_home)
         binding.toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                R.id.action_notification_settings -> {
+                    handleNotificationSettingsClick()
+                    true
+                }
                 R.id.action_invite_code -> {
                     viewModel.onInviteCodeClick()
+                    true
+                }
+                R.id.action_travel_mode -> {
+                    handleTravelModeMenuClick()
                     true
                 }
                 else -> false
             }
         }
+        observeTravelModeState()
+    }
+
+    private fun observeTravelModeState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                TravelModeState.state.collect { travelState ->
+                    updateTravelModeMenuItem(travelState)
+                }
+            }
+        }
+    }
+
+    private fun handleTravelModeMenuClick() {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val currentState = TravelModeState.state.value
+
+        if (currentState.isRunning && currentState.roomId == roomId) {
+            startService(TravelModeService.stopIntent(this))
+        } else {
+            if (LocationPermissionHelper.hasLocationPermission(this)) {
+                checkNotificationPermissionAndStartService()
+            } else {
+                requestLocationPermissionsLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
+        }
+    }
+
+    private fun checkNotificationPermissionAndStartService() {
+        NotificationPermissionHelper.requestNotificationPermission(
+            context = this,
+            launcher = requestNotificationPermissionLauncher,
+            onAlreadyGranted = {
+                startTravelModeService()
+            }
+        )
+    }
+
+    private fun startTravelModeService() {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val roomName = currentSuccessState?.roomName.orEmpty().ifBlank { getString(R.string.app_name) }
+        val serviceIntent = TravelModeService.startIntent(this, roomId, roomName)
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
+    private fun showLocationPermissionSettingsDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.travel_mode_location_permission_dialog_title)
+            .setMessage(R.string.travel_mode_location_permission_dialog_message)
+            .setPositiveButton(R.string.travel_mode_btn_go_to_settings) { _, _ ->
+                LocationPermissionHelper.openAppSettings(this)
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    private fun updateTravelModeMenuItem(travelState: TravelState) {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val menuItem = binding.toolbar.menu.findItem(R.id.action_travel_mode) ?: return
+
+        val titleResId = when {
+            !travelState.isRunning -> R.string.menu_travel_mode_turn_on
+            travelState.roomId == roomId -> R.string.menu_travel_mode_turn_off
+            else -> R.string.menu_travel_mode_switch_to_this_room
+        }
+        menuItem.setTitle(titleResId)
+    }
+
+    private fun handleNotificationSettingsClick() {
+        FriendNotificationService.createNotificationChannel(applicationContext)
+
+        val isGranted = NotificationPermissionHelper.isNotificationPermissionGranted(this)
+        val prefs = getSharedPreferences("pintrip_device_prefs", Context.MODE_PRIVATE)
+        val hasRequestedBefore = prefs.getBoolean("requested_notif_perm", false)
+        val shouldShowRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            false
+        }
+
+        val appNotificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
+        var isChannelEnabled = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = manager.getNotificationChannel(FriendNotificationService.CHANNEL_ID)
+            if (channel != null && channel.importance == NotificationManager.IMPORTANCE_NONE) {
+                isChannelEnabled = false
+            }
+        }
+
+        val action = NotificationPermissionFlow.determineAction(
+            isRuntimePermissionGranted = isGranted,
+            hasRequestedBefore = hasRequestedBefore,
+            shouldShowRationale = shouldShowRationale,
+            areAppNotificationsEnabled = appNotificationsEnabled,
+            isChannelEnabled = isChannelEnabled
+        )
+
+        when (action) {
+            NotificationPermissionAction.REQUEST_RUNTIME_PERMISSION -> {
+                prefs.edit().putBoolean("requested_notif_perm", true).apply()
+                NotificationPermissionHelper.requestNotificationPermission(this, friendNotificationPermissionLauncher) {
+                    Toast.makeText(this, R.string.notice_notification_enabled, Toast.LENGTH_SHORT).show()
+                    lifecycleScope.launch {
+                        DeviceTokenRepository.getInstance(applicationContext).syncToken()
+                    }
+                }
+            }
+            NotificationPermissionAction.OPEN_APP_SETTINGS -> {
+                showNotificationSettingsDialog(isChannel = false)
+            }
+            NotificationPermissionAction.OPEN_CHANNEL_SETTINGS -> {
+                showNotificationSettingsDialog(isChannel = true)
+            }
+            NotificationPermissionAction.SHOW_GRANTED_TOAST_AND_SYNC -> {
+                Toast.makeText(this, R.string.notice_notification_enabled, Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    DeviceTokenRepository.getInstance(applicationContext).syncToken()
+                }
+            }
+        }
+    }
+
+    private fun showNotificationSettingsDialog(isChannel: Boolean) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.notice_notification_blocked_title)
+            .setMessage(R.string.notice_notification_blocked_message)
+            .setPositiveButton(R.string.btn_open_settings) { _, _ ->
+                val intent = if (isChannel && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                        putExtra(Settings.EXTRA_CHANNEL_ID, FriendNotificationService.CHANNEL_ID)
+                    }
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    }
+                } else {
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", packageName, null)
+                    }
+                }
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to launch notification settings: ${e.message}")
+                }
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
     }
 
     private fun setupBottomSheet() {

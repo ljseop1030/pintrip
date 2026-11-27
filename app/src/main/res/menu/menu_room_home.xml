@@ -2,8 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_notification_settings"
+        android:icon="@drawable/ic_notification"
+        android:title="@string/btn_notification_settings"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_invite_code"
         android:icon="@drawable/ic_link"
         android:title="@string/btn_view_invite_code"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_travel_mode"
+        android:title="@string/menu_travel_mode_turn_on"
+        app:showAsAction="never" />
 </menu>

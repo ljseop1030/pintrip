@@ -2,6 +2,7 @@ package com.pintrip.app.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -11,9 +12,14 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import com.google.firebase.auth.FirebaseAuth
 import com.pintrip.app.R
+import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.databinding.ActivitySignUpBinding
 import com.pintrip.app.room.RoomListActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 /**
  * 정식 회원가입 화면 (Figma S02).
@@ -27,6 +33,7 @@ class SignUpActivity : AppCompatActivity(),
     SignUpCompleteDialogFragment.Listener {
 
     companion object {
+        private const val TAG = "SignUpActivity"
         const val TAG_COMPLETION_ERROR = "CompletionCheckErrorDialogFragment"
     }
 
@@ -357,20 +364,36 @@ class SignUpActivity : AppCompatActivity(),
     }
 
     override fun onSignOutFromErrorDialog() {
-        pendingRetryAction = null
-        viewModel.signOut()
+        performLogout()
     }
 
     override fun onSignOutFromCorruptedDialog() {
-        pendingRetryAction = null
-        viewModel.signOut()
+        performLogout()
     }
 
     override fun onGetStartedFromSignUpComplete() {
         viewModel.onGetStartedClicked()
     }
 
+    private fun performLogout() {
+        pendingRetryAction = null
+        viewModel.performLogout(DeviceTokenRepository.getInstance(applicationContext))
+    }
+
     private fun navigateToRoomList() {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+        if (!currentUid.isNullOrBlank()) {
+            val tokenRepo = DeviceTokenRepository.getInstance(applicationContext)
+            tokenRepo.activateSession(currentUid)
+            lifecycleScope.launch {
+                try {
+                    tokenRepo.syncToken()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Token sync failed on signup/restore: ${e.message}")
+                }
+            }
+        }
         val intent = Intent(this, RoomListActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }

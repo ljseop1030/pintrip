@@ -113,7 +113,7 @@ class SignUpViewModel(
         confirmPasswordRaw: String,
         isTermsChecked: Boolean,
     ) {
-        if (_uiState.value is SignUpUiState.Loading || isSignUpInProgress) return
+        if (_uiState.value is SignUpUiState.Loading || isSignUpInProgress || isLogoutInProgress) return
 
         val nickname = nicknameRaw.trim()
         val email = emailRaw.trim()
@@ -370,7 +370,9 @@ class SignUpViewModel(
                     }
                 }
             } catch (e: CancellationException) {
-                isSignUpInProgress = false
+                if (token == sessionToken) {
+                    isSignUpInProgress = false
+                }
                 throw e
             } catch (_: Exception) {
                 if (!validateSessionAndUid(token, uid)) return@launch
@@ -446,15 +448,55 @@ class SignUpViewModel(
         }
     }
 
+    private var isLogoutInProgress = false
+
     fun signOut() {
-        sessionToken++
+        performLogout()
+    }
+
+    fun performLogout(tokenRepo: com.pintrip.app.data.repository.DeviceTokenRepository? = null, onComplete: (() -> Unit)? = null) {
+        if (isLogoutInProgress) return
+        isLogoutInProgress = true
+
+        val token = ++sessionToken
         isSignUpInProgress = false
         isSignUpCompleted = false
         completedUid = null
         pendingErrorContext = null
         _events.value = null
-        try { firebaseAuth.signOut() } catch (_: Exception) {}
         _uiState.value = SignUpUiState.Idle
+
+        val previousUid = getCurrentAuthUid()
+        val targetSessionGen = com.pintrip.app.data.repository.DeviceTokenRepository.invalidateSession()
+
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    try {
+                        if (!previousUid.isNullOrBlank() && tokenRepo != null) {
+                            try {
+                                tokenRepo.cleanupTokenOnLogout(previousUid)
+                            } catch (_: Exception) {
+                                // cleanup error or cancellation should not block sign out
+                            }
+                        }
+                        if (token == sessionToken && getCurrentAuthUid() == previousUid) {
+                            try { firebaseAuth.signOut() } catch (_: Exception) {}
+                        }
+                    } finally {
+                        if (com.pintrip.app.data.repository.DeviceTokenRepository.currentSessionGeneration() == targetSessionGen) {
+                            com.pintrip.app.data.repository.DeviceTokenRepository.setLoggingOut(false)
+                        }
+                        if (token == sessionToken) {
+                            _uiState.value = SignUpUiState.Idle
+                        }
+                        onComplete?.invoke()
+                    }
+                }
+            } finally {
+                isLogoutInProgress = false
+            }
+        }
     }
 
     fun clearNicknameError() {

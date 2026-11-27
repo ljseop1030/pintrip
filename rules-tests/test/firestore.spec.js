@@ -2047,4 +2047,211 @@ describe("Firestore Security Rules Tests", () => {
       assert.strictEqual(snap.data().likeCount, 1);
     });
   });
+
+  describe("users/{uid}/devices/{installationId} subcollection rules", () => {
+    const userUid = "user_1";
+    const otherUid = "user_2";
+    const installationId = "install_123";
+
+    it("allows logged-in user to create their own device token document", async () => {
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertSucceeds(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("allows logged-in user to update their own device token document", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection("users").doc(userUid).collection("devices").doc(installationId).set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: new Date(),
+        });
+      });
+
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertSucceeds(
+        deviceRef.update({
+          token: "fcm_token_updated",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("allows logged-in user to delete their own device token document", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection("users").doc(userUid).collection("devices").doc(installationId).set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: new Date(),
+        });
+      });
+
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertSucceeds(deviceRef.delete());
+    });
+
+    it("rejects unauthenticated user from reading/writing device token document", async () => {
+      const db = getDb(null);
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertFails(deviceRef.get());
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it("rejects user from accessing another user's device token document", async () => {
+      const db = getDb({ uid: otherUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertFails(deviceRef.get());
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+      await assertFails(deviceRef.delete());
+    });
+
+    it("rejects device token creation with invalid fields or non-android platform", async () => {
+      const db = getDb({ uid: userUid });
+      const deviceRef = db.collection("users").doc(userUid).collection("devices").doc(installationId);
+
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "ios",
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await assertFails(
+        deviceRef.set({
+          token: "fcm_token_123",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+          extraField: "bad",
+        })
+      );
+
+      await assertFails(
+        deviceRef.set({
+          token: "",
+          platform: "android",
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+  });
+
+  describe("Notification Batch ID & Place Rules", () => {
+    it("allows creating place with notificationBatchId and rejects modifying notificationBatchId on update", async () => {
+      const uid = "user_batch_test";
+      const now = new Date();
+
+      await seedRoom("room_batch_rules", {
+        name: "부산 여행",
+        region: "부산",
+        icon: "sea",
+        inviteCode: "BATCH1",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [uid],
+        ownerId: uid,
+        members: { user_batch_test: { nickname: "민지", avatarColor: "#FF5722", lastSeenAt: null } },
+        placeCount: 0,
+      });
+
+      const db = getDb({ uid });
+
+      // 1. Create place with notificationBatchId -> SUCCEEDS
+      const batch1 = db.batch();
+      batch1.set(db.collection("rooms").doc("room_batch_rules").collection("places").doc("p_batch_1"), {
+        kakaoPlaceId: "p_batch_1",
+        kakaoPlaceUrl: "https://place.map.kakao.com/p_batch_1",
+        searchKeyword: "해운대",
+        matchType: "confirmed",
+        sourceType: "text",
+        addedBy: uid,
+        addedByNickname: "민지",
+        likedBy: [],
+        likeCount: 0,
+        notificationBatchId: "batch_uuid_999",
+        createdAt: serverTimestamp(),
+      });
+      batch1.update(db.collection("rooms").doc("room_batch_rules"), { placeCount: 1 });
+      await assertSucceeds(batch1.commit());
+
+      // 2. Modify notificationBatchId on update -> FAILS
+      const placeRef = db.collection("rooms").doc("room_batch_rules").collection("places").doc("p_batch_1");
+      await assertFails(
+        placeRef.update({
+          notificationBatchId: "batch_tampered_888",
+        })
+      );
+    });
+
+    it("allows like toggle on legacy place without notificationBatchId", async () => {
+      const uid = "user_like_legacy";
+      const now = new Date();
+
+      await seedRoom("room_legacy_place", {
+        name: "제주 여행",
+        region: "제주",
+        icon: "jeju",
+        inviteCode: "LEGACY",
+        createdAt: now,
+        updatedAt: now,
+        memberIds: [uid],
+        ownerId: uid,
+        members: { user_like_legacy: { nickname: "하니", avatarColor: "#00FF00", lastSeenAt: null } },
+        placeCount: 1,
+      });
+
+      // Seed legacy place without notificationBatchId
+      await seedPlace("room_legacy_place", "p_legacy_1", {
+        kakaoPlaceId: "p_legacy_1",
+        kakaoPlaceUrl: "https://place.map.kakao.com/p_legacy_1",
+        searchKeyword: "성산일출봉",
+        matchType: "confirmed",
+        sourceType: "text",
+        addedBy: uid,
+        addedByNickname: "하니",
+        likedBy: [],
+        likeCount: 0,
+        createdAt: now,
+      });
+
+      const db = getDb({ uid });
+      const placeRef = db.collection("rooms").doc("room_legacy_place").collection("places").doc("p_legacy_1");
+
+      // Like toggle on legacy place -> SUCCEEDS
+      await assertSucceeds(
+        placeRef.update({
+          likedBy: [uid],
+          likeCount: 1,
+        })
+      );
+    });
+  });
 });

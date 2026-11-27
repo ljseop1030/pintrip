@@ -383,4 +383,45 @@
     <string name="place_detail_like">좋아요</string>
     <string name="place_detail_unlike">좋아요 취소</string>
     <string name="place_detail_like_failed">좋아요를 반영하지 못했어요</string>
+
+    <!-- Notification Strings -->
+    <string name="channel_friend_place_added_name">친구 장소 추가 알림</string>
+    <string name="channel_friend_place_added_description">방에 친구가 새로운 장소를 추가했을 때 받는 알림입니다.</string>
+    <string name="notification_friend_place_added_title">새로운 장소 핀 추가</string>
+    <string name="notification_friend_place_added_body">방에 새로운 장소가 추가되었습니다.</string>
+    <string name="notification_friend_place_added_title_single">%1$s님이 \'%2$s\'에 장소를 추가했어요.</string>
+    <string name="notification_friend_place_added_title_multi">%1$s님이 \'%2$s\'에 %3$d곳을 추가했어요.</string>
+    <string name="notification_friend_place_added_body_formatted">클릭하여 방에서 장소를 확인해 보세요.</string>
+    <string name="btn_notification_settings">친구 알림 설정</string>
+    <string name="notice_notification_enabled">친구 장소 추가 알림이 활성화되어 있습니다.</string>
+    <string name="notice_notification_granted">친구 장소 추가 알림이 활성화되었습니다.</string>
+    <string name="notice_notification_denied">알림 권한이 거부되었습니다. 설정에서 언제든지 켤 수 있습니다.</string>
+    <string name="notice_notification_blocked_title">알림이 차단되어 있습니다</string>
+    <string name="notice_notification_blocked_message">앱 또는 알림 채널 설정이 꺼져 있습니다. 기기 설정에서 알림을 허용해 주세요.</string>
+    <string name="btn_open_settings">설정으로 이동</string>
+    <string name="notice_notification_access_denied">접근 권한이 없는 방이거나 이미 삭제된 장소입니다.</string>
+    <string name="notice_notification_account_mismatch">다른 계정으로 전달된 알림입니다.</string>
+
+    <!-- Travel Mode -->
+    <string name="menu_travel_mode_turn_on">여행 모드 켜기</string>
+    <string name="menu_travel_mode_turn_off">여행 모드 끄기</string>
+    <string name="menu_travel_mode_switch_to_this_room">이 방으로 여행 모드 바꾸기</string>
+
+    <string name="notification_channel_travel_mode">여행 모드</string>
+    <string name="notification_channel_nearby_place">근처 장소</string>
+    <string name="notification_travel_mode_title">여행 모드</string>
+    <string name="notification_travel_mode_content_format">여행 모드 · %1$s</string>
+    <string name="notification_travel_mode_loading">%1$s · 장소 불러오는 중</string>
+    <string name="notification_travel_mode_loaded">%1$s · 장소 %2$d곳 확인 중</string>
+    <string name="notification_travel_mode_load_failed">%1$s · 장소를 불러오지 못했어요</string>
+    <string name="notification_nearby_place_title">근처에 %1$s%2$s 있어요</string>
+    <string name="notification_nearby_place_content">%1$dm · 눌러서 자세히 보기</string>
+    <string name="notification_action_stop">끄기</string>
+
+    <string name="travel_mode_location_permission_required">여행 모드는 위치 권한이 필요해요</string>
+    <string name="travel_mode_location_permission_dialog_title">위치 권한 필요</string>
+    <string name="travel_mode_location_permission_dialog_message">여행 모드를 사용하려면 위치 권한이 필요합니다. 설정 화면에서 위치 권한을 허용해 주세요.</string>
+    <string name="travel_mode_btn_go_to_settings">설정으로 이동</string>
+
+    <string name="travel_mode_notification_permission_denied_toast">알림을 허용하면 근처 장소를 알려드려요</string>
 </resources>

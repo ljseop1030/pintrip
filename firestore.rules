@@ -48,6 +48,26 @@ service cloud.firestore {
         && request.resource.data.avatarColor.matches('^#[0-9A-Fa-f]{6}$')
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.keys().hasOnly(['nickname', 'email', 'avatarColor', 'createdAt']);
+
+      // -----------------------------------------------------------
+      // 기기 토큰 서브컬렉션 규칙 (users/{uid}/devices/{installationId})
+      // -----------------------------------------------------------
+      match /devices/{installationId} {
+        // 읽기: 본인 UID만 허용
+        allow read: if isSignedIn() && request.auth.uid == uid;
+
+        // 생성 (create) / 수정 (update): 본인 UID + 필드 규격 검증 (token: 비어있지 않은 문자열, platform: 'android', updatedAt: 서버시각)
+        allow create, update: if isSignedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.platform == 'android'
+          && request.resource.data.updatedAt == request.time;
+
+        // 삭제 (delete): 본인 UID만 허용
+        allow delete: if isSignedIn() && request.auth.uid == uid;
+      }
     }
 
     // -------------------------------------------------------------
@@ -269,11 +289,12 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'kakaoPlaceId', 'kakaoPlaceUrl', 'searchKeyword', 'searchRegion',
             'matchType', 'sourceType', 'sourceUrl', 'addedBy', 'addedByNickname',
-            'likedBy', 'likeCount', 'createdAt'
+            'likedBy', 'likeCount', 'notificationBatchId', 'createdAt'
           ])
           // 선택 필드 검사 (생략, null, 또는 문자열 허용)
           && (!('searchRegion' in request.resource.data) || request.resource.data.searchRegion == null || request.resource.data.searchRegion is string)
           && (!('sourceUrl' in request.resource.data) || request.resource.data.sourceUrl == null || request.resource.data.sourceUrl is string)
+          && (!('notificationBatchId' in request.resource.data) || request.resource.data.notificationBatchId == null || (request.resource.data.notificationBatchId is string && request.resource.data.notificationBatchId.size() > 0))
           // 트랜잭션 동시 실행 검증: 같은 트랜잭션 요청에서 부모 방의 placeCount도 함께 증가했는지 getAfter로 확인
           && getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount > get(/databases/$(database)/documents/rooms/$(roomId)).data.placeCount;
 
@@ -288,7 +309,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'kakaoPlaceId', 'kakaoPlaceUrl', 'searchKeyword', 'searchRegion',
             'matchType', 'sourceType', 'sourceUrl', 'addedBy', 'addedByNickname',
-            'likedBy', 'likeCount', 'createdAt'
+            'likedBy', 'likeCount', 'notificationBatchId', 'createdAt'
           ])
           // 3. 보호 필드 불변성 검증
           && request.resource.data.kakaoPlaceId == resource.data.kakaoPlaceId
@@ -300,6 +321,7 @@ service cloud.firestore {
           && ((!('sourceUrl' in resource.data) && !('sourceUrl' in request.resource.data)) || (request.resource.data.sourceUrl == resource.data.sourceUrl))
           && request.resource.data.addedBy == resource.data.addedBy
           && request.resource.data.addedByNickname == resource.data.addedByNickname
+          && ((!('notificationBatchId' in resource.data) && !('notificationBatchId' in request.resource.data)) || (request.resource.data.notificationBatchId == resource.data.notificationBatchId))
           && request.resource.data.createdAt == resource.data.createdAt
           // 4. likedBy, likeCount 타입 및 기존/신규 likedBy 중복 금지 검증
           && resource.data.likedBy is list
@@ -331,6 +353,16 @@ service cloud.firestore {
               && request.resource.data.likeCount == resource.data.likeCount - 1
             )
           );
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 4. 서버 전용 알림 추적 컬렉션 (notificationEvents/{eventId})
+    // -------------------------------------------------------------
+    match /notificationEvents/{eventId} {
+      allow read, write: if false;
+      match /{allChildren=**} {
+        allow read, write: if false;
       }
     }
 
