@@ -337,6 +337,7 @@
     <string name="place_item_date_just_now">방금 전 (서버 타임스탬프)</string>
     <string name="place_item_format">%1$d. 장소 ID: %2$s\n   - 검색어: %3$s\n   - 작성자: %4$s (%5$s)\n   - 생성 시각: %6$s\n   - Kakao URL: %7$s\n\n</string>
     <string name="place_added_by">%1$s님이 추가</string>
+    <string name="place_category_added_by_format">%1$s · %2$s님이 추가</string>
 
     <!-- Place List Screen -->
     <string name="title_activity_place_list">장소 목록</string>

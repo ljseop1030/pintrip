@@ -45,6 +45,7 @@ import com.pintrip.app.notification.FriendNotificationService
 import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
 import com.pintrip.app.place.PlaceDetailActivity
+import com.pintrip.app.place.labelResId
 import com.pintrip.app.room.DeepLinkUtils
 import com.pintrip.app.travel.TravelModeService
 import com.pintrip.app.travel.TravelModeState
@@ -464,17 +465,6 @@ class RoomMapActivity : AppCompatActivity() {
         }
     }
 
-    private fun getCategoryNameResId(category: PlaceCategory): Int {
-        return when (category) {
-            PlaceCategory.ALL -> R.string.category_all
-            PlaceCategory.DINING -> R.string.category_dining
-            PlaceCategory.CAFE -> R.string.category_cafe
-            PlaceCategory.SIGHTS -> R.string.category_sights
-            PlaceCategory.STAY -> R.string.category_stay
-            PlaceCategory.ETC -> R.string.category_etc
-        }
-    }
-
     private fun observeViewModel() {
         viewModel.uiState.observe(this) { state ->
             when (state) {
@@ -504,7 +494,7 @@ class RoomMapActivity : AppCompatActivity() {
                     if (state.selectedCategory == PlaceCategory.ALL) {
                         binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_all_format, count)
                     } else {
-                        val categoryName = getString(getCategoryNameResId(state.selectedCategory))
+                        val categoryName = getString(state.selectedCategory.labelResId())
                         binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_category_format, categoryName, count)
                     }
 
@@ -694,7 +684,7 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.layoutResult.isVisible = false
                 dialogBinding.layoutEmpty.isVisible = false
 
-                val categoryName = getString(getCategoryNameResId(state.category))
+                val categoryName = getString(state.category.labelResId())
                 dialogBinding.tvReadySubtitle.text = getString(
                     R.string.shake_ready_subtitle_format,
                     categoryName,
@@ -713,7 +703,7 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.tvResultPlaceName.text = place.name.orEmpty().ifBlank { place.place.searchKeyword }
 
                 val actualCategoryEnum = com.pintrip.app.place.PlaceCategory.fromCode(place.category)
-                val actualCategoryName = getString(getCategoryNameResId(actualCategoryEnum))
+                val actualCategoryName = getString(actualCategoryEnum.labelResId())
                 val address = place.address.orEmpty()
                 val addedBy = place.place.addedByNickname.orEmpty()
 
@@ -736,7 +726,7 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.layoutResult.isVisible = false
                 dialogBinding.layoutEmpty.isVisible = true
 
-                val categoryName = getString(getCategoryNameResId(state.category))
+                val categoryName = getString(state.category.labelResId())
                 dialogBinding.tvEmptyMessage.text = when (state.reason) {
                     com.pintrip.app.place.EmptyReason.NO_SAVED_PLACES -> getString(R.string.shake_empty_no_saved_places)
                     com.pintrip.app.place.EmptyReason.NO_AVAILABLE_PLACES -> getString(R.string.shake_empty_no_available_places)
