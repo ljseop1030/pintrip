@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.ImageViewCompat
@@ -157,6 +158,9 @@ class RoomMapActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityRoomMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 헤더가 파란 그라데이션이라 상태바 아이콘을 밝게 바꾼다 (기본값은 어두운 아이콘)
+        WindowCompat.getInsetsController(window, binding.main).isAppearanceLightStatusBars = false
 
         // 06 내 여행방과 같은 규칙: 지도와 헤더가 상태바까지 올라가고,
         // 헤더 top padding만 (상태바 + gap)으로 계산한다. root에 top을 주면
@@ -378,6 +382,8 @@ class RoomMapActivity : AppCompatActivity() {
 
     private fun setupRecyclerView(roomId: String) {
         roomPlaceAdapter = RoomPlaceAdapter { kakaoPlaceId ->
+            // 상세를 보고 돌아왔을 때 어느 곳을 봤는지 지도에 남는다
+            applyFocusedMarker(kakaoPlaceId)
             startActivity(PlaceDetailActivity.newIntent(this, roomId, kakaoPlaceId))
         }
         binding.rvPlaces.apply {
@@ -479,6 +485,7 @@ class RoomMapActivity : AppCompatActivity() {
             val kakaoPlaceId = labelPlaceMap[label]
             if (!kakaoPlaceId.isNullOrBlank()) {
                 val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+                applyFocusedMarker(kakaoPlaceId)
                 startActivity(PlaceDetailActivity.newIntent(this@RoomMapActivity, roomId, kakaoPlaceId))
             }
             true
@@ -491,7 +498,7 @@ class RoomMapActivity : AppCompatActivity() {
         focusLabelStyles = KakaoMapHelper.createMascotLabelStyles(
             context = this,
             kakaoMap = kakaoMap,
-            widthDimenResId = R.dimen.map_marker_mascot_focus_width,
+            widthDimenResId = R.dimen.map_marker_mascot_width,
             anchorY = FOCUS_MARKER_ANCHOR_Y,
             withText = true,
         )

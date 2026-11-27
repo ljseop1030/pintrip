@@ -20,7 +20,7 @@
         android:outlineSpotShadowColor="@color/room_header_grad_start"
         android:paddingHorizontal="20dp"
         android:paddingTop="@dimen/room_header_gap_top"
-        android:paddingBottom="40dp"
+        android:paddingBottom="@dimen/room_header_padding_bottom"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">

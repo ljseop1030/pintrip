@@ -359,7 +359,7 @@ class PlaceDetailActivity : AppCompatActivity() {
                 val labelStyles = KakaoMapHelper.createMascotLabelStyles(
                     context = this@PlaceDetailActivity,
                     kakaoMap = kakaoMap,
-                    widthDimenResId = R.dimen.map_marker_mascot_detail_width,
+                    widthDimenResId = R.dimen.map_marker_mascot_width,
                     anchorY = MASCOT_MARKER_ANCHOR_Y,
                     withText = false,
                 )

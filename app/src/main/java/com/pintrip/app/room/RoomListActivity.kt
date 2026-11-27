@@ -82,6 +82,9 @@ class RoomListActivity : AppCompatActivity() {
         binding = ActivityRoomListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 헤더가 파란 그라데이션이라 상태바 아이콘을 밝게 바꾼다 (기본값은 어두운 아이콘)
+        WindowCompat.getInsetsController(window, binding.main).isAppearanceLightStatusBars = false
+
         // 헤더가 상태바 영역까지 덮고, top padding은 (상태바 + gap)으로 계산한다.
         // 시안의 56dp는 상태바 높이를 이미 포함한 값이므로 더하면 그만큼 헤더가 높아진다.
         val headerGapTop = resources.getDimensionPixelSize(R.dimen.room_header_gap_top)
