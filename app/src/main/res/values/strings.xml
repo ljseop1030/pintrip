@@ -203,6 +203,9 @@
 
     <!-- S03 Room List -->
     <string name="my_travel_room_title">내 여행방</string>
+    <string name="title_my_info">내 정보</string>
+    <string name="label_notification">알림</string>
+    <string name="desc_notification_setting">친구 장소 추가 · 여행 모드 알림</string>
     <string name="greeting_format">안녕하세요, %1$s님</string>
     <string name="greeting_default">안녕하세요, 사용자님</string>
     <string name="location_count_format">장소 %1$d개</string>

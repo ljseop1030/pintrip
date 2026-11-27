@@ -57,7 +57,7 @@
             android:fontFamily="@font/pretendard"
             android:textColor="@color/text_greeting"
             android:textSize="@dimen/text_greeting"
-            app:layout_constraintEnd_toStartOf="@id/btnLogout"
+            app:layout_constraintEnd_toStartOf="@id/ivHeaderIllustration"
             app:layout_constraintStart_toEndOf="@id/ivChevronDown"
             app:layout_constraintTop_toTopOf="@id/tvHeaderAvatar"
             tools:text="안녕하세요, Minji 님" />
@@ -71,7 +71,7 @@
             android:layout_marginTop="2dp"
             android:text="@string/my_travel_room_title"
             android:textColor="@color/white"
-            app:layout_constraintEnd_toStartOf="@id/btnLogout"
+            app:layout_constraintEnd_toStartOf="@id/ivHeaderIllustration"
             app:layout_constraintStart_toEndOf="@id/ivChevronDown"
             app:layout_constraintTop_toBottomOf="@id/tvGreeting" />
 
@@ -87,18 +87,6 @@
             android:translationY="5dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLogout"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_logout"
-            android:textColor="@color/text_greeting"
-            android:textSize="@dimen/text_caption"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

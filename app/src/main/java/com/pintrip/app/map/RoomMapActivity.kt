@@ -51,6 +51,7 @@ import com.pintrip.app.ui.common.LocationPermissionHelper
 import com.pintrip.app.ui.common.NotificationPermissionAction
 import com.pintrip.app.ui.common.NotificationPermissionFlow
 import com.pintrip.app.ui.common.NotificationPermissionHelper
+import com.pintrip.app.ui.common.NotificationSettingsHandler
 import kotlinx.coroutines.launch
 
 class RoomMapActivity : AppCompatActivity() {
@@ -313,87 +314,15 @@ class RoomMapActivity : AppCompatActivity() {
     }
 
     private fun handleNotificationSettingsClick() {
-        FriendNotificationService.createNotificationChannel(applicationContext)
-
-        val isGranted = NotificationPermissionHelper.isNotificationPermissionGranted(this)
-        val prefs = getSharedPreferences("pintrip_device_prefs", Context.MODE_PRIVATE)
-        val hasRequestedBefore = prefs.getBoolean("requested_notif_perm", false)
-        val shouldShowRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            false
-        }
-
-        val appNotificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
-        var isChannelEnabled = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val channel = manager.getNotificationChannel(FriendNotificationService.CHANNEL_ID)
-            if (channel != null && channel.importance == NotificationManager.IMPORTANCE_NONE) {
-                isChannelEnabled = false
-            }
-        }
-
-        val action = NotificationPermissionFlow.determineAction(
-            isRuntimePermissionGranted = isGranted,
-            hasRequestedBefore = hasRequestedBefore,
-            shouldShowRationale = shouldShowRationale,
-            areAppNotificationsEnabled = appNotificationsEnabled,
-            isChannelEnabled = isChannelEnabled
-        )
-
-        when (action) {
-            NotificationPermissionAction.REQUEST_RUNTIME_PERMISSION -> {
-                prefs.edit().putBoolean("requested_notif_perm", true).apply()
-                NotificationPermissionHelper.requestNotificationPermission(this, friendNotificationPermissionLauncher) {
-                    Toast.makeText(this, R.string.notice_notification_enabled, Toast.LENGTH_SHORT).show()
-                    lifecycleScope.launch {
-                        DeviceTokenRepository.getInstance(applicationContext).syncToken()
-                    }
-                }
-            }
-            NotificationPermissionAction.OPEN_APP_SETTINGS -> {
-                showNotificationSettingsDialog(isChannel = false)
-            }
-            NotificationPermissionAction.OPEN_CHANNEL_SETTINGS -> {
-                showNotificationSettingsDialog(isChannel = true)
-            }
-            NotificationPermissionAction.SHOW_GRANTED_TOAST_AND_SYNC -> {
-                Toast.makeText(this, R.string.notice_notification_enabled, Toast.LENGTH_SHORT).show()
+        NotificationSettingsHandler.executeNotificationPermissionFlow(
+            activity = this,
+            launcher = friendNotificationPermissionLauncher,
+            onGranted = {
                 lifecycleScope.launch {
                     DeviceTokenRepository.getInstance(applicationContext).syncToken()
                 }
             }
-        }
-    }
-
-    private fun showNotificationSettingsDialog(isChannel: Boolean) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.notice_notification_blocked_title)
-            .setMessage(R.string.notice_notification_blocked_message)
-            .setPositiveButton(R.string.btn_open_settings) { _, _ ->
-                val intent = if (isChannel && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                        putExtra(Settings.EXTRA_CHANNEL_ID, FriendNotificationService.CHANNEL_ID)
-                    }
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    }
-                } else {
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", packageName, null)
-                    }
-                }
-                try {
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to launch notification settings: ${e.message}")
-                }
-            }
-            .setNegativeButton(R.string.btn_cancel, null)
-            .show()
+        )
     }
 
     private fun setupBottomSheet() {

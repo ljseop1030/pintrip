@@ -198,14 +198,26 @@
                     android:textColor="@color/text_link_hint"
                     android:textSize="@dimen/text_signup"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toStartOf="@id/btnClearDates"
+                    app:layout_constraintEnd_toStartOf="@id/ivCalendarIcon"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:id="@+id/ivCalendarIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_calendar"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnClearDates"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/text_link_hint" />
 
                 <ImageView
                     android:id="@+id/btnClearDates"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
+                    android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="@null"
@@ -339,7 +351,7 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_check_circle"
+                        android:src="@drawable/ic_info"
                         app:tint="@color/button_outlined_text" />
 
                     <TextView

@@ -58,7 +58,7 @@
                 android:layout_height="20dp"
                 android:layout_gravity="center"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_notification"
+                android:src="@drawable/ic_person_add"
                 app:tint="@color/white" />
         </com.google.android.material.card.MaterialCardView>
 
@@ -180,7 +180,7 @@
                 android:layout_height="20dp"
                 android:layout_gravity="center"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_pending_circle"
+                android:src="@drawable/ic_add"
                 app:tint="@color/pintrip_blue" />
         </com.google.android.material.card.MaterialCardView>
 

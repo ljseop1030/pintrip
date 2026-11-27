@@ -200,9 +200,19 @@ class RoomListActivity : AppCompatActivity() {
             viewModel.loadRooms(forceRefresh = true)
         }
 
-        binding.btnLogout.setOnClickListener {
-            viewModel.logout()
+        binding.tvHeaderAvatar.setOnClickListener {
+            showMyInfoBottomSheet()
         }
+
+        binding.ivChevronDown.setOnClickListener {
+            showMyInfoBottomSheet()
+        }
+    }
+
+    private fun showMyInfoBottomSheet() {
+        if (supportFragmentManager.findFragmentByTag(MyInfoBottomSheetFragment.TAG) != null) return
+        val sheet = MyInfoBottomSheetFragment()
+        sheet.show(supportFragmentManager, MyInfoBottomSheetFragment.TAG)
     }
 
     private fun observeViewModel() {
