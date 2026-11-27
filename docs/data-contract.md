@@ -20,6 +20,7 @@ Single source of truth for Firestore schema, in-memory models, and the Gemini/Ka
 
 ```
 users/{uid}
+users/{uid}/devices/{installationId}
 rooms/{roomId}
 rooms/{roomId}/places/{kakaoPlaceId}
 inviteCodes/{code}
@@ -39,6 +40,111 @@ There is no `likes` collection. Likes live in each place's `likedBy` array.
 | email | String | ✓ | |
 | avatarColor | String | ✓ | `#RRGGBB`, random at sign-up |
 | createdAt | Timestamp | ✓ | |
+
+### users/{uid}/devices/{installationId}  (doc ID = app installation unit UUID)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| token | String | ✓ | FCM device token |
+| platform | String | ✓ | `"android"` |
+| updatedAt | Timestamp | ✓ | `serverTimestamp` |
+
+- `installationId`: Unique UUID stored in local `SharedPreferences` (`pintrip_device_prefs`) representing the app installation instance (not hardware ID).
+- Sync policy: Synced after login/profile verification or upon `onNewToken` refresh. Pre-login sync is blocked. On logout, `cleanupTokenOnLogout` attempts remote deletion of `users/{previousUid}/devices/{installationId}` with a 3-second timeout.
+- Note on logout & new UID: Creating a document under `{newUid}` creates a new document; it does NOT delete or overwrite `{previousUid}`'s document. If remote deletion fails or times out during offline logout, `{previousUid}`'s document may temporarily remain in Firestore until administrative cleanup or re-login. However, local session invalidation (`isLoggingOut`, `sessionGeneration`) and strict `recipientUid` checks guarantee that no cross-account notifications or navigations occur on the device.
+
+---
+
+## 4. FCM Push Notification Contract (Friend Place Added)
+
+Server-to-client push notification protocol for `type = "PLACE_ADDED"` (new pin in room).
+
+### Message Payload Format (Legacy AndroidConfig - Data-Only)
+
+Server MUST send **data-only FCM messages** (`data` map). Do **NOT** send `notification` payload (which triggers OS auto-display bypassing client-side recipient and permission checks).
+
+| Field | Type | Req | Value / Description |
+|---|---|---|---|
+| `type` | String | ✓ | `"PLACE_ADDED"` |
+| `eventId` | String | ✓ | Unique event identifier (`evt_${roomId}_${requestingUid}_${notificationBatchId}` for the primary batch route). Used for client-side LRU deduplication |
+| `recipientUid` | String | ✓ | Firebase Auth UID of the recipient. Messages are rejected if unauthenticated or UID mismatches |
+| `roomId` | String | ✓ | Target room ID (`rooms/{roomId}`) |
+| `addedByNickname` | String | ✓ | Author nickname for localized notification formatting |
+| `roomName` | String | ✓ | Room name for localized notification formatting |
+| `addedCount` | String | ✓ | Number of places added in batch (e.g. `"3"`) |
+| `kakaoPlaceId` | String | ✓ | Kakao place ID for single place addition (`addedCount == 1`), or empty string `""` for multi-place additions (`addedCount > 1`) |
+
+### Client Navigation Contract
+- Single place (`addedCount == 1` && `kakaoPlaceId.isNotBlank()`): Opens `RoomMapActivity` then `PlaceDetailActivity`.
+- Multi place (`addedCount > 1` || `kakaoPlaceId.isBlank()`): Opens `RoomMapActivity` (Room Home).
+
+---
+
+## 4.1. Vercel Serverless FCM API Endpoint (`/api/friend-place-added`)
+
+Serverless function endpoint used to trigger friend place notifications via Vercel.
+
+- **HTTP Method**: `POST`
+- **Request Header**: `Authorization: Bearer <Firebase_ID_Token>`
+- **Primary Request Body (Batch Route)**:
+  ```json
+  {
+    "roomId": "room_123",
+    "notificationBatchId": "batch_uuid_999"
+  }
+  ```
+- **Backward Compatibility Request Body (Legacy Single Place Route)**:
+  ```json
+  {
+    "roomId": "room_123",
+    "kakaoPlaceId": "place_456",
+    "createdAtMs": 1700000000000
+  }
+  ```
+- **Response Status Codes & Semantics**:
+  - `HTTP 200 OK`: Notification processed (`{ "success": true, "result": { ... } }`) or skipped gracefully (`{ "success": true, "skipped": true, "reason": "NO_PLACES_IN_BATCH" }`).
+  - `HTTP 400 Bad Request`: Missing `roomId` or invalid body parameters.
+  - `HTTP 401 Unauthorized`: Missing or invalid Bearer ID token.
+  - `HTTP 403 Forbidden`: Requesting user is not a room member or not the batch author.
+  - `HTTP 404 Not Found`: Parent room or target place does not exist.
+  - `HTTP 500 Internal Server Error`: Generic internal server error (error stack and message omitted from response body).
+
+- **Firestore Rules Deployment Order**:
+  - `firestore.rules` must be deployed before installing new client APKs (`firebase deploy --only firestore:rules --project pintrip-a12a6`).
+
+---
+
+## 5. Server-Only Notification Delivery Tracking Collection
+
+Collection used strictly by trusted servers through the Firebase Admin SDK for tracking notification delivery states, idempotency, and retries. Client access is strictly blocked in `firestore.rules`.
+
+### notificationEvents/{eventId}  (doc ID = `evt_${roomId}_${requestingUid}_${notificationBatchId}`)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| eventId | String | ✓ | Unique stable event ID (`evt_${roomId}_${requestingUid}_${notificationBatchId}`) |
+| roomId | String | ✓ | Target room ID |
+| kakaoPlaceId | String | ✓ | Target Kakao place ID for single place addition, or empty string `""` for batch additions |
+| addedBy | String | ✓ | Author UID |
+| status | String | ✓ | `"pending"` \| `"in_progress"` \| `"completed"` \| `"failed_transient"` \| `"failed_permanent"` |
+| createdAt | Timestamp | ✓ | Function trigger creation time (preserved on updates) |
+| updatedAt | Timestamp | ✓ | Last delivery attempt time |
+
+### notificationEvents/{eventId}/deliveries/{deliveryId}  (doc ID = `${recipientUid}_${installationId}`)
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| deliveryId | String | ✓ | `${recipientUid}_${installationId}` |
+| recipientUid | String | ✓ | Recipient user UID |
+| installationId | String | ✓ | Device installation ID |
+| status | String | ✓ | `"pending"` \| `"in_progress"` \| `"success"` \| `"failed_transient"` \| `"failed_permanent"` |
+| leaseOwner | String? | | Execution UUID holding current 5-minute lease |
+| leaseExpiresAt | Number? | | Lease expiration timestamp in ms (`now + 5 mins`) |
+| retryCount | Number? | | Delivery attempt count |
+| errorCode | String? | | Firebase Messaging error code if failed |
+| updatedAt | Timestamp | ✓ | Last attempt timestamp |
+
+---
 
 ### rooms/{roomId}  (doc ID = auto ID)
 

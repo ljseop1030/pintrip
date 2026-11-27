@@ -1,0 +1,9 @@
+.vercel
+.env*
+
+# Server dependencies and generated output
+node_modules/
+lib/
+
+# Share variable names only
+!.env.example

@@ -2,6 +2,7 @@ package com.pintrip.app.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -9,21 +10,32 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doOnTextChanged
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import com.google.firebase.auth.FirebaseAuth
 import com.pintrip.app.R
+import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.databinding.ActivityTestLoginBinding
 import com.pintrip.app.room.RoomListActivity
+import com.pintrip.app.auth.scrollToEnsureViewFullyVisible
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 /**
- * 정식 로그인 화면 (Figma S01).
+ * 로그인 화면 (Figma S02).
  *
- * 이메일/비밀번호로 로그인하며, 프로필 문서(users/{uid})가 없는 경우
- * 화면에서 닉네임을 입력받아 프로필을 생성합니다.
+ * 이메일, 비밀번호 입력을 받아 Firebase Auth 로그인 후 Firestore `users/{uid}`에서
+ * 프로필 조회 상태에 따라 닉네임 입력, 손상 안내, 오류 다이얼로그 및 방 목록 이동을 처리합니다.
  */
 class TestLoginActivity : AppCompatActivity(),
     ProfileNicknameDialogFragment.Listener,
     ProfileErrorDialogFragment.Listener,
     ProfileCorruptedDialogFragment.Listener {
+
+    companion object {
+        private const val TAG = "TestLoginActivity"
+    }
 
     private lateinit var binding: ActivityTestLoginBinding
     private val viewModel: LoginViewModel by viewModels()
@@ -199,7 +211,7 @@ class TestLoginActivity : AppCompatActivity(),
     }
 
     override fun onSignOutFromNicknameDialog() {
-        viewModel.signOut()
+        performLogout()
     }
 
     override fun onRetryProfile(isSaveError: Boolean, isCompletionCheck: Boolean) {
@@ -211,24 +223,41 @@ class TestLoginActivity : AppCompatActivity(),
     }
 
     override fun onSignOutFromErrorDialog() {
-        viewModel.signOut()
+        performLogout()
     }
 
     override fun onSignOutFromCorruptedDialog() {
-        viewModel.signOut()
+        performLogout()
+    }
+
+    private fun performLogout() {
+        viewModel.performLogout(DeviceTokenRepository.getInstance(applicationContext))
+    }
+
+    private fun navigateToRoomList() {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+        if (!currentUid.isNullOrBlank()) {
+            val tokenRepo = DeviceTokenRepository.getInstance(applicationContext)
+            tokenRepo.activateSession(currentUid)
+            lifecycleScope.launch {
+                try {
+                    tokenRepo.syncToken()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Failed to sync token on login: ${e.message}")
+                }
+            }
+        }
+        val intent = Intent(this, RoomListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun clearAllErrorsFromUi() {
         binding.tilEmail.error = null
         binding.tilPassword.error = null
         binding.tvFormError.visibility = View.GONE
-    }
-
-    private fun navigateToRoomList() {
-        val intent = Intent(this, RoomListActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        startActivity(intent)
-        finish()
     }
 }

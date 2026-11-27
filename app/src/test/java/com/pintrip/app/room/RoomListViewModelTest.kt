@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -490,5 +491,53 @@ class RoomListViewModelTest {
         fakeRoomRepo.exceptionToThrow = RoomJoinException.CodeNotFound()
         viewModel.joinRoomWithCode("K7P2QX")
         assertEquals(R.string.error_invite_code_not_found, viewModel.joinErrorMessageResId.value)
+    }
+
+    @Test
+    fun syncDeviceToken_callsRepositorySyncToken() {
+        val fakeTokenRepo = FakeDeviceTokenRepository()
+        val viewModel = RoomListViewModel(
+            roomRepository = FakeRoomRepository(),
+            userRepository = FakeUserRepository(),
+            deviceTokenRepository = fakeTokenRepo
+        )
+
+        viewModel.syncDeviceToken()
+
+        assertTrue(fakeTokenRepo.syncTokenCalled)
+    }
+
+    @Test
+    fun logout_callsRepositoryCleanupToken() {
+        val fakeTokenRepo = FakeDeviceTokenRepository()
+        val viewModel = RoomListViewModel(
+            roomRepository = FakeRoomRepository(),
+            userRepository = FakeUserRepository(),
+            deviceTokenRepository = fakeTokenRepo,
+            currentUidProvider = { "user_owner_123" }
+        )
+
+        viewModel.logout()
+
+        assertTrue(fakeTokenRepo.cleanupTokenCalled)
+        assertEquals("user_owner_123", fakeTokenRepo.lastCleanedUid)
+        assertNotNull(viewModel.navigateToLogin.value)
+    }
+}
+
+open class FakeDeviceTokenRepository : com.pintrip.app.data.repository.DeviceTokenRepository(null, null, null, null) {
+    var syncTokenCalled = false
+    var cleanupTokenCalled = false
+    var lastCleanedUid: String? = null
+
+    override suspend fun syncToken(token: String?): Boolean {
+        syncTokenCalled = true
+        return true
+    }
+
+    override suspend fun cleanupTokenOnLogout(previousUid: String): Boolean {
+        cleanupTokenCalled = true
+        lastCleanedUid = previousUid
+        return true
     }
 }

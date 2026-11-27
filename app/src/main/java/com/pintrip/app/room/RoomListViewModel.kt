@@ -32,10 +32,15 @@ class RoomListViewModel(
     private val roomRepository: RoomRepository = RoomRepository(),
     private val userRepository: UserRepository = UserRepository(),
     private val auth: FirebaseAuth? = null,
+    private val deviceTokenRepository: com.pintrip.app.data.repository.DeviceTokenRepository? = null,
+    private val currentUidProvider: (() -> String?)? = null,
 ) : ViewModel() {
 
     private val currentAuth: FirebaseAuth?
         get() = auth ?: try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
+
+    val currentUid: String?
+        get() = currentUidProvider?.invoke() ?: currentAuth?.currentUser?.uid
 
     companion object {
         private const val TAG = "RoomListViewModel"
@@ -342,9 +347,50 @@ class RoomListViewModel(
         isNavigating = false
     }
 
+    fun syncDeviceToken() {
+        viewModelScope.launch {
+            val repo = deviceTokenRepository
+            if (repo != null) {
+                try {
+                    repo.syncToken()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Failed to sync device token in ViewModel: ${e.message}")
+                }
+            }
+        }
+    }
+
     fun logout() {
         if (isNavigating || _isJoining.value == true || _joinSuccessResult.value != null) return
-        currentAuth?.signOut()
-        _navigateToLogin.value = Event(Unit)
+        val previousUid = currentUid.orEmpty()
+        viewModelScope.launch {
+            val repo = deviceTokenRepository
+            if (repo != null) {
+                try {
+                    repo.cleanupTokenOnLogout(previousUid)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Failed to cleanup device token on logout: ${e.message}")
+                }
+            }
+            currentAuth?.signOut()
+            _navigateToLogin.value = Event(Unit)
+        }
+    }
+}
+
+class RoomListViewModelFactory(
+    private val roomRepository: RoomRepository = RoomRepository(),
+    private val userRepository: UserRepository = UserRepository(),
+    private val auth: FirebaseAuth? = null,
+    private val deviceTokenRepository: com.pintrip.app.data.repository.DeviceTokenRepository? = null,
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(RoomListViewModel::class.java)) {
+            return RoomListViewModel(roomRepository, userRepository, auth, deviceTokenRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

@@ -145,7 +145,7 @@ class SelectPlacesActivity : AppCompatActivity() {
         binding.btnAddPlaces.setOnClickListener {
             val selectedCount = viewModel.getConfirmableCheckedCount()
             Log.d(TAG, "Add places clicked with $selectedCount places selected")
-            viewModel.saveSelectedPlaces()
+            viewModel.saveSelectedPlaces(applicationContext)
         }
     }
 
@@ -249,7 +249,7 @@ class SelectPlacesActivity : AppCompatActivity() {
             .setTitle(R.string.select_places_unconfirmed_dialog_title)
             .setMessage(message)
             .setPositiveButton(R.string.select_places_unconfirmed_continue) { _, _ ->
-                viewModel.saveSelectedPlaces(skipUnconfirmed = true)
+                viewModel.saveSelectedPlaces(applicationContext, skipUnconfirmed = true)
             }
             .setNegativeButton(R.string.btn_cancel, null)
             .show()

@@ -17,7 +17,7 @@
   - map/: map view inside room home, map camera
   - place/: place list, place detail, likes, shake to pick
   - extract/: share receive, Gemini extraction, place matching, select places
-  - notification/: friend place-added notifications (Firestore listener, WorkManager worker)
+  - notification/: friend place-added notifications (FirebaseMessagingService, NotificationMessageParser, notification channel)
   - travel/: travel mode, location foreground service
   - vote/: place voting in a room
   - plan/: Day recommendation

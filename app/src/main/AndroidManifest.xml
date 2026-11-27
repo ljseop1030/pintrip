@@ -120,6 +120,14 @@
             android:label="@string/title_activity_place_detail" />
 
         <service
+            android:name=".notification.FriendNotificationService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".travel.TravelModeService"
             android:enabled="true"
             android:exported="false"

@@ -23,6 +23,7 @@ data class Place(
     val addedByNickname: String = "",
     val likedBy: List<String> = emptyList(),
     val likeCount: Int = 0,
+    val notificationBatchId: String? = null,
     @get:ServerTimestamp
     val createdAt: Timestamp? = null,
 )

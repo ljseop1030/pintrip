@@ -20,6 +20,7 @@ import kotlinx.coroutines.tasks.await
 data class AddPlacesResult(
     val addedCount: Int,
     val skippedCount: Int,
+    val notificationBatchId: String? = null,
 )
 
 /**
@@ -93,6 +94,7 @@ open class PlaceRepository(
         }
 
         val roomRef = db.collection("rooms").document(roomId)
+        val batchId = java.util.UUID.randomUUID().toString()
 
         // 4. Firestore Transaction (모든 Read 실행 후 Write 진행)
         return db.runTransaction { transaction ->
@@ -118,10 +120,11 @@ open class PlaceRepository(
                 if ((snapshot != null) && snapshot.exists()) {
                     dbSkippedCount++
                 } else {
-                    // 신규 장소 초기화: likedBy 비우기, likeCount 0, createdAt null(서버 타임스탬프 자동 부여)
+                    // 신규 장소 초기화: likedBy 비우기, likeCount 0, notificationBatchId 할당, createdAt null(서버 타임스탬프 자동 부여)
                     val placeToSave = place.copy(
                         likedBy = emptyList(),
                         likeCount = 0,
+                        notificationBatchId = batchId,
                         createdAt = null,
                     )
                     newPlaces.add(placeToSave)
@@ -145,6 +148,7 @@ open class PlaceRepository(
             AddPlacesResult(
                 addedCount = newPlaces.size,
                 skippedCount = dbSkippedCount + requestDuplicatesCount,
+                notificationBatchId = if (newPlaces.isNotEmpty()) batchId else null,
             )
         }.await()
     }

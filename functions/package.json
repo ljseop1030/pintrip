@@ -1,0 +1,33 @@
+{
+  "name": "functions",
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions:onFriendPlaceAdded",
+    "logs": "firebase functions:log",
+    "test": "npm run build && mocha 'lib/test/**/*.spec.js' --timeout 15000"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "lib/src/index.js",
+  "dependencies": {
+    "firebase-admin": "^13.1.0",
+    "firebase-functions": "^6.3.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^22.10.1",
+    "@vercel/node": "^3.2.26",
+    "chai": "^4.3.10",
+    "mocha": "^10.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "private": true
+}

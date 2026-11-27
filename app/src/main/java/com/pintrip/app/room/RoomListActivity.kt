@@ -13,10 +13,22 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
+import android.util.Log
+import androidx.lifecycle.lifecycleScope
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
 import com.pintrip.app.R
 import com.pintrip.app.auth.TestLoginActivity
+import com.pintrip.app.data.repository.DeviceTokenRepository
+import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.databinding.ActivityRoomListBinding
+import com.pintrip.app.map.RoomMapActivity
+import com.pintrip.app.notification.PendingNotificationManager
+import com.pintrip.app.place.PlaceDetailActivity
 import com.pintrip.app.place.PlaceListActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 /**
  * 사용자 참여 여행방 목록 화면 (Figma S03).
@@ -24,7 +36,12 @@ import com.pintrip.app.place.PlaceListActivity
 class RoomListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRoomListBinding
-    private val viewModel: RoomListViewModel by viewModels()
+    private val roomRepository: RoomRepository by lazy { RoomRepository() }
+    private val viewModel: RoomListViewModel by viewModels {
+        RoomListViewModelFactory(
+            deviceTokenRepository = DeviceTokenRepository.getInstance(applicationContext)
+        )
+    }
     private lateinit var roomAdapter: RoomAdapter
 
     private val createRoomLauncher = registerForActivityResult(
@@ -64,7 +81,9 @@ class RoomListActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             processIntentInvite(intent)
+            checkPendingNotificationDestination()
         }
+        viewModel.syncDeviceToken()
         viewModel.loadRooms()
     }
 
@@ -72,6 +91,61 @@ class RoomListActivity : AppCompatActivity() {
         super.onResume()
         viewModel.resetNavigation()
         viewModel.checkPendingInvite(applicationContext)
+        checkPendingNotificationDestination()
+    }
+
+    private fun checkPendingNotificationDestination() {
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+        if (currentUid.isNullOrBlank()) return
+        val tokenRepo = DeviceTokenRepository.getInstance(applicationContext)
+
+        lifecycleScope.launch {
+            val result = com.pintrip.app.notification.NotificationDestinationHandler.processDestination(
+                applicationContext,
+                roomRepository,
+                sessionProvider = {
+                    com.pintrip.app.notification.SessionSnapshot(
+                        uid = FirebaseAuth.getInstance().currentUser?.uid,
+                        generation = DeviceTokenRepository.currentSessionGeneration(),
+                        isLoggingOut = tokenRepo.isLoggingOut
+                    )
+                }
+            )
+            handleRoomListDestinationResult(result)
+        }
+    }
+
+    private fun handleRoomListDestinationResult(result: com.pintrip.app.notification.PendingDestinationResult) {
+        when (result) {
+            is com.pintrip.app.notification.PendingDestinationResult.Success -> {
+                val override = PendingNotificationManager.navigatorOverride
+                if (override != null) {
+                    override.invoke(this, result.roomId, result.kakaoPlaceId)
+                } else {
+                    val roomMapIntent = RoomMapActivity.newIntent(this, result.roomId)
+                    if (result.kakaoPlaceId.isNotBlank()) {
+                        val placeDetailIntent = PlaceDetailActivity.newIntent(this, result.roomId, result.kakaoPlaceId)
+                        startActivities(arrayOf(roomMapIntent, placeDetailIntent))
+                    } else {
+                        startActivity(roomMapIntent)
+                    }
+                }
+            }
+            is com.pintrip.app.notification.PendingDestinationResult.AccountMismatch -> {
+                Toast.makeText(this, R.string.notice_notification_account_mismatch, Toast.LENGTH_SHORT).show()
+            }
+            is com.pintrip.app.notification.PendingDestinationResult.AccessDenied -> {
+                Toast.makeText(this, R.string.notice_notification_access_denied, Toast.LENGTH_SHORT).show()
+            }
+            is com.pintrip.app.notification.PendingDestinationResult.NetworkError -> {
+                Toast.makeText(this, R.string.error_network_unavailable, Toast.LENGTH_SHORT).show()
+            }
+            is com.pintrip.app.notification.PendingDestinationResult.NoDestination,
+            is com.pintrip.app.notification.PendingDestinationResult.AlreadyProcessing,
+            is com.pintrip.app.notification.PendingDestinationResult.StaleOrSuperseded -> {
+                // Do nothing
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
