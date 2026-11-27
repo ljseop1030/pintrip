@@ -69,9 +69,16 @@ class RoomListActivity : AppCompatActivity() {
         binding = ActivityRoomListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val initialHeaderPaddingTop = binding.layoutHeader.paddingTop
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            binding.layoutHeader.setPadding(
+                binding.layoutHeader.paddingLeft,
+                initialHeaderPaddingTop + systemBars.top,
+                binding.layoutHeader.paddingRight,
+                binding.layoutHeader.paddingBottom
+            )
             insets
         }
 

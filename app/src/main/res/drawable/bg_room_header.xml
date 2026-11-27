@@ -1,13 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <gradient
-        android:angle="300"
-        android:startColor="#4357BA"
-        android:centerColor="#5069D4"
-        android:endColor="#5F86EC"
-        android:type="linear" />
-    <corners
-        android:bottomLeftRadius="28dp"
-        android:bottomRightRadius="28dp" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 아래층: linear gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="330"
+                android:startColor="@color/room_header_grad_start"
+                android:centerColor="@color/room_header_grad_center"
+                android:endColor="@color/room_header_grad_end"
+                android:type="linear" />
+            <corners
+                android:bottomLeftRadius="28dp"
+                android:bottomRightRadius="28dp" />
+        </shape>
+    </item>
+    <!-- 위층: radial gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.92"
+                android:centerY="1.1"
+                android:gradientRadius="220dp"
+                android:startColor="@color/room_header_radial_highlight"
+                android:endColor="@color/transparent"
+                android:type="radial" />
+            <corners
+                android:bottomLeftRadius="28dp"
+                android:bottomRightRadius="28dp" />
+        </shape>
+    </item>
+</layer-list>

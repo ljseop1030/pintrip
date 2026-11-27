@@ -23,6 +23,18 @@
     <color name="place_heart_unliked_tint">#7B7A88</color>
     <color name="place_likes_bg">#FFF0EB</color>
     <color name="place_list_empty_text">#7B7A88</color>
+    <!-- Room Header & Link Bar Colors -->
+    <color name="room_header_grad_start">#4357BA</color>
+    <color name="room_header_grad_center">#5069D4</color>
+    <color name="room_header_grad_end">#5F86EC</color>
+    <color name="room_header_radial_highlight">#734BC8FF</color>
+    <color name="transparent">#00000000</color>
+    <color name="text_greeting">#E3E9FF</color>
+    <color name="text_link_hint">#646C8F</color>
+    <color name="icon_bg_blue">#E5EBFE</color>
+    <color name="button_outlined_stroke">#C9D3F5</color>
+    <color name="button_outlined_text">#334BB1</color>
+
     <!-- Design System Colors (UI v2) -->
     <color name="pintrip_blue">#4B60C0</color>
     <color name="tagline_text">#5A6AB8</color>
