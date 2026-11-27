@@ -267,8 +267,8 @@
     <string name="error_room_join_default">방 가입 중 오류가 발생했습니다. 다시 시도해 주세요.</string>
     <string name="notice_joining_room_in_progress">여행방에 가입하고 있습니다. 잠시만 기다려 주세요.</string>
 
-    <string name="created_room_code_title">방 생성이 완료되었습니다!</string>
-    <string name="created_room_code_subtext">아래 초대 코드를 친구들에게 공유하여 함께 장소를 모아보세요.</string>
+    <string name="created_room_code_title">여행방이 만들어졌어요!</string>
+    <string name="created_room_code_subtext">아래 초대 코드를 친구에게 공유하고\n함께 장소를 모아 보세요</string>
     <string name="created_room_code_label">초대 코드</string>
     <string name="btn_copy_code">코드 복사</string>
     <string name="btn_share_link">링크 공유</string>
