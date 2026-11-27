@@ -37,6 +37,8 @@
     <color name="icon_chip_bg">#F0F3FD</color>
     <color name="button_outlined_stroke">#C9D3F5</color>
     <color name="button_outlined_text">#334BB1</color>
+    <!-- 비활성 Primary 버튼 배경 (시안 16 공유 수신 / 17 장소 선택의 잠긴 버튼) -->
+    <color name="btn_primary_disabled">#A9B4E4</color>
     <color name="text_dark_navy">#1F2440</color>
 
     <!-- Design System Colors (UI v2) -->
@@ -65,4 +67,6 @@
     <color name="header_btn_bg">#29FFFFFF</color>
     <color name="header_btn_stroke">#73FFFFFF</color>
     <color name="shake_arc">#7D94FE</color>
+    <!-- 11-B 여행 모드 켜짐: Primary 배경 위에 올라가는 상태 점 -->
+    <color name="travel_dot_active">#8EE0BE</color>
 </resources>

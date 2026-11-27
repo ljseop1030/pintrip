@@ -68,7 +68,8 @@
         <item name="cornerRadius">@dimen/start_btn_corner_radius</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="backgroundTint">?attr/colorPrimary</item>
+        <!-- 활성/비활성 상태를 함께 갖는 ColorStateList (단색이면 비활성이 활성과 같아 보임) -->
+        <item name="backgroundTint">@color/btn_primary_bg</item>
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">@dimen/text_btn</item>
         <item name="android:fontFamily">@font/pretendard_bold</item>

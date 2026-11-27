@@ -24,7 +24,9 @@
         android:paddingHorizontal="12dp"
         android:paddingTop="48dp"
         android:paddingBottom="16dp"
-        app:elevation="4dp">
+        android:elevation="@dimen/room_header_elevation"
+        android:outlineAmbientShadowColor="@color/room_header_grad_start"
+        android:outlineSpotShadowColor="@color/room_header_grad_start">
 
         <ImageView
             android:id="@+id/ivBack"
@@ -185,7 +187,7 @@
             android:layout_width="40dp"
             android:layout_height="4dp"
             android:layout_marginTop="10dp"
-            android:background="@color/button_outlined_stroke"
+            android:background="@drawable/bg_drag_handle"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

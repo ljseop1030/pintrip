@@ -35,4 +35,10 @@
     <dimen name="text_travel_btn">14sp</dimen>
     <dimen name="fab_travel_offset">-20dp</dimen>
     <dimen name="fab_dice_offset">-80dp</dimen>
+
+    <!-- 05 · 06 · 11 방 헤더 그림자 (시안 0 8px 24px) -->
+    <dimen name="room_header_elevation">8dp</dimen>
+    <!-- 17 장소 선택 후보 선택 항목 / 18 위치 선택 선택된 후보 테두리 -->
+    <dimen name="card_stroke_width_selected">2dp</dimen>
+    <dimen name="card_stroke_width_none">0dp</dimen>
 </resources>

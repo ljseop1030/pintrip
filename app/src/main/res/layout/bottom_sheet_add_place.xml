@@ -17,7 +17,7 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="16dp"
-        android:background="@color/button_outlined_stroke" />
+        android:background="@drawable/bg_drag_handle" />
 
     <!-- Title & Close Button Row (Figma Node 37:1223) -->
     <androidx.constraintlayout.widget.ConstraintLayout

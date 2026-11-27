@@ -62,11 +62,13 @@ class ItemConfirmCandidateAdapter(
             if (isSelected) {
                 binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
                 binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.pintrip_blue)
-                binding.cardCandidateContainer.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
+                binding.cardCandidateContainer.strokeWidth =
+                    context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_selected)
             } else {
                 binding.cardCandidateContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
                 binding.cardCandidateContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)
-                binding.cardCandidateContainer.strokeWidth = 0
+                binding.cardCandidateContainer.strokeWidth =
+                    context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_none)
             }
 
             binding.cardCandidateContainer.setOnClickListener {
