@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/pintrip_surface">
 
+    <!-- Map View -->
     <com.kakao.vectormap.MapView
         android:id="@+id/map_view"
         android:layout_width="match_parent"
@@ -25,32 +26,74 @@
         android:paddingBottom="16dp"
         app:elevation="4dp">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            app:layout_constraintEnd_toStartOf="@id/btnInvite"
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="@string/common_back"
+            android:focusable="true"
+            android:padding="11dp"
+            android:src="@drawable/ic_back"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:navigationIcon="@drawable/ic_back"
-            app:navigationIconTint="@color/white"
-            app:title="@string/title_activity_room_map"
-            app:titleTextColor="@color/white" />
+            app:tint="@color/white" />
 
-        <!-- 친구 초대 버튼 -->
+        <LinearLayout
+            android:id="@+id/layoutTitleBlock"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="@id/ivBack"
+            app:layout_constraintEnd_toStartOf="@id/btnInvite"
+            app:layout_constraintStart_toEndOf="@id/ivBack"
+            app:layout_constraintTop_toTopOf="@id/ivBack">
+
+            <TextView
+                android:id="@+id/tvTitle"
+                style="@style/Widget.Pintrip.TextView.Title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/white"
+                android:textSize="@dimen/text_title_sheet"
+                tools:text="부산" />
+
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:ellipsize="end"
+                android:fontFamily="@font/pretendard"
+                android:maxLines="1"
+                android:textColor="@color/text_greeting"
+                android:textSize="@dimen/text_caption"
+                tools:text="10.24 – 10.26 · 장소 24" />
+
+        </LinearLayout>
+
+        <!-- 친구 초대 버튼 (Figma Node 16:2): 마스코트 바로 왼쪽 -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnInvite"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginEnd="8dp"
-            app:cardBackgroundColor="#29FFFFFF"
+            android:clickable="true"
+            android:contentDescription="@string/cd_invite_friend"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/header_btn_bg"
             app:cardCornerRadius="20dp"
             app:cardElevation="0dp"
-            app:layout_constraintBottom_toBottomOf="@id/toolbar"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/toolbar"
-            app:strokeColor="#73FFFFFF"
+            app:layout_constraintBottom_toBottomOf="@id/ivBack"
+            app:layout_constraintEnd_toStartOf="@id/ivHeaderIllustration"
+            app:layout_constraintTop_toTopOf="@id/ivBack"
+            app:strokeColor="@color/header_btn_stroke"
             app:strokeWidth="1dp">
 
             <ImageView
@@ -60,6 +103,7 @@
                 android:contentDescription="@null"
                 android:src="@drawable/ic_person_add"
                 app:tint="@color/white" />
+
         </com.google.android.material.card.MaterialCardView>
 
         <!-- 마스코트 행성 일러스트 -->
@@ -148,20 +192,19 @@
 
         <TextView
             android:id="@+id/tv_sheet_title"
+            style="@style/Widget.Pintrip.TextView.Title.Sheet"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="12dp"
             android:layout_marginEnd="16dp"
-            android:fontFamily="@font/pretendard_bold"
             android:textColor="@color/text_dark_navy"
-            android:textSize="18sp"
-            android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@id/btnAddPlace"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/view_drag_handle"
             tools:text="장소 24" />
 
+        <!-- 장소 추가 버튼 (Figma Node 16:7) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnAddPlace"
             android:layout_width="40dp"
@@ -215,6 +258,7 @@
                     android:text="@string/category_all"
                     android:textColor="@color/chip_text_color"
                     android:textSize="@dimen/text_greeting"
+                    app:checkedIconVisible="false"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="17dp"
                     app:chipIconVisible="false"
@@ -230,6 +274,7 @@
                     android:text="@string/category_dining"
                     android:textColor="@color/chip_text_color"
                     android:textSize="@dimen/text_greeting"
+                    app:checkedIconVisible="false"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="17dp"
                     app:chipIconVisible="false"
@@ -245,6 +290,7 @@
                     android:text="@string/category_cafe"
                     android:textColor="@color/chip_text_color"
                     android:textSize="@dimen/text_greeting"
+                    app:checkedIconVisible="false"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="17dp"
                     app:chipIconVisible="false"
@@ -260,6 +306,7 @@
                     android:text="@string/category_sights"
                     android:textColor="@color/chip_text_color"
                     android:textSize="@dimen/text_greeting"
+                    app:checkedIconVisible="false"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="17dp"
                     app:chipIconVisible="false"
@@ -275,6 +322,7 @@
                     android:text="@string/category_stay"
                     android:textColor="@color/chip_text_color"
                     android:textSize="@dimen/text_greeting"
+                    app:checkedIconVisible="false"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="17dp"
                     app:chipIconVisible="false"
@@ -290,6 +338,7 @@
                     android:text="@string/category_etc"
                     android:textColor="@color/chip_text_color"
                     android:textSize="@dimen/text_greeting"
+                    app:checkedIconVisible="false"
                     app:chipBackgroundColor="@color/chip_bg_color"
                     app:chipCornerRadius="17dp"
                     app:chipIconVisible="false"
@@ -331,7 +380,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 3. Floating Action Buttons on Map (Dice & Travel Mode) -->
+    <!-- 3. Floating Action Buttons on Map: 주사위(위), 여행 모드(아래, 시트 쪽) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/fab_dice"
         style="@style/Widget.Material3.CardView.Elevated"
@@ -342,7 +391,7 @@
         android:clickable="true"
         android:contentDescription="@string/cd_random_pick"
         android:focusable="true"
-        android:translationY="-20dp"
+        android:translationY="@dimen/fab_dice_offset"
         app:cardBackgroundColor="@color/white"
         app:cardCornerRadius="24dp"
         app:cardElevation="4dp"
@@ -357,6 +406,64 @@
             android:contentDescription="@null"
             android:src="@drawable/ic_dice"
             app:tint="@color/pintrip_blue" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 여행 모드 플로팅 버튼 (Figma Node 118:8 / 118:115 / 118:224). 상태는 코드에서 그림 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/btnTravelMode"
+        style="@style/Widget.Material3.CardView.Elevated"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:translationY="@dimen/fab_travel_offset"
+        app:cardBackgroundColor="@color/white"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="4dp"
+        app:layout_anchor="@id/bottom_sheet"
+        app:layout_anchorGravity="top|end"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp">
+
+            <ImageView
+                android:id="@+id/ivTravelIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_travel"
+                app:tint="@color/pintrip_blue" />
+
+            <TextView
+                android:id="@+id/tvTravelModeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/pretendard_bold"
+                android:text="@string/travel_mode_turn_on"
+                android:textColor="@color/button_outlined_text"
+                android:textSize="@dimen/text_travel_btn"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <View
+                android:id="@+id/viewTravelDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_circle_dot_green"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
 

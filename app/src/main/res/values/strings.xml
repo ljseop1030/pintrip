@@ -367,6 +367,8 @@
     <string name="room_map_empty_no_places">아직 저장한 장소가 없어요</string>
     <string name="room_map_empty_category">이 카테고리에 저장한 장소가 없어요</string>
     <string name="cd_random_pick">랜덤으로 장소 고르기</string>
+    <string name="cd_invite_friend">친구 초대</string>
+    <string name="room_header_subtitle_format">%1$s · 장소 %2$d</string>
 
     <!-- Shake to Pick UI Strings -->
     <string name="title_shake_to_pick">흔들어서 장소 고르기</string>
@@ -427,6 +429,11 @@
     <string name="menu_travel_mode_turn_on">여행 모드 켜기</string>
     <string name="menu_travel_mode_turn_off">여행 모드 끄기</string>
     <string name="menu_travel_mode_switch_to_this_room">이 방으로 여행 모드 바꾸기</string>
+    <string name="travel_mode_turn_on">여행 모드 켜기</string>
+    <string name="travel_mode_turn_off">여행 모드 끄기</string>
+    <string name="travel_mode_active">여행 모드 켜짐</string>
+    <string name="travel_mode_turn_off_confirm_title">여행 모드를 끌까요?</string>
+    <string name="travel_mode_turn_off_confirm_message">근처 장소 알림이 더 이상 오지 않아요.</string>
 
     <string name="notification_channel_travel_mode">여행 모드</string>
     <string name="notification_channel_nearby_place">근처 장소</string>

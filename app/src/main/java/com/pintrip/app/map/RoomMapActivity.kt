@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -20,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -51,8 +53,10 @@ import com.pintrip.app.ui.common.LocationPermissionHelper
 import com.pintrip.app.ui.common.NotificationPermissionAction
 import com.pintrip.app.ui.common.NotificationPermissionFlow
 import com.pintrip.app.ui.common.NotificationPermissionHelper
-import com.pintrip.app.ui.common.NotificationSettingsHandler
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class RoomMapActivity : AppCompatActivity() {
 
@@ -83,19 +87,12 @@ class RoomMapActivity : AppCompatActivity() {
     private var shakeDialogBinding: com.pintrip.app.databinding.BottomSheetShakeToPickBinding? = null
 
     private var isCleaningUpForDestroy = false
+    private var isTravelButtonExpanded = false
+    private val headerDateFormat = SimpleDateFormat("MM.dd", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
-
-    private val friendNotificationPermissionLauncher = NotificationPermissionHelper.registerNotificationPermissionLauncher(this) { isGranted ->
-        if (isGranted) {
-            Toast.makeText(this, R.string.notice_notification_granted, Toast.LENGTH_SHORT).show()
-            lifecycleScope.launch {
-                DeviceTokenRepository.getInstance(applicationContext).syncToken()
-            }
-        } else {
-            Toast.makeText(this, R.string.notice_notification_denied, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     private val requestLocationPermissionsLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
@@ -142,7 +139,8 @@ class RoomMapActivity : AppCompatActivity() {
             insets
         }
 
-        setupToolbar()
+        setupHeader()
+        setupTravelModeButton()
         setupBottomSheet()
         setupRecyclerView(roomId)
         setupCategoryChips()
@@ -218,39 +216,75 @@ class RoomMapActivity : AppCompatActivity() {
         inviteCodeDialogBinding = null
     }
 
-    private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
+    private fun setupHeader() {
+        binding.ivBack.setOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
-        binding.toolbar.inflateMenu(R.menu.menu_room_home)
-        binding.toolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_notification_settings -> {
-                    handleNotificationSettingsClick()
-                    true
-                }
-                R.id.action_invite_code -> {
-                    viewModel.onInviteCodeClick()
-                    true
-                }
-                R.id.action_travel_mode -> {
-                    handleTravelModeMenuClick()
-                    true
-                }
-                else -> false
-            }
+        binding.btnInvite.setOnClickListener {
+            viewModel.onInviteCodeClick()
         }
-        observeTravelModeState()
     }
 
-    private fun observeTravelModeState() {
+    private fun setupTravelModeButton() {
+        binding.btnTravelMode.setOnClickListener {
+            val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+            val travelState = TravelModeState.state.value
+            val isOnInThisRoom = travelState.isRunning && travelState.roomId == roomId
+            when {
+                isOnInThisRoom -> showTravelModeTurnOffDialog()
+                !isTravelButtonExpanded -> {
+                    isTravelButtonExpanded = true
+                    renderTravelModeButton(travelState)
+                }
+                else -> {
+                    isTravelButtonExpanded = false
+                    handleTravelModeMenuClick()
+                    renderTravelModeButton(travelState)
+                }
+            }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 TravelModeState.state.collect { travelState ->
-                    updateTravelModeMenuItem(travelState)
+                    renderTravelModeButton(travelState)
                 }
             }
         }
+    }
+
+    private fun renderTravelModeButton(travelState: TravelState) {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val isOnInThisRoom = travelState.isRunning && travelState.roomId == roomId
+        if (isOnInThisRoom) isTravelButtonExpanded = false
+
+        val bgColor = ContextCompat.getColor(this, if (isOnInThisRoom) R.color.pintrip_blue else R.color.white)
+        val textColor = ContextCompat.getColor(this, if (isOnInThisRoom) R.color.white else R.color.button_outlined_text)
+        val iconColor = ContextCompat.getColor(this, if (isOnInThisRoom) R.color.white else R.color.pintrip_blue)
+
+        binding.btnTravelMode.setCardBackgroundColor(bgColor)
+        ImageViewCompat.setImageTintList(binding.ivTravelIcon, ColorStateList.valueOf(iconColor))
+        binding.tvTravelModeText.setTextColor(textColor)
+        binding.tvTravelModeText.setText(
+            when {
+                isOnInThisRoom -> R.string.travel_mode_active
+                travelState.isRunning -> R.string.menu_travel_mode_switch_to_this_room
+                else -> R.string.travel_mode_turn_on
+            }
+        )
+        binding.tvTravelModeText.isVisible = isOnInThisRoom || isTravelButtonExpanded
+        binding.viewTravelDot.isVisible = isOnInThisRoom
+        binding.btnTravelMode.contentDescription = binding.tvTravelModeText.text
+    }
+
+    private fun showTravelModeTurnOffDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.travel_mode_turn_off_confirm_title)
+            .setMessage(R.string.travel_mode_turn_off_confirm_message)
+            .setPositiveButton(R.string.travel_mode_turn_off) { _, _ ->
+                handleTravelModeMenuClick()
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
     }
 
     private fun handleTravelModeMenuClick() {
@@ -299,30 +333,6 @@ class RoomMapActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.btn_cancel, null)
             .show()
-    }
-
-    private fun updateTravelModeMenuItem(travelState: TravelState) {
-        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
-        val menuItem = binding.toolbar.menu.findItem(R.id.action_travel_mode) ?: return
-
-        val titleResId = when {
-            !travelState.isRunning -> R.string.menu_travel_mode_turn_on
-            travelState.roomId == roomId -> R.string.menu_travel_mode_turn_off
-            else -> R.string.menu_travel_mode_switch_to_this_room
-        }
-        menuItem.setTitle(titleResId)
-    }
-
-    private fun handleNotificationSettingsClick() {
-        NotificationSettingsHandler.executeNotificationPermissionFlow(
-            activity = this,
-            launcher = friendNotificationPermissionLauncher,
-            onGranted = {
-                lifecycleScope.launch {
-                    DeviceTokenRepository.getInstance(applicationContext).syncToken()
-                }
-            }
-        )
     }
 
     private fun setupBottomSheet() {
@@ -380,9 +390,9 @@ class RoomMapActivity : AppCompatActivity() {
             override fun onMapError(error: Exception) {
                 Log.e(TAG, "onMapError: ${error.message} (cause: ${error.cause})", error)
                 val isAuthError = error is com.kakao.vectormap.MapAuthException ||
-                    error.javaClass.name.contains("Auth", ignoreCase = true) ||
-                    error.message?.contains("auth", ignoreCase = true) == true ||
-                    error.message?.contains("인증", ignoreCase = true) == true
+                        error.javaClass.name.contains("Auth", ignoreCase = true) ||
+                        error.message?.contains("auth", ignoreCase = true) == true ||
+                        error.message?.contains("인증", ignoreCase = true) == true
 
                 runOnUiThread {
                     binding.mapView.isVisible = false
@@ -478,7 +488,17 @@ class RoomMapActivity : AppCompatActivity() {
                     binding.layoutError.isVisible = false
                     currentSuccessState = state
 
-                    binding.toolbar.title = state.roomName
+                    binding.tvTitle.text = state.roomName
+                    val dateText = if (state.startDate != null && state.endDate != null) {
+                        getString(
+                            R.string.date_range_format,
+                            headerDateFormat.format(state.startDate.toDate()),
+                            headerDateFormat.format(state.endDate.toDate()),
+                        )
+                    } else {
+                        getString(R.string.date_to_be_determined)
+                    }
+                    binding.tvSubtitle.text = getString(R.string.room_header_subtitle_format, dateText, state.totalPlaceCount)
 
                     val count = state.placeDetails.size
                     if (state.selectedCategory == PlaceCategory.ALL) {

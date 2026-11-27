@@ -61,4 +61,7 @@
     <!-- Map Label Colors -->
     <color name="map_label_text">#1A1C26</color>
     <color name="map_label_stroke">#FFFFFFFF</color>
+    <!-- 11 Room home header button -->
+    <color name="header_btn_bg">#29FFFFFF</color>
+    <color name="header_btn_stroke">#73FFFFFF</color>
 </resources>

@@ -30,4 +30,9 @@
     <dimen name="text_badge">11sp</dimen>
     <dimen name="input_box_corner_radius">14dp</dimen>
     <dimen name="text_chip">13sp</dimen>
+
+    <!-- 11 Room home floating buttons -->
+    <dimen name="text_travel_btn">14sp</dimen>
+    <dimen name="fab_travel_offset">-20dp</dimen>
+    <dimen name="fab_dice_offset">-80dp</dimen>
 </resources>
