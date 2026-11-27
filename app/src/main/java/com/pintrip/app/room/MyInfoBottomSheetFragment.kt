@@ -1,12 +1,9 @@
 package com.pintrip.app.room
 
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -129,19 +126,6 @@ class MyInfoBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
-        roomListViewModel.avatarColor.observe(viewLifecycleOwner) { colorHex ->
-            val context = context ?: return@observe
-            if (!colorHex.isNullOrBlank()) {
-                try {
-                    val parsedColor = Color.parseColor(colorHex)
-                    binding.tvAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
-                    binding.tvAvatar.setTextColor(Color.WHITE)
-                } catch (_: Exception) {
-                    val defaultBlue = ContextCompat.getColor(context, R.color.pintrip_blue)
-                    binding.tvAvatar.backgroundTintList = ColorStateList.valueOf(defaultBlue)
-                }
-            }
-        }
     }
 
     private fun updateNotificationSwitchState() {

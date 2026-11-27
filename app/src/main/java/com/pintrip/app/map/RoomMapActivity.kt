@@ -151,9 +151,19 @@ class RoomMapActivity : AppCompatActivity() {
         binding = ActivityRoomMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 06 내 여행방과 같은 규칙: 지도와 헤더가 상태바까지 올라가고,
+        // 헤더 top padding만 (상태바 + gap)으로 계산한다. root에 top을 주면
+        // 상태바 자리에 화면 배경색이 드러나 06과 다르게 보인다.
+        val headerGapTop = resources.getDimensionPixelSize(R.dimen.room_map_header_gap_top)
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            binding.layoutHeader.setPadding(
+                binding.layoutHeader.paddingLeft,
+                systemBars.top + headerGapTop,
+                binding.layoutHeader.paddingRight,
+                binding.layoutHeader.paddingBottom
+            )
             insets
         }
 

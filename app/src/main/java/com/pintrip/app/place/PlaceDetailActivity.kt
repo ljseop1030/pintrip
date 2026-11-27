@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -65,9 +66,27 @@ class PlaceDetailActivity : AppCompatActivity() {
         binding = ActivityPlaceDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 지도는 상태바까지, 하단 바는 화면 맨 아래까지 채운다.
+        // root에 top/bottom을 주면 지도가 밀리고 하단 바 아래에 배경색 띠가 하나 더 생긴다.
+        val backGapTop = resources.getDimensionPixelSize(R.dimen.place_detail_back_gap_top)
+        val barPaddingBottom = resources.getDimensionPixelSize(R.dimen.bottom_bar_padding_bottom)
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, 0, systemBars.right, 0)
+
+            val backMarginTop = systemBars.top + backGapTop
+            val backParams = binding.btnBack.layoutParams as ViewGroup.MarginLayoutParams
+            if (backParams.topMargin != backMarginTop) {
+                backParams.topMargin = backMarginTop
+                binding.btnBack.layoutParams = backParams
+            }
+
+            binding.layoutBottomBar.setPadding(
+                binding.layoutBottomBar.paddingLeft,
+                binding.layoutBottomBar.paddingTop,
+                binding.layoutBottomBar.paddingRight,
+                systemBars.bottom + barPaddingBottom
+            )
             insets
         }
 

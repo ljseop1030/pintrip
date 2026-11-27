@@ -22,7 +22,7 @@
         android:clipToOutline="true"
         android:clipToPadding="false"
         android:paddingHorizontal="12dp"
-        android:paddingTop="48dp"
+        android:paddingTop="@dimen/room_map_header_gap_top"
         android:paddingBottom="16dp"
         android:elevation="@dimen/room_header_elevation"
         android:outlineAmbientShadowColor="@color/room_header_grad_start"
@@ -117,7 +117,7 @@
             android:alpha="0.95"
             android:contentDescription="@null"
             android:src="@drawable/img_mascot_white"
-            android:translationY="5dp"
+            android:translationY="@dimen/room_map_mascot_offset"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 

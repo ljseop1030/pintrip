@@ -19,7 +19,7 @@
         android:outlineAmbientShadowColor="@color/room_header_grad_start"
         android:outlineSpotShadowColor="@color/room_header_grad_start"
         android:paddingHorizontal="20dp"
-        android:paddingTop="56dp"
+        android:paddingTop="@dimen/room_header_gap_top"
         android:paddingBottom="40dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -87,7 +87,7 @@
             android:alpha="0.95"
             android:contentDescription="@null"
             android:src="@drawable/img_mascot_white"
-            android:translationY="5dp"
+            android:translationY="@dimen/room_header_mascot_offset"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 

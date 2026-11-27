@@ -1,8 +1,6 @@
 package com.pintrip.app.room
 
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Patterns
 import android.view.KeyEvent
@@ -84,13 +82,15 @@ class RoomListActivity : AppCompatActivity() {
         binding = ActivityRoomListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val initialHeaderPaddingTop = binding.layoutHeader.paddingTop
+        // 헤더가 상태바 영역까지 덮고, top padding은 (상태바 + gap)으로 계산한다.
+        // 시안의 56dp는 상태바 높이를 이미 포함한 값이므로 더하면 그만큼 헤더가 높아진다.
+        val headerGapTop = resources.getDimensionPixelSize(R.dimen.room_header_gap_top)
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
             binding.layoutHeader.setPadding(
                 binding.layoutHeader.paddingLeft,
-                initialHeaderPaddingTop + systemBars.top,
+                systemBars.top + headerGapTop,
                 binding.layoutHeader.paddingRight,
                 binding.layoutHeader.paddingBottom
             )
@@ -268,18 +268,6 @@ class RoomListActivity : AppCompatActivity() {
 
         viewModel.avatarText.observe(this) { avatar ->
             binding.tvHeaderAvatar.text = avatar
-        }
-
-        viewModel.avatarColor.observe(this) { colorHex ->
-            if (!colorHex.isNullOrBlank()) {
-                try {
-                    val parsedColor = Color.parseColor(colorHex)
-                    binding.tvHeaderAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
-                    binding.tvHeaderAvatar.setTextColor(Color.WHITE)
-                } catch (_: Exception) {
-                    // Keep layout background if parsing fails
-                }
-            }
         }
 
         viewModel.uiState.observe(this) { state ->
