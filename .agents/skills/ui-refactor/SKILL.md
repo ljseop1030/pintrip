@@ -26,8 +26,15 @@ The user gives: **frame** (e.g. "06 내 여행방"), optional **part** (e.g. "he
 - Build, run, check Logcat.
 
 ## Mode: verify
-- The user attaches the Figma image and an app screenshot.
-- List every visible difference (spacing, size, color, radius, shadow, icon, text), then fix them.
+- Report only. Do not change any file.
+- The user attaches the Figma inamge and app screenshot
+- list every visible difference top to bottom as a table:
+  # | part | Figma | app | likely cause (file / attribute).
+  Cover spacing, size, color, radius, shadow, icon, font (family, weight, size), alignment.
+- Mark each item: must fix / minor / keep (existing feature or platform limit).
+- If the frame shares parts with another frame (e.g. 02 and 03 logo, buttons, signup text),
+  check that their positions and styles match too.
+- Do not change files yet. End with a fix plan and wait for the user to pick items.
 
 ## Report when done
 - Files changed
