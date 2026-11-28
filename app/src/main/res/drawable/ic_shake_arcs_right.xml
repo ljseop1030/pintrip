@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 캔버스 13 흔들림 선 (right) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="60dp"
+    android:viewportWidth="30"
+    android:viewportHeight="60">
+    <path
+        android:pathData="M8,6c10,8 10,40 0,48"
+        android:strokeColor="@color/shake_arc"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M20,16c6,6 6,22 0,28"
+        android:strokeColor="@color/shake_arc"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+</vector>

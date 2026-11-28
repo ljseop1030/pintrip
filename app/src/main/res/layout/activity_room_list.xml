@@ -5,107 +5,224 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pintrip_bg_gray">
+    android:background="@color/pintrip_surface">
 
-    <!-- 1. 상단 파란색 헤더 영역 (Figma S03) -->
+    <!-- 1. 상단 파란색 헤더 영역 (Figma Frame 05 / 06) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutHeader"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="@color/pintrip_blue"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="48dp"
-        android:paddingBottom="24dp"
+        android:background="@drawable/bg_room_header"
+        android:clipToOutline="true"
+        android:clipToPadding="false"
+        android:elevation="@dimen/room_header_elevation"
+        android:outlineAmbientShadowColor="@color/room_header_grad_start"
+        android:outlineSpotShadowColor="@color/room_header_grad_start"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="@dimen/room_header_gap_top"
+        android:paddingBottom="@dimen/room_header_padding_bottom"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tvHeaderAvatar"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@color/white"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_avatar_white"
+            android:fontFamily="@font/pretendard_bold"
             android:gravity="center"
             android:textColor="@color/pintrip_blue"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_btn"
             android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="M" />
+
+        <ImageView
+            android:id="@+id/ivChevronDown"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="2dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_chevron_down"
+            app:layout_constraintBottom_toBottomOf="@id/tvHeaderAvatar"
+            app:layout_constraintStart_toEndOf="@id/tvHeaderAvatar"
+            app:layout_constraintTop_toTopOf="@id/tvHeaderAvatar"
+            app:tint="@color/white" />
 
         <TextView
             android:id="@+id/tvGreeting"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:textColor="@color/white"
-            android:textSize="13sp"
-            app:layout_constraintEnd_toStartOf="@id/btnLogout"
-            app:layout_constraintStart_toEndOf="@id/tvHeaderAvatar"
+            android:fontFamily="@font/pretendard"
+            android:textColor="@color/text_greeting"
+            android:textSize="@dimen/text_greeting"
+            app:layout_constraintEnd_toStartOf="@id/ivHeaderIllustration"
+            app:layout_constraintStart_toEndOf="@id/ivChevronDown"
             app:layout_constraintTop_toTopOf="@id/tvHeaderAvatar"
-            tools:text="Hello, Minji" />
+            tools:text="안녕하세요, Minji 님" />
 
         <TextView
             android:id="@+id/tvHeaderTitle"
+            style="@style/Widget.Pintrip.TextView.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
+            android:layout_marginTop="2dp"
             android:text="@string/my_travel_room_title"
             android:textColor="@color/white"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/btnLogout"
-            app:layout_constraintStart_toEndOf="@id/tvHeaderAvatar"
+            app:layout_constraintEnd_toStartOf="@id/ivHeaderIllustration"
+            app:layout_constraintStart_toEndOf="@id/ivChevronDown"
             app:layout_constraintTop_toBottomOf="@id/tvGreeting" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLogout"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_logout"
-            android:textColor="@color/white"
+        <!-- 마스코트 행성 일러스트 -->
+        <ImageView
+            android:id="@+id/ivHeaderIllustration"
+            android:layout_width="121dp"
+            android:layout_height="76dp"
+            android:layout_marginEnd="8dp"
+            android:alpha="0.95"
+            android:contentDescription="@null"
+            android:src="@drawable/img_mascot_white"
+            android:translationY="@dimen/room_header_mascot_offset"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 2. 하단 액션 버튼 바 (코드로 참여 / + 방 만들기) -->
+    <!-- 2. 장소 추가 공유/링크 입력줄 (Figma Frame 06 - node 14:2) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutLinkBar"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_link_bar"
+        android:elevation="4dp"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutHeader">
+
+        <ImageView
+            android:id="@+id/ivLinkIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_link"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/text_link_hint" />
+
+        <!-- 링크 입력칸: 붙여 넣고 키보드의 이동(Go)을 누르면 16 공유 수신으로 넘어감 -->
+        <EditText
+            android:id="@+id/etLink"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@null"
+            android:fontFamily="@font/pretendard"
+            android:hint="@string/link_input_hint"
+            android:imeOptions="actionGo"
+            android:importantForAutofill="no"
+            android:inputType="textUri"
+            android:maxLines="1"
+            android:textColor="@color/text_dark_navy"
+            android:textColorHint="@color/text_link_hint"
+            android:textSize="@dimen/text_signup"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnPhotoAdd"
+            app:layout_constraintStart_toEndOf="@id/ivLinkIcon"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnPhotoAdd"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:clickable="true"
+            android:contentDescription="@string/cd_add_from_photo"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/icon_bg_blue"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:strokeWidth="0dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_image"
+                app:tint="@color/pintrip_blue" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <TextView
+        android:id="@+id/tvScreenshotHint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="36dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/pretendard"
+        android:text="@string/screenshot_add_hint"
+        android:textColor="@color/text_link_hint"
+        android:textSize="@dimen/text_caption"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutLinkBar" />
+
+    <!-- 3. 하단 액션 버튼 바 (코드로 참여 / + 방 만들기) -->
     <LinearLayout
         android:id="@+id/layoutActionBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginBottom="24dp"
         android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutHeader">
+        app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnJoinCode"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginEnd="8dp"
+            android:layout_height="@dimen/start_btn_height"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:backgroundTint="@color/white"
+            android:fontFamily="@font/pretendard_bold"
+            app:fontFamily="@font/pretendard_bold"
             android:text="@string/btn_join_code"
-            android:textColor="@color/pintrip_blue"
-            app:strokeColor="@color/pintrip_blue" />
+            android:textColor="@color/button_outlined_text"
+            android:textSize="@dimen/text_card_title"
+            android:textStyle="bold"
+            app:cornerRadius="@dimen/start_btn_corner_radius"
+            app:strokeColor="@color/button_outlined_stroke"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCreateRoom"
+            style="@style/Widget.Pintrip.Button.Primary"
             android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginStart="8dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:backgroundTint="@color/pintrip_blue"
-            android:text="@string/btn_new_room"
-            android:textColor="@color/white" />
+            android:text="@string/btn_new_room" />
     </LinearLayout>
 
-    <!-- 3. 상태별 로딩 / 에러 / 빈 목록 / 리사이클러뷰 -->
+    <!-- 4. 상태별 로딩 / 에러 / 빈 목록 (Figma Frame 05 여행방 없음) / 리사이클러뷰 -->
 
     <ProgressBar
         android:id="@+id/pbLoading"
@@ -113,27 +230,310 @@
         android:layout_height="wrap_content"
         android:indeterminateTint="@color/pintrip_blue"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:visibility="gone" />
 
-    <TextView
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/tvEmpty"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="32dp"
-        android:gravity="center"
-        android:text="@string/room_list_empty"
-        android:textColor="@color/text_sub_gray"
-        android:textSize="15sp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
-        tools:visibility="visible" />
+        app:layout_constraintTop_toBottomOf="@id/layoutHeader"
+        tools:visibility="visible">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="28dp"
+            android:paddingBottom="12dp">
+
+            <!-- Title & Subtitle -->
+            <TextView
+                android:id="@+id/tvEmptyTitle"
+                style="@style/Widget.Pintrip.TextView.Title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/empty_room_title"
+                android:textColor="@color/text_dark_navy"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tvEmptySubtitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/pretendard"
+                android:gravity="center"
+                android:text="@string/empty_room_subtitle"
+                android:textColor="@color/text_link_hint"
+                android:textSize="@dimen/text_signup"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvEmptyTitle" />
+
+            <!-- Onboarding 3-Step Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardEmptyOnboarding"
+                style="@style/Widget.Material3.CardView.Elevated"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="2dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvEmptySubtitle"
+                app:strokeWidth="0dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="22dp">
+
+                    <!-- STEP 1 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardStep1IconBg"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:cardBackgroundColor="@color/pintrip_blue"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:strokeWidth="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivStep1Icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_room_map"
+                            app:tint="@color/white" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tvStep1Tag"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:text="@string/empty_step_1_tag"
+                        android:textColor="@color/pintrip_blue"
+                        android:textSize="@dimen/text_caption"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep1IconBg"
+                        app:layout_constraintTop_toTopOf="@id/cardStep1IconBg" />
+
+                    <TextView
+                        android:id="@+id/tvStep1Title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:text="@string/empty_step_1_title"
+                        android:textColor="@color/text_dark_navy"
+                        android:textSize="@dimen/text_card_title"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep1IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/tvStep1Tag" />
+
+                    <TextView
+                        android:id="@+id/tvStep1Desc"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/pretendard"
+                        android:text="@string/empty_step_1_desc"
+                        android:textColor="@color/text_link_hint"
+                        android:textSize="@dimen/text_greeting"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep1IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/tvStep1Title" />
+
+                    <!-- Dashed Line 1 -->
+                    <View
+                        android:id="@+id/viewDashedLine1"
+                        android:layout_width="2dp"
+                        android:layout_height="24dp"
+                        android:layout_marginVertical="4dp"
+                        android:background="@drawable/bg_dashed_line_vertical"
+                        android:layerType="software"
+                        app:layout_constraintBottom_toTopOf="@id/cardStep2IconBg"
+                        app:layout_constraintEnd_toEndOf="@id/cardStep1IconBg"
+                        app:layout_constraintStart_toStartOf="@id/cardStep1IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/cardStep1IconBg" />
+
+                    <!-- STEP 2 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardStep2IconBg"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="24dp"
+                        app:cardBackgroundColor="@color/icon_bg_blue"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/cardStep1IconBg"
+                        app:strokeWidth="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivStep2Icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_image"
+                            app:tint="@color/pintrip_blue" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tvStep2Tag"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:text="@string/empty_step_2_tag"
+                        android:textColor="@color/pintrip_blue"
+                        android:textSize="@dimen/text_caption"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep2IconBg"
+                        app:layout_constraintTop_toTopOf="@id/cardStep2IconBg" />
+
+                    <TextView
+                        android:id="@+id/tvStep2Title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:text="@string/empty_step_2_title"
+                        android:textColor="@color/text_dark_navy"
+                        android:textSize="@dimen/text_card_title"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep2IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/tvStep2Tag" />
+
+                    <TextView
+                        android:id="@+id/tvStep2Desc"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/pretendard"
+                        android:text="@string/empty_step_2_desc"
+                        android:textColor="@color/text_link_hint"
+                        android:textSize="@dimen/text_greeting"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep2IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/tvStep2Title" />
+
+                    <!-- Dashed Line 2 -->
+                    <View
+                        android:id="@+id/viewDashedLine2"
+                        android:layout_width="2dp"
+                        android:layout_height="24dp"
+                        android:layout_marginVertical="4dp"
+                        android:background="@drawable/bg_dashed_line_vertical"
+                        android:layerType="software"
+                        app:layout_constraintBottom_toTopOf="@id/cardStep3IconBg"
+                        app:layout_constraintEnd_toEndOf="@id/cardStep2IconBg"
+                        app:layout_constraintStart_toStartOf="@id/cardStep2IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/cardStep2IconBg" />
+
+                    <!-- STEP 3 -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardStep3IconBg"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="24dp"
+                        app:cardBackgroundColor="@color/icon_bg_blue"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/cardStep2IconBg"
+                        app:strokeWidth="0dp">
+
+                        <ImageView
+                            android:id="@+id/ivStep3Icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_map_marker"
+                            app:tint="@color/pintrip_blue" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/tvStep3Tag"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:text="@string/empty_step_3_tag"
+                        android:textColor="@color/pintrip_blue"
+                        android:textSize="@dimen/text_caption"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep3IconBg"
+                        app:layout_constraintTop_toTopOf="@id/cardStep3IconBg" />
+
+                    <TextView
+                        android:id="@+id/tvStep3Title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:text="@string/empty_step_3_title"
+                        android:textColor="@color/text_dark_navy"
+                        android:textSize="@dimen/text_card_title"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep3IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/tvStep3Tag" />
+
+                    <TextView
+                        android:id="@+id/tvStep3Desc"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/pretendard"
+                        android:text="@string/empty_step_3_desc"
+                        android:textColor="@color/text_link_hint"
+                        android:textSize="@dimen/text_greeting"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/cardStep3IconBg"
+                        app:layout_constraintTop_toBottomOf="@id/tvStep3Title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.core.widget.NestedScrollView>
 
     <LinearLayout
         android:id="@+id/layoutError"
@@ -143,10 +543,10 @@
         android:gravity="center"
         android:orientation="vertical"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:visibility="gone">
 
         <TextView
@@ -155,17 +555,16 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textColor="@color/text_dark"
-            android:textSize="15sp"
+            android:textSize="@dimen/text_body"
             tools:text="방 목록을 불러오지 못했습니다." />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
+            style="@style/Widget.Pintrip.Button.Primary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:backgroundTint="@color/pintrip_blue"
-            android:text="@string/btn_retry"
-            android:textColor="@color/white" />
+            android:text="@string/btn_retry" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -173,11 +572,11 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingVertical="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:paddingVertical="12dp"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutActionBar"
+        app:layout_constraintTop_toBottomOf="@id/tvScreenshotHint"
         tools:listitem="@layout/item_room_card" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -59,13 +59,10 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnTestLogin"
+                style="@style/Widget.Pintrip.Button.Primary"
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/start_btn_height"
-                android:backgroundTint="@color/pintrip_blue"
-                android:text="@string/start_btn_login"
-                android:textColor="@color/white"
-                android:textSize="@dimen/text_btn"
-                app:cornerRadius="@dimen/start_btn_corner_radius" />
+                android:layout_height="wrap_content"
+                android:text="@string/start_btn_login" />
 
             <LinearLayout
                 android:layout_width="wrap_content"

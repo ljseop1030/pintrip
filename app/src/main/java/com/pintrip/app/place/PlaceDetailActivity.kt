@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -22,16 +24,20 @@ import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.LabelOptions
-import com.kakao.vectormap.label.LabelTextBuilder
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.databinding.ActivityPlaceDetailBinding
 import com.pintrip.app.map.KakaoMapHelper
+import com.pintrip.app.ui.common.AvatarPalette
 
 class PlaceDetailActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "PlaceDetailActivity"
+        /** 마스코트 마커는 꼬리가 없어 좌표를 이미지 중앙에 둔다 (시안 12) */
+        private const val MASCOT_MARKER_ANCHOR_Y = 0.5f
+        private const val CONTENT_ENTER_DURATION_MS = 320L
+        private const val BOTTOM_BAR_ENTER_DELAY_MS = 40L
         const val EXTRA_ROOM_ID = "extra_room_id"
         const val EXTRA_KAKAO_PLACE_ID = "extra_kakao_place_id"
 
@@ -48,6 +54,8 @@ class PlaceDetailActivity : AppCompatActivity() {
 
     private var kakaoMapInstance: KakaoMap? = null
     private var isMapViewInitialized = false
+    /** 지도는 그대로 두고 콘텐츠만 올라오는 진입 연출. 화면 재생성 시에는 재생하지 않는다 */
+    private var shouldPlayEnterAnimation = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,13 +69,37 @@ class PlaceDetailActivity : AppCompatActivity() {
             return
         }
 
+        // 창을 밀어 올리면 지도까지 움직여 연속성이 깨지므로 창은 페이드만 하고,
+        // 올라오는 느낌은 콘텐츠 애니메이션이 담당한다
+        overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, R.anim.place_detail_enter, R.anim.hold)
+        overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, R.anim.hold, R.anim.place_detail_exit)
+        shouldPlayEnterAnimation = savedInstanceState == null
+
         enableEdgeToEdge()
         binding = ActivityPlaceDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 지도는 상태바까지, 하단 바는 화면 맨 아래까지 채운다.
+        // root에 top/bottom을 주면 지도가 밀리고 하단 바 아래에 배경색 띠가 하나 더 생긴다.
+        val backGapTop = resources.getDimensionPixelSize(R.dimen.place_detail_back_gap_top)
+        val barPaddingBottom = resources.getDimensionPixelSize(R.dimen.bottom_bar_padding_bottom)
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, 0, systemBars.right, 0)
+
+            val backMarginTop = systemBars.top + backGapTop
+            val backParams = binding.btnBack.layoutParams as ViewGroup.MarginLayoutParams
+            if (backParams.topMargin != backMarginTop) {
+                backParams.topMargin = backMarginTop
+                binding.btnBack.layoutParams = backParams
+            }
+
+            binding.layoutBottomBar.setPadding(
+                binding.layoutBottomBar.paddingLeft,
+                binding.layoutBottomBar.paddingTop,
+                binding.layoutBottomBar.paddingRight,
+                systemBars.bottom + barPaddingBottom
+            )
             insets
         }
 
@@ -117,6 +149,7 @@ class PlaceDetailActivity : AppCompatActivity() {
                     binding.scrollView.isVisible = true
                     binding.layoutError.isVisible = false
                     renderSuccess(state)
+                    playContentEnterAnimation()
                 }
                 is PlaceDetailUiState.Error -> {
                     binding.pbLoading.isVisible = false
@@ -148,7 +181,12 @@ class PlaceDetailActivity : AppCompatActivity() {
             binding.btnLike.contentDescription = getString(R.string.place_detail_like)
         }
 
-        // overflow menu 설정
+        // 카카오맵 자세히 보기
+        binding.layoutKakaoMapDetail.setOnClickListener {
+            openKakaoPlaceUrl(detail.place.kakaoPlaceUrl)
+        }
+
+        // overflow menu 설정 (하위 호환성 유지)
         binding.btnMenu.setOnClickListener {
             showOverflowMenu(detail.place.kakaoPlaceUrl)
         }
@@ -210,9 +248,11 @@ class PlaceDetailActivity : AppCompatActivity() {
             if (index < state.likedUsers.size) {
                 val user = state.likedUsers[index]
                 tv.text = user.nickname.take(1).uppercase()
-                val bg = ContextCompat.getDrawable(this, R.drawable.bg_circle_avatar)?.mutate()
-                bg?.setTint(parseColorSafely(user.avatarColor, ContextCompat.getColor(this, R.color.pintrip_blue)))
+                val colors = AvatarPalette.colorsFor(user.avatarColor, user.uid)
+                val bg = ContextCompat.getDrawable(this, R.drawable.bg_circle_avatar_border)?.mutate()
+                bg?.setTint(ContextCompat.getColor(this, colors.backgroundRes))
                 tv.background = bg
+                tv.setTextColor(ContextCompat.getColor(this, colors.textRes))
                 tv.isVisible = true
             } else {
                 tv.isVisible = false
@@ -225,12 +265,16 @@ class PlaceDetailActivity : AppCompatActivity() {
         when (sourceType) {
             "screenshot" -> {
                 binding.tvSourceBadge.text = "IMG"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#E5EBFE"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#4B60C0"))
                 binding.tvSourceText.text = getString(R.string.place_detail_source_screenshot)
                 binding.tvSourceOpen.isVisible = false
                 binding.cardSource.setOnClickListener(null)
             }
             "text" -> {
                 binding.tvSourceBadge.text = "TXT"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#EDE7FB"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#5B45A8"))
                 binding.tvSourceText.text = getString(R.string.place_detail_source_text)
                 binding.tvSourceOpen.isVisible = false
                 binding.cardSource.setOnClickListener(null)
@@ -238,6 +282,8 @@ class PlaceDetailActivity : AppCompatActivity() {
             "link" -> {
                 val domain = extractDomain(sourceUrl)
                 binding.tvSourceBadge.text = "LINK"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DDF3EA"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#1E7A5C"))
                 binding.tvSourceText.text = if (domain.isNotBlank()) {
                     getString(R.string.place_detail_source_link_format, domain)
                 } else {
@@ -248,6 +294,8 @@ class PlaceDetailActivity : AppCompatActivity() {
             }
             else -> {
                 binding.tvSourceBadge.text = "PIN"
+                binding.tvSourceBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFEDE3"))
+                binding.tvSourceBadge.setTextColor(Color.parseColor("#A85628"))
                 binding.tvSourceText.text = detail.place.searchKeyword
                 binding.tvSourceOpen.isVisible = false
                 binding.cardSource.setOnClickListener(null)
@@ -258,10 +306,32 @@ class PlaceDetailActivity : AppCompatActivity() {
         val addedBy = state.addedByUserInfo
         binding.tvAddedByNickname.text = addedBy.nickname
         binding.tvAddedByAvatar.text = addedBy.nickname.take(1).uppercase()
+        val addedByColors = AvatarPalette.colorsFor(addedBy.avatarColor, addedBy.uid)
         val addedByBg = ContextCompat.getDrawable(this, R.drawable.bg_circle_avatar)?.mutate()
-        addedByBg?.setTint(parseColorSafely(addedBy.avatarColor, ContextCompat.getColor(this, R.color.pintrip_blue)))
+        addedByBg?.setTint(ContextCompat.getColor(this, addedByColors.backgroundRes))
         binding.tvAddedByAvatar.background = addedByBg
+        binding.tvAddedByAvatar.setTextColor(ContextCompat.getColor(this, addedByColors.textRes))
         binding.tvCreatedAt.text = state.formattedCreatedAt
+    }
+
+    /** 콘텐츠와 하단 바만 아래에서 올라오게 해서 바텀시트가 열리는 느낌을 만든다 */
+    private fun playContentEnterAnimation() {
+        if (!shouldPlayEnterAnimation) return
+        shouldPlayEnterAnimation = false
+
+        val distance = resources.getDimensionPixelSize(R.dimen.place_detail_enter_translation).toFloat()
+        val targets = listOf(binding.scrollView, binding.layoutBottomBar)
+        targets.forEachIndexed { index, view ->
+            view.translationY = distance
+            view.alpha = 0f
+            view.animate()
+                .translationY(0f)
+                .alpha(1f)
+                .setStartDelay(if (index == 0) 0L else BOTTOM_BAR_ENTER_DELAY_MS)
+                .setDuration(CONTENT_ENTER_DURATION_MS)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
     }
 
     private fun setupMapView(placeDetail: PlaceDetail) {
@@ -284,13 +354,18 @@ class PlaceDetailActivity : AppCompatActivity() {
         }, object : KakaoMapReadyCallback() {
             override fun onMapReady(kakaoMap: KakaoMap) {
                 kakaoMapInstance = kakaoMap
-                val labelStyles = KakaoMapHelper.createLabelStyles(this@PlaceDetailActivity, kakaoMap)
+                // 시안 12는 핀 대신 마스코트를 좌표 중앙에 둔다. 장소명은 아래 카드에 있으므로
+                // 마커에는 텍스트를 붙이지 않는다
+                val labelStyles = KakaoMapHelper.createMascotLabelStyles(
+                    context = this@PlaceDetailActivity,
+                    kakaoMap = kakaoMap,
+                    widthDimenResId = R.dimen.map_marker_mascot_width,
+                    anchorY = MASCOT_MARKER_ANCHOR_Y,
+                    withText = false,
+                )
                 if (labelStyles != null) {
                     val latLng = LatLng.from(lat, lng)
-                    val textBuilder = LabelTextBuilder().setTexts(placeDetail.name.orEmpty())
-                    val options = LabelOptions.from(latLng)
-                        .setStyles(labelStyles)
-                        .setTexts(textBuilder)
+                    val options = LabelOptions.from(latLng).setStyles(labelStyles)
                     kakaoMap.labelManager?.layer?.addLabel(options)
                     kakaoMap.moveCamera(CameraUpdateFactory.newCenterPosition(latLng, 15))
                 }
@@ -346,15 +421,6 @@ class PlaceDetailActivity : AppCompatActivity() {
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(this, R.string.place_list_error_cannot_open_url, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun parseColorSafely(colorString: String?, defaultColor: Int): Int {
-        if (colorString.isNullOrBlank()) return defaultColor
-        return try {
-            Color.parseColor(colorString)
-        } catch (e: Exception) {
-            defaultColor
         }
     }
 

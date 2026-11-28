@@ -16,6 +16,7 @@
 | Tagline | NanumSquareRound Bold, 17sp | `style="@style/Widget.Pintrip.TextView.Tagline"` |
 | Body | Pretendard, 15sp | `TextAppearance.Pintrip.Body` |
 | Corner | card 20dp, bottom sheet 28dp | `ShapeAppearance.Pintrip.*` |
+| Primary button | 54dp, corner 27dp, inset 0, Pretendard Bold 17sp, white on Primary | `style="@style/Widget.Pintrip.Button.Primary"` |
 
 - Title and Tagline must use the `Widget.Pintrip.TextView.*` style, not only `textAppearance`.
 - If Figma uses a different color for the same role, change the existing color's value. Add a new color only when no existing one fits.
@@ -38,6 +39,20 @@ Bundle in `res/font/`.
 | healing (abroad) | `airplane` | `ic_room_category_healing.xml` |
 
 - Other icons use Material Symbols Rounded.
+
+### Place categories
+Place list items (11 Room home) show the place's category icon on `icon_bg_blue`, tinted `pintrip_blue`. Use the same icons wherever a place's category is shown. Name and icon come from `PlaceCategory.labelResId()` / `iconResId()` (`place/PlaceCategoryUi.kt`).
+
+| Category | Material Symbols Rounded | Drawable |
+|---|---|---|
+| dining | `restaurant` | `ic_place_dining.xml` |
+| cafe | `local_cafe` | `ic_place_cafe.xml` |
+| sights | `photo_camera` | `ic_place_sights.xml` |
+| stay | `bed` | `ic_place_stay.xml` |
+| etc (or no category) | 12dp dot | `ic_place_etc.xml` |
+
+- Subtitle under the place name: "카테고리 · 닉네임님이 추가" (`place_category_added_by_format`).
+- Full-width primary buttons (login, create, add, confirm) must use `Widget.Pintrip.Button.Primary`. Do not set height, color, corner or text style on the button itself.
 
 ## Screen Flow
 - Login → Room list → Room home (map + place list)

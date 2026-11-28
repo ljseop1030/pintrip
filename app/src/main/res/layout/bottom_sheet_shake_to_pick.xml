@@ -11,9 +11,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="24dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="36dp">
 
         <!-- Bottom Sheet Drag Handle -->
         <View
@@ -22,8 +22,7 @@
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_bottom_sheet"
-            android:backgroundTint="?attr/colorOutline" />
+            android:background="@drawable/bg_drag_handle" />
 
         <!-- Header Section -->
         <RelativeLayout
@@ -37,25 +36,26 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_centerVertical="true"
-                android:layout_toStartOf="@id/btn_close"
                 android:layout_marginEnd="8dp"
+                android:layout_toStartOf="@id/btn_close"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/title_shake_to_pick"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="@color/text_dark_navy"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <ImageButton
                 android:id="@+id/btn_close"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:minWidth="48dp"
-                android:minHeight="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_btn_circle_light_blue"
                 android:contentDescription="@string/btn_close"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                app:tint="?attr/colorOnSurface" />
+                android:padding="11dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_close"
+                app:tint="@color/text_dark_navy" />
         </RelativeLayout>
 
         <!-- Loading State Layout -->
@@ -79,12 +79,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                android:fontFamily="@font/pretendard"
                 android:text="@string/shake_loading_places"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="@color/text_link_hint"
+                android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Ready / Awaiting Shake State Layout -->
+        <!-- Ready / Awaiting Shake State Layout (Frame 13) -->
         <LinearLayout
             android:id="@+id/layout_ready"
             android:layout_width="match_parent"
@@ -94,44 +95,87 @@
             android:paddingVertical="8dp"
             android:visibility="visible">
 
-            <ImageView
-                android:id="@+id/iv_dice_ready"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_marginBottom="12dp"
-                android:contentDescription="@string/cd_random_pick"
-                android:src="@drawable/ic_dice" />
+            <!-- Shake Illustration (캔버스 13): 200x150 영역, 글로우 · 기울인 마스코트 · 양옆 흔들림 선 -->
+            <FrameLayout
+                android:layout_width="200dp"
+                android:layout_height="150dp"
+                android:layout_marginTop="10dp">
+
+                <!-- 가운데에서 바깥으로 사라지는 원형 글로우 -->
+                <View
+                    android:layout_width="160dp"
+                    android:layout_height="110dp"
+                    android:layout_gravity="top|start"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/bg_mascot_oval_glow" />
+
+                <!-- 마스코트: 원본 비율(617x361) 그대로 156dp 폭, -8도 기울임 -->
+                <ImageView
+                    android:id="@+id/iv_dice_ready"
+                    android:layout_width="156dp"
+                    android:layout_height="91dp"
+                    android:layout_gravity="top|start"
+                    android:layout_marginStart="22dp"
+                    android:layout_marginTop="18dp"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="@string/cd_random_pick"
+                    android:rotation="-8"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/img_mascot_blue" />
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="top|start"
+                    android:layout_marginTop="40dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_shake_arcs_left" />
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="40dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_shake_arcs_right" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/tv_ready_heading"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:text="@string/shake_ready_heading_sensor"
-                android:textAppearance="?attr/textAppearanceTitleLarge"
-                android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold" />
+                android:textColor="@color/text_dark_navy" />
 
             <TextView
                 android:id="@+id/tv_ready_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
+                android:fontFamily="@font/pretendard_semibold"
                 android:gravity="center"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="전체 24곳 중에서 하나를 골라 드려요" />
+                android:textColor="@color/pintrip_blue"
+                android:textSize="@dimen/text_signup"
+                android:textStyle="bold"
+                tools:text="부산 24곳 중에서 하나를 골라 드려요" />
 
             <TextView
                 android:id="@+id/tv_ready_category_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@color/chip_bg_color"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="6dp"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
-                android:textColor="?attr/colorPrimary"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_source_badge"
+                android:backgroundTint="@color/icon_bg_blue"
+                android:fontFamily="@font/pretendard_bold"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:textColor="@color/pintrip_blue"
+                android:textSize="12sp"
                 android:textStyle="bold"
+                android:visibility="gone"
                 tools:text="전체" />
 
             <TextView
@@ -139,21 +183,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:fontFamily="@font/pretendard"
                 android:gravity="center"
+                android:lineSpacingExtra="4dp"
                 android:text="@string/shake_ready_guide_sensor"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="@color/text_link_hint"
+                android:textSize="@dimen/text_greeting" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_touch_pick"
+                style="@style/Widget.Pintrip.Button.Secondary"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="20dp"
-                android:text="@string/btn_touch_pick"
-                app:cornerRadius="12dp" />
+                android:layout_marginTop="24dp"
+                android:text="@string/btn_touch_pick" />
         </LinearLayout>
 
-        <!-- Result State Layout -->
+        <!-- Result State Layout (Frame 14) -->
         <LinearLayout
             android:id="@+id/layout_result"
             android:layout_width="match_parent"
@@ -166,69 +211,117 @@
 
             <TextView
                 android:id="@+id/tv_result_headline"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="16dp"
                 android:text="@string/shake_result_headline"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="@color/text_dark_navy" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_result_place"
+            <!-- Result Place Card -->
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                app:cardBackgroundColor="@color/card_background"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeColor="?attr/colorOutlineVariant"
-                app:strokeWidth="1dp">
+                android:layout_marginBottom="20dp">
 
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_result_place"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:layout_marginTop="28dp"
+                    app:cardBackgroundColor="@color/transparent"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
 
-                    <TextView
-                        android:id="@+id/tv_result_place_name"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold"
-                        tools:text="이재모피자 본점" />
+                        android:background="@drawable/bg_card_result_place"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="52dp"
+                        android:paddingBottom="22dp">
 
-                    <TextView
-                        android:id="@+id/tv_result_place_info"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        tools:text="식당 · 부산 중구 광복로 1" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:id="@+id/tv_result_category_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_source_badge"
+                            android:backgroundTint="@color/white"
+                            android:fontFamily="@font/pretendard_bold"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="3dp"
+                            android:textColor="@color/button_outlined_text"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            tools:text="관광지" />
 
-            <!-- Vertical Button Layout -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_view_on_map"
+                        <TextView
+                            android:id="@+id/tv_result_place_name"
+                            style="@style/Widget.Pintrip.TextView.Title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:textColor="@color/text_dark_navy"
+                            tools:text="해운대 블루라인파크" />
+
+                        <TextView
+                            android:id="@+id/tv_result_place_info"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/pretendard"
+                            android:gravity="center"
+                            android:textColor="@color/text_link_hint"
+                            android:textSize="@dimen/text_greeting"
+                            tools:text="관광지 · 부산 해운대구 · Minji 님이 추가" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Overlapping Mascot Image -->
+                <ImageView
+                    android:layout_width="120dp"
+                    android:layout_height="70dp"
+                    android:layout_centerHorizontal="true"
+                    android:contentDescription="@null"
+                    android:src="@drawable/img_mascot_blue" />
+            </RelativeLayout>
+
+            <!-- Horizontal Action Buttons -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="@string/btn_view_on_map"
-                app:cornerRadius="12dp" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_pick_again"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/btn_pick_again"
-                app:cornerRadius="12dp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_pick_again"
+                    style="@style/Widget.Pintrip.Button.Secondary"
+                    android:layout_width="0dp"
+                    android:layout_marginEnd="5dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_pick_again"
+                    app:icon="@drawable/ic_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="6dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_view_on_map"
+                    style="@style/Widget.Pintrip.Button.Primary"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_view_on_map"
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_room_map"
+                    app:iconGravity="textStart"
+                    app:iconPadding="6dp"
+                    app:iconTint="@color/white" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Empty / Error State Layout -->
@@ -246,20 +339,19 @@
                 android:id="@+id/tv_empty_message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/nanum_square_round_eb"
                 android:gravity="center"
-                android:textAppearance="?attr/textAppearanceBodyLarge"
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="@color/text_dark_navy"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 tools:text="아직 저장한 장소가 없어요." />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_empty_close"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Pintrip.Button.Secondary"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
                 android:layout_marginTop="20dp"
-                android:text="@string/btn_close"
-                app:cornerRadius="12dp" />
+                android:text="@string/btn_close" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

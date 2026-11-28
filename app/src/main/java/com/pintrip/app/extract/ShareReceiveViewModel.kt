@@ -114,11 +114,17 @@ class ShareReceiveViewModel(
         parseAndSetInput(intent)
     }
 
-    fun fetchRooms(forceRefresh: Boolean = false) {
+    fun fetchRooms(forceRefresh: Boolean = false, preselectedRoomId: String? = null) {
         if (loadJob?.isActive == true) {
             if (!forceRefresh) return
             loadJob?.cancel()
         } else if (isDataLoaded && !forceRefresh) {
+            if (preselectedRoomId != null && _rooms.value != null) {
+                val preselected = _rooms.value?.find { it.id == preselectedRoomId }
+                if (preselected != null) {
+                    _selectedRoom.value = preselected
+                }
+            }
             return
         }
 
@@ -135,8 +141,15 @@ class ShareReceiveViewModel(
                     _roomLoadError.value = null
                     isDataLoaded = true
 
-                    if (myRooms.size == 1 && _selectedRoom.value == null) {
-                        _selectedRoom.value = myRooms.first()
+                    val targetRoom = if (preselectedRoomId != null) {
+                        myRooms.find { it.id == preselectedRoomId } ?: if (myRooms.size == 1) myRooms.first() else null
+                    } else if (myRooms.size == 1) {
+                        myRooms.first()
+                    } else {
+                        null
+                    }
+                    if (targetRoom != null && _selectedRoom.value == null) {
+                        _selectedRoom.value = targetRoom
                     }
                 }
             } catch (e: CancellationException) {

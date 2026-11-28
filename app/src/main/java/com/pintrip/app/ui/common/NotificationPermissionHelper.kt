@@ -1,11 +1,10 @@
 package com.pintrip.app.ui.common
 
-
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultCaller
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -24,10 +23,10 @@ object NotificationPermissionHelper {
     }
 
     fun registerNotificationPermissionLauncher(
-        activity: ComponentActivity,
+        caller: ActivityResultCaller,
         onResult: (isGranted: Boolean) -> Unit
     ): ActivityResultLauncher<String> {
-        return activity.registerForActivityResult(
+        return caller.registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             onResult(isGranted)

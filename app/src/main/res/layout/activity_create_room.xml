@@ -5,82 +5,100 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/pintrip_surface">
 
-    <!-- Top Bar -->
-    <ImageView
-        android:id="@+id/ivBack"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="36dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:clickable="true"
-        android:contentDescription="@null"
-        android:focusable="true"
-        android:padding="12dp"
-        android:src="@drawable/ic_chevron_down"
-        android:rotation="90"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="wrap_content"
+    <!-- 1. Top Bar (Figma Node 37:283) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutTopBar"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/title_create_room"
-        android:textColor="@color/text_dark"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="@id/ivBack"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/ivBack" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <ScrollView
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="@null"
+            android:focusable="true"
+            android:padding="11dp"
+            android:src="@drawable/ic_back"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/text_dark_navy" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:fontFamily="@font/pretendard_bold"
+            android:text="@string/title_create_room"
+            android:textColor="@color/text_dark_navy"
+            android:textSize="@dimen/text_btn"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="@id/ivBack"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivBack"
+            app:layout_constraintTop_toTopOf="@id/ivBack" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 2. Main Content Scroll View -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingBottom="24dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ivBack">
+        app:layout_constraintTop_toBottomOf="@id/layoutTopBar">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="24dp"
-            android:paddingTop="16dp">
+            android:paddingTop="4dp"
+            android:paddingBottom="40dp">
 
             <!-- Subheader -->
             <TextView
                 android:id="@+id/tvHeadline"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/create_room_headline"
-                android:textColor="@color/text_dark"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:textColor="@color/text_dark_navy" />
 
             <TextView
                 android:id="@+id/tvSubtext"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/pretendard"
                 android:text="@string/create_room_subtext"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="14sp" />
+                android:textColor="@color/text_link_hint"
+                android:textSize="@dimen/text_signup" />
 
             <!-- Room Name Field -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="22dp"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_travel_room_name"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="12sp"
+                android:textColor="@color/start_signup_prefix_text"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -88,32 +106,38 @@
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusTopStart="12dp"
-                app:boxStrokeColor="@color/pintrip_blue">
+                android:layout_marginTop="8dp"
+                app:boxBackgroundColor="@color/white"
+                app:boxCornerRadiusBottomEnd="@dimen/input_box_corner_radius"
+                app:boxCornerRadiusBottomStart="@dimen/input_box_corner_radius"
+                app:boxCornerRadiusTopEnd="@dimen/input_box_corner_radius"
+                app:boxCornerRadiusTopStart="@dimen/input_box_corner_radius"
+                app:boxStrokeColor="@color/input_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etRoomName"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="52dp"
+                    android:fontFamily="@font/pretendard"
                     android:hint="@string/hint_room_name"
                     android:inputType="text"
+                    android:paddingHorizontal="16dp"
                     android:singleLine="true"
-                    android:textColor="@color/text_dark"
-                    android:textSize="15sp" />
+                    android:textColor="@color/text_dark_navy"
+                    android:textColorHint="#757575"
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Region Field (TextInputEditText) -->
+            <!-- Region Field -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_travel_region"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="12sp"
+                android:textColor="@color/start_signup_prefix_text"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -121,22 +145,27 @@
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusTopStart="12dp"
-                app:boxStrokeColor="@color/pintrip_blue">
+                android:layout_marginTop="8dp"
+                app:boxBackgroundColor="@color/white"
+                app:boxCornerRadiusBottomEnd="@dimen/input_box_corner_radius"
+                app:boxCornerRadiusBottomStart="@dimen/input_box_corner_radius"
+                app:boxCornerRadiusTopEnd="@dimen/input_box_corner_radius"
+                app:boxCornerRadiusTopStart="@dimen/input_box_corner_radius"
+                app:boxStrokeColor="@color/input_box_stroke"
+                app:hintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etRegion"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="52dp"
+                    android:fontFamily="@font/pretendard"
                     android:hint="@string/hint_region"
                     android:inputType="text"
+                    android:paddingHorizontal="16dp"
                     android:singleLine="true"
-                    android:textColor="@color/text_dark"
-                    android:textSize="15sp" />
+                    android:textColor="@color/text_dark_navy"
+                    android:textColorHint="#757575"
+                    android:textSize="@dimen/text_body" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Travel Period Field -->
@@ -144,36 +173,51 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_travel_period"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="12sp"
+                android:textColor="@color/start_signup_prefix_text"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/layoutDateSelection"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/badge_status_bg"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_box"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
                 android:paddingHorizontal="16dp">
 
                 <TextView
                     android:id="@+id/tvDateDisplay"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:fontFamily="@font/pretendard"
                     android:text="@string/date_to_be_determined"
-                    android:textColor="@color/text_dark"
-                    android:textSize="15sp" />
+                    android:textColor="@color/text_link_hint"
+                    android:textSize="@dimen/text_body"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/ivCalendarIcon"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:id="@+id/ivCalendarIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_calendar"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnClearDates"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/text_link_hint" />
 
                 <ImageView
                     android:id="@+id/btnClearDates"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
+                    android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:contentDescription="@null"
@@ -181,17 +225,22 @@
                     android:padding="4dp"
                     android:src="@drawable/ic_pending_circle"
                     android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
                     tools:visibility="visible" />
-            </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <!-- Main Icon Selection -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:fontFamily="@font/pretendard_bold"
                 android:text="@string/label_main_icon"
-                android:textColor="@color/text_sub_gray"
-                android:textSize="12sp"
+                android:textColor="@color/start_signup_prefix_text"
+                android:textSize="@dimen/text_label"
                 android:textStyle="bold" />
 
             <com.google.android.material.chip.ChipGroup
@@ -208,74 +257,128 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="@string/icon_sea" />
+                    android:fontFamily="@font/pretendard_bold"
+                    android:text="@string/icon_sea"
+                    android:textColor="@color/chip_text_color"
+                    android:textSize="@dimen/text_chip_room_icon"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipCornerRadius="18dp"
+                    app:chipIconVisible="false"
+                    app:chipMinHeight="36dp"
+                    app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipFood"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/icon_food" />
+                    android:fontFamily="@font/pretendard_bold"
+                    android:text="@string/icon_food"
+                    android:textColor="@color/chip_text_color"
+                    android:textSize="@dimen/text_chip_room_icon"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipCornerRadius="18dp"
+                    app:chipIconVisible="false"
+                    app:chipMinHeight="36dp"
+                    app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipNature"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/icon_nature" />
+                    android:fontFamily="@font/pretendard_bold"
+                    android:text="@string/icon_nature"
+                    android:textColor="@color/chip_text_color"
+                    android:textSize="@dimen/text_chip_room_icon"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipCornerRadius="18dp"
+                    app:chipIconVisible="false"
+                    app:chipMinHeight="36dp"
+                    app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipCity"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/icon_city" />
+                    android:fontFamily="@font/pretendard_bold"
+                    android:text="@string/icon_city"
+                    android:textColor="@color/chip_text_color"
+                    android:textSize="@dimen/text_chip_room_icon"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipCornerRadius="18dp"
+                    app:chipIconVisible="false"
+                    app:chipMinHeight="36dp"
+                    app:chipStrokeWidth="0dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipHealing"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/icon_healing" />
+                    android:fontFamily="@font/pretendard_bold"
+                    android:text="@string/icon_healing"
+                    android:textColor="@color/chip_text_color"
+                    android:textSize="@dimen/text_chip_room_icon"
+                    app:chipBackgroundColor="@color/chip_bg_color"
+                    app:chipCornerRadius="18dp"
+                    app:chipIconVisible="false"
+                    app:chipMinHeight="36dp"
+                    app:chipStrokeWidth="0dp" />
+
             </com.google.android.material.chip.ChipGroup>
 
-            <!-- Notice Box (Figma S04 Blue Info Card) -->
+            <!-- Notice Box (Figma Node 37:337) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                app:cardBackgroundColor="@color/pintrip_blue"
-                app:cardCornerRadius="16dp"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/icon_bg_blue"
+                app:cardCornerRadius="@dimen/input_box_corner_radius"
+                app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="12dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_info"
+                        app:tint="@color/button_outlined_text" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/pretendard"
                         android:text="@string/notice_invite_code_auto"
-                        android:textColor="@color/white"
-                        android:textSize="13sp" />
+                        android:textColor="@color/button_outlined_text"
+                        android:textSize="@dimen/text_greeting" />
+
                 </LinearLayout>
+
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Create Action Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCreate"
+                style="@style/Widget.Pintrip.Button.Primary"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="24dp"
-                android:backgroundTint="@color/pintrip_blue"
-                android:text="@string/btn_create_room_action"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:layout_height="@dimen/start_btn_height"
+                android:layout_marginTop="32dp"
+                android:text="@string/btn_create_room_action" />
 
         </LinearLayout>
-    </ScrollView>
+
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

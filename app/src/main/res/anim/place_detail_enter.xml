@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  11 방 홈 -> 12 장소 상세 진입.
+  창 전체를 밀어 올리면 지도까지 같이 움직여 "다른 화면"처럼 보이므로,
+  창은 짧게 페이드만 하고 올라오는 느낌은 콘텐츠 애니메이션이 담당한다.
+-->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="180"
+    android:fromAlpha="0.0"
+    android:interpolator="@android:anim/decelerate_interpolator"
+    android:toAlpha="1.0" />

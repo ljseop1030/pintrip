@@ -26,6 +26,8 @@ data class LikedUserInfo(
 )
 
 data class AddedByUserInfo(
+    /** 아바타 색을 좋아요 스택과 같은 기준으로 고르기 위해 uid를 함께 넘긴다 */
+    val uid: String,
     val nickname: String,
     val avatarColor: String?,
 )
@@ -110,11 +112,13 @@ class PlaceDetailViewModel(
                 val addedByMember = room.members[placeDetail.place.addedBy]
                 val addedByUserInfo = if (addedByMember != null) {
                     AddedByUserInfo(
+                        uid = placeDetail.place.addedBy,
                         nickname = addedByMember.nickname.ifBlank { placeDetail.place.addedByNickname },
                         avatarColor = addedByMember.avatarColor.ifBlank { null }
                     )
                 } else {
                     AddedByUserInfo(
+                        uid = placeDetail.place.addedBy,
                         nickname = placeDetail.place.addedByNickname,
                         avatarColor = null
                     )

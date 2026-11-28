@@ -14,34 +14,72 @@
     <!-- Place List Item Colors -->
     <color name="place_card_background">#FFFFFFFF</color>
     <color name="place_card_stroke">#F0F1F5</color>
+    <color name="place_item_bg">#F7F9FE</color>
     <color name="place_title">#1A1C26</color>
     <color name="place_added_by">#7B7A88</color>
-    <color name="place_like_count">#F09C6B</color>
+    <color name="place_like_count">#B4612F</color>
+    <color name="place_like_text">#B4612F</color>
     <color name="place_icon_container_bg">#EEF2FF</color>
     <color name="place_icon_tint">@color/pintrip_blue</color>
     <color name="place_heart_tint">#F09C6B</color>
     <color name="place_heart_unliked_tint">#7B7A88</color>
     <color name="place_likes_bg">#FFF0EB</color>
     <color name="place_list_empty_text">#7B7A88</color>
+    <!-- Room Header & Link Bar Colors -->
+    <color name="room_header_grad_start">#4357BA</color>
+    <color name="room_header_grad_center">#5069D4</color>
+    <color name="room_header_grad_end">#5F86EC</color>
+    <color name="room_header_radial_highlight">#734BC8FF</color>
+    <color name="transparent">#00000000</color>
+    <color name="text_greeting">#E3E9FF</color>
+    <color name="text_link_hint">#646C8F</color>
+    <color name="icon_bg_blue">#E5EBFE</color>
+    <color name="icon_chip_bg">#F0F3FD</color>
+    <color name="button_outlined_stroke">#C9D3F5</color>
+    <color name="button_outlined_text">#334BB1</color>
+    <!-- 비활성 Primary 버튼 배경 (시안 16 공유 수신 / 17 장소 선택의 잠긴 버튼) -->
+    <color name="btn_primary_disabled">#A9B4E4</color>
+    <color name="text_dark_navy">#1F2440</color>
+
     <!-- Design System Colors (UI v2) -->
     <color name="pintrip_blue">#4B60C0</color>
     <color name="tagline_text">#5A6AB8</color>
     <color name="start_signup_prefix_text">#4A4F63</color>
     <color name="pintrip_surface">#F3F6FE</color>
+    <color name="input_border">#DDE3F3</color>
     <color name="pintrip_bg_gray">#F5F6FA</color>
     <color name="text_dark">#1A1C26</color>
     <color name="text_sub_gray">#7B7A88</color>
     <color name="badge_blue_bg">#EBF0FF</color>
     <color name="badge_blue_text">@color/pintrip_blue</color>
     <color name="icon_bg_light">#F0F3FA</color>
-    <color name="badge_check_bg">#FFF7ED</color>
-    <color name="badge_check_text">#D97706</color>
-    <color name="badge_exception_bg">#FFF1F0</color>
-    <color name="badge_exception_text">#F09C6B</color>
-    <color name="item_check_border">#FDBA74</color>
-    <color name="item_check_bg">#FFFBEB</color>
+    <color name="badge_check_bg">#FFEDE3</color>
+    <color name="badge_check_text">#A85628</color>
+    <color name="badge_exception_bg">#F0F1F5</color>
+    <color name="badge_exception_text">#646C8F</color>
+    <color name="item_check_border">#F6CDB5</color>
+    <color name="item_check_bg">#FFFFFF</color>
 
     <!-- Map Label Colors -->
     <color name="map_label_text">#1A1C26</color>
     <color name="map_label_stroke">#FFFFFFFF</color>
+    <!-- 11 Room home header button -->
+    <color name="header_btn_bg">#29FFFFFF</color>
+    <color name="header_btn_stroke">#73FFFFFF</color>
+    <color name="shake_arc">#7D94FE</color>
+    <!-- 11-B 여행 모드 켜짐: Primary 배경 위에 올라가는 상태 점 -->
+    <color name="travel_dot_active">#8EE0BE</color>
+
+    <!--
+      아바타 팔레트 (시안 12 좋아요 스택). 파스텔 배경 + 어두운 글자 4쌍을 순환한다.
+      배경 hex는 UserRepository.AVATAR_COLORS 와 같은 순서여야 한다.
+    -->
+    <color name="avatar_bg_blue">#E5EBFE</color>
+    <color name="avatar_text_blue">#334BB1</color>
+    <color name="avatar_bg_green">#DDF3EA</color>
+    <color name="avatar_text_green">#1E7A5C</color>
+    <color name="avatar_bg_purple">#EDE7FB</color>
+    <color name="avatar_text_purple">#5B45A8</color>
+    <color name="avatar_bg_orange">#FFEDE3</color>
+    <color name="avatar_text_orange">#A85628</color>
 </resources>

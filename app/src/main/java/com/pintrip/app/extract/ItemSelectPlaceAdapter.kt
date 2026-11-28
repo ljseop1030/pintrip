@@ -121,12 +121,17 @@ class ItemSelectPlaceAdapter(
             }
 
             // 5. 카드 테두리 및 배경 스타일
+            // strokeColor만 바꾸면 strokeWidth가 0이라 테두리가 그려지지 않으므로 폭도 함께 지정한다
             if (item.status == MatchResult.STATUS_CHECK) {
                 binding.cardContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.item_check_bg))
                 binding.cardContainer.strokeColor = ContextCompat.getColor(context, R.color.item_check_border)
+                binding.cardContainer.strokeWidth =
+                    context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_selected)
             } else {
                 binding.cardContainer.setCardBackgroundColor(ContextCompat.getColor(context, R.color.card_background))
                 binding.cardContainer.strokeColor = ContextCompat.getColor(context, R.color.card_stroke)
+                binding.cardContainer.strokeWidth =
+                    context.resources.getDimensionPixelSize(R.dimen.card_stroke_width_none)
             }
 
             binding.root.setOnClickListener {

@@ -3,75 +3,46 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/card_place"
+    style="@style/Widget.Material3.CardView.Elevated"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="16dp"
-    android:layout_marginEnd="16dp"
-    android:layout_marginTop="6dp"
-    android:layout_marginBottom="6dp"
-    app:cardBackgroundColor="@color/place_card_background"
-    app:cardCornerRadius="16dp"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="@color/place_item_bg"
+    app:cardCornerRadius="18dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/place_card_stroke"
-    app:strokeWidth="1dp">
+    app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cv_icon_container"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            app:cardBackgroundColor="@color/place_icon_container_bg"
-            app:cardCornerRadius="12dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            app:cardBackgroundColor="@color/icon_bg_blue"
+            app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
-            app:strokeWidth="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="12dp"
-                android:layout_height="12dp"
-                android:layout_gravity="center"
-                app:cardBackgroundColor="@color/place_icon_tint"
-                app:cardCornerRadius="6dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp" />
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <LinearLayout
-            android:id="@+id/layout_like"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            app:strokeWidth="0dp">
 
             <ImageView
-                android:id="@+id/iv_like_icon"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@android:drawable/btn_star_big_on"
-                app:tint="@color/place_heart_tint"
-                tools:ignore="ContentDescription" />
+                android:id="@+id/iv_category_icon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_image"
+                app:tint="@color/pintrip_blue" />
 
-            <TextView
-                android:id="@+id/tv_like_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="@color/place_like_count"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                tools:text="4" />
-
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:id="@+id/tv_search_keyword"
@@ -80,10 +51,12 @@
             android:layout_marginStart="12dp"
             android:layout_marginEnd="8dp"
             android:ellipsize="end"
+            android:fontFamily="@font/pretendard_bold"
             android:maxLines="1"
             android:textColor="@color/place_title"
-            android:textSize="15sp"
+            android:textSize="@dimen/text_body"
             android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@id/tv_added_by"
             app:layout_constraintEnd_toStartOf="@id/layout_like"
             app:layout_constraintStart_toEndOf="@id/cv_icon_container"
             app:layout_constraintTop_toTopOf="@id/cv_icon_container"
@@ -95,14 +68,50 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:ellipsize="end"
+            android:fontFamily="@font/pretendard"
             android:maxLines="1"
             android:textColor="@color/place_added_by"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_caption"
             app:layout_constraintBottom_toBottomOf="@id/cv_icon_container"
             app:layout_constraintEnd_toEndOf="@id/tv_search_keyword"
             app:layout_constraintStart_toStartOf="@id/tv_search_keyword"
             app:layout_constraintTop_toBottomOf="@id/tv_search_keyword"
-            tools:text="민지님이 추가" />
+            tools:text="관광지 · Minji 님이 추가" />
+
+        <LinearLayout
+            android:id="@+id/layout_like"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_source_badge"
+            android:backgroundTint="@color/place_likes_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/iv_like_icon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_heart_filled"
+                app:tint="@color/place_like_text" />
+
+            <TextView
+                android:id="@+id/tv_like_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="@font/pretendard_bold"
+                android:textColor="@color/place_like_text"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="4" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

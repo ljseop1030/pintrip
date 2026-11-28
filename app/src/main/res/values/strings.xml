@@ -11,17 +11,17 @@
     <string name="share_receive_title_in_progress">장소 찾는 중…</string>
     <string name="share_receive_title_error">공유 내용을 확인할 수 없습니다</string>
 
-    <string name="share_receive_step1_image_completed">이미지 받기 완료</string>
+    <string name="share_receive_step1_image_completed">스크린샷 받기 완료</string>
     <string name="share_receive_step1_text_completed">링크 받기 완료</string>
     <string name="share_receive_step1_empty">공유 데이터 없음</string>
 
-    <string name="share_receive_step2_in_progress">텍스트 추출 (Gemini)</string>
-    <string name="share_receive_step2_completed">텍스트 추출 완료</string>
-    <string name="share_receive_step2_pending">텍스트 추출 대기 중</string>
+    <string name="share_receive_step2_in_progress">글자 읽는 중…</string>
+    <string name="share_receive_step2_completed">글자 읽기 완료</string>
+    <string name="share_receive_step2_pending">글자 읽기 대기 중</string>
 
-    <string name="share_receive_step3_in_progress">장소 매칭 중…</string>
-    <string name="share_receive_step3_completed_format">장소 매칭 완료 (%1$d개 장소 발견)</string>
-    <string name="share_receive_step3_pending">장소 매칭 대기 중</string>
+    <string name="share_receive_step3_in_progress">지도에서 위치 찾는 중…</string>
+    <string name="share_receive_step3_completed_format">위치 찾기 완료 (%1$d개 장소)</string>
+    <string name="share_receive_step3_pending">지도에서 위치 찾기</string>
 
     <string name="share_receive_room_label">여행 방</string>
     <string name="share_receive_room_name_format">%1$s</string>
@@ -91,33 +91,34 @@
     <string name="manual_search_error">장소 검색 중 오류가 발생했습니다.</string>
     <string name="btn_manual_search">직접 검색</string>
     <string name="common_confirm">확인</string>
+    <string name="common_back">뒤로 가기</string>
 
     <string name="app_subtitle">Fill your travel map together with a single share</string>
 
     <!-- S01 Login -->
-    <string name="test_login_title">Login</string>
-    <string name="email_hint">Email</string>
-    <string name="password_hint">Password</string>
+    <string name="test_login_title">로그인</string>
+    <string name="email_hint">이메일</string>
+    <string name="password_hint">비밀번호</string>
     <string name="sample_email_hint">travel@email.com</string>
-    <string name="sample_password_hint">••••••••</string>
-    <string name="btn_login">Login</string>
-    <string name="login_status_signing_in">Signing in…</string>
-    <string name="login_error_empty_email">Please enter your email.</string>
-    <string name="login_error_empty_password">Please enter your password.</string>
-    <string name="login_error_empty_nickname">Please enter a nickname.</string>
-    <string name="login_error_check_credentials">Please check your email and password.</string>
-    <string name="login_error_generic">Unable to sign in. Please try again.</string>
-    <string name="login_error_profile_title">Profile error</string>
-    <string name="login_error_profile_load">Unable to load your profile. Please try again.</string>
-    <string name="login_error_profile_save">Unable to save your profile. Please try again.</string>
-    <string name="login_dialog_profile_title">Set Profile Nickname</string>
-    <string name="login_dialog_profile_message">No profile found for this account. Please enter a nickname to use.</string>
-    <string name="login_dialog_profile_corrupted_title">Profile Data Error</string>
-    <string name="login_dialog_profile_corrupted_message">Your profile data is corrupted. Please sign out and try again.</string>
-    <string name="login_btn_save">Save Profile</string>
-    <string name="login_btn_retry">Retry</string>
-    <string name="login_btn_sign_out">Sign out</string>
-    <string name="login_signup_link_action">Sign up</string>
+    <string name="sample_password_hint">비밀번호</string>
+    <string name="btn_login">로그인하기</string>
+    <string name="login_status_signing_in">로그인 중…</string>
+    <string name="login_error_empty_email">이메일을 입력해 주세요.</string>
+    <string name="login_error_empty_password">비밀번호를 입력해 주세요.</string>
+    <string name="login_error_empty_nickname">닉네임을 입력해 주세요.</string>
+    <string name="login_error_check_credentials">이메일과 비밀번호를 확인해 주세요.</string>
+    <string name="login_error_generic">로그인할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="login_error_profile_title">프로필 오류</string>
+    <string name="login_error_profile_load">프로필을 불러올 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="login_error_profile_save">프로필을 저장할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="login_dialog_profile_title">프로필 닉네임 설정</string>
+    <string name="login_dialog_profile_message">프로필 정보가 없습니다. 사용할 닉네임을 입력해 주세요.</string>
+    <string name="login_dialog_profile_corrupted_title">프로필 정보 오류</string>
+    <string name="login_dialog_profile_corrupted_message">프로필 정보가 손상되었습니다. 로그아웃 후 다시 시도해 주세요.</string>
+    <string name="login_btn_save">프로필 저장</string>
+    <string name="login_btn_retry">재시도</string>
+    <string name="login_btn_sign_out">로그아웃</string>
+    <string name="login_signup_link_action">회원가입하기</string>
 
     <!-- Legacy / Shared (preserved for other screens) -->
     <string name="btn_logout">로그아웃</string>
@@ -131,42 +132,43 @@
     <string name="btn_open_test_login">개발용 테스트 로그인 화면 열기</string>
 
     <!-- S02 Sign Up -->
-    <string name="title_join_membership">join membership</string>
-    <string name="signup_headline">Shall we create\na travel map together?</string>
-    <string name="signup_subtext">Sign up easily with your email</string>
-    <string name="nickname_hint">Nickname</string>
-    <string name="confirm_password_hint">Confirm Password</string>
-    <string name="sample_nickname_hint">Minji</string>
-    <string name="sample_confirm_password_hint">Re-enter password</string>
-    <string name="terms_agreement">I agree to the Terms of Service (required)</string>
-    <string name="btn_signup">Sign Up</string>
-    <string name="signup_link_prefix">Don\'t have an account?</string>
-    <string name="signup_link_action">join membership</string>
-    <string name="signup_cd_back">Back</string>
-    <string name="signup_header_title">Sign up</string>
+    <string name="title_join_membership">회원가입</string>
+    <string name="signup_headline">함께 채우는\n여행 지도를 만들어 볼까요?</string>
+    <string name="signup_subtext">이메일로 간단하게 가입해요</string>
+    <string name="nickname_hint">닉네임</string>
+    <string name="confirm_password_hint">비밀번호 확인</string>
+    <string name="sample_nickname_hint">예: 민지</string>
+    <string name="sample_confirm_password_hint">비밀번호 재입력</string>
+    <string name="terms_agreement">[필수] 서비스 이용약관 동의</string>
+    <string name="terms_view_link">보기 ></string>
+    <string name="btn_signup">가입하기</string>
+    <string name="signup_link_prefix">계정이 있으신가요?</string>
+    <string name="signup_link_action">로그인</string>
+    <string name="signup_cd_back">뒤로 가기</string>
+    <string name="signup_header_title">회원가입</string>
 
-    <!-- Sign Up Dedicated English Resources -->
-    <string name="signup_error_empty_nickname">Please enter a nickname.</string>
-    <string name="signup_error_empty_email">Please enter your email.</string>
-    <string name="signup_error_invalid_email">Please enter a valid email address.</string>
-    <string name="signup_error_empty_password">Please enter your password.</string>
-    <string name="signup_error_password_too_short">Use at least 8 characters.</string>
-    <string name="signup_error_empty_confirm_password">Please confirm your password.</string>
-    <string name="signup_error_password_mismatch">Passwords do not match.</string>
-    <string name="signup_error_terms_required">Please agree to the Terms of Service.</string>
-    <string name="signup_error_generic">Unable to sign up. Please try again.</string>
-    <string name="signup_error_email_already_in_use">Please check your details or sign in.</string>
-    <string name="signup_error_profile_title">Profile error</string>
-    <string name="signup_error_profile_load">Unable to load your profile. Please try again.</string>
-    <string name="signup_error_profile_save">Unable to save your profile. Please try again.</string>
-    <string name="signup_status_signing_up">Signing up…</string>
-    <string name="signup_btn_get_started">Get Started</string>
-    <string name="signup_btn_retry">Retry</string>
-    <string name="signup_btn_sign_out">Sign out</string>
-    <string name="signup_complete_title">Welcome to PinTrip!</string>
-    <string name="signup_complete_message">Your account and profile are ready.\nCreate a trip room and share places with friends!</string>
-    <string name="signup_restored_title">Account Restored</string>
-    <string name="signup_restored_message">Welcome back! Your existing account profile has been loaded.</string>
+    <!-- Sign Up Dedicated Resources -->
+    <string name="signup_error_empty_nickname">닉네임을 입력해 주세요.</string>
+    <string name="signup_error_empty_email">이메일을 입력해 주세요.</string>
+    <string name="signup_error_invalid_email">올바른 이메일 형식이 아닙니다.</string>
+    <string name="signup_error_empty_password">비밀번호를 입력해 주세요.</string>
+    <string name="signup_error_password_too_short">8자 이상 입력해 주세요.</string>
+    <string name="signup_error_empty_confirm_password">비밀번호를 확인해 주세요.</string>
+    <string name="signup_error_password_mismatch">비밀번호가 일치하지 않습니다.</string>
+    <string name="signup_error_terms_required">서비스 이용약관에 동의해 주세요.</string>
+    <string name="signup_error_generic">가입할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="signup_error_email_already_in_use">이미 등록된 이메일입니다.</string>
+    <string name="signup_error_profile_title">프로필 오류</string>
+    <string name="signup_error_profile_load">프로필을 불러올 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="signup_error_profile_save">프로필을 저장할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="signup_status_signing_up">가입 중…</string>
+    <string name="signup_btn_get_started">시작하기</string>
+    <string name="signup_btn_retry">재시도</string>
+    <string name="signup_btn_sign_out">로그아웃</string>
+    <string name="signup_complete_title">PinTrip에 오신 것을 환영합니다!</string>
+    <string name="signup_complete_message">계정과 프로필이 준비되었습니다.\n여행방을 만들고 친구들과 장소를 공유해 보세요!</string>
+    <string name="signup_restored_title">계정 복구됨</string>
+    <string name="signup_restored_message">다시 오신 것을 환영합니다! 기존 계정 프로필을 불러왔습니다.</string>
     <string name="signup_dialog_corrupted_title">Profile Data Error</string>
     <string name="signup_dialog_corrupted_message">Your profile data is corrupted. Please sign out and try again.</string>
 
@@ -201,6 +203,9 @@
 
     <!-- S03 Room List -->
     <string name="my_travel_room_title">내 여행방</string>
+    <string name="title_my_info">내 정보</string>
+    <string name="label_notification">알림</string>
+    <string name="desc_notification_setting">친구 장소 추가 · 여행 모드 알림</string>
     <string name="greeting_format">안녕하세요, %1$s님</string>
     <string name="greeting_default">안녕하세요, 사용자님</string>
     <string name="location_count_format">장소 %1$d개</string>
@@ -215,7 +220,7 @@
     <!-- S04 Room Creation & List UI Strings -->
     <string name="title_create_room">방 만들기</string>
     <string name="create_room_headline">새로운 여행방 만들기</string>
-    <string name="create_room_subtext">친구를 초대하고 같은 지도에 장소를 모아보세요</string>
+    <string name="create_room_subtext">친구를 초대하고 같은 지도에 장소를 모아 보세요</string>
     <string name="label_travel_room_name">여행방 이름</string>
     <string name="label_travel_region">여행 지역</string>
     <string name="label_travel_period">여행 기간 (선택)</string>
@@ -224,8 +229,8 @@
     <string name="icon_food">맛집</string>
     <string name="icon_nature">자연</string>
     <string name="icon_city">도시</string>
-    <string name="icon_healing">휴식</string>
-    <string name="notice_invite_code_auto">방을 만들면 초대 코드가 바로 발급됩니다.</string>
+    <string name="icon_healing">힐링</string>
+    <string name="notice_invite_code_auto">방을 만들면 초대 코드가 바로 발급돼요</string>
     <string name="btn_create_room_action">방 만들기</string>
     <string name="btn_creating_room_in_progress">생성 중…</string>
     <string name="notice_creating_room_in_progress">여행방을 생성하고 있습니다. 잠시만 기다려 주세요.</string>
@@ -234,7 +239,23 @@
 
     <string name="btn_join_code">코드로 참여</string>
     <string name="btn_new_room">+ 방 만들기</string>
+    <string name="link_input_hint">블로그·지도 링크를 붙여 넣어 보세요</string>
+    <string name="screenshot_add_hint">스크린샷은 사진 버튼으로 추가할 수 있어요</string>
+    <string name="cd_add_from_photo">사진에서 장소 추가</string>
     <string name="room_list_empty">아직 참여 중인 여행방이 없습니다.\n새로운 여행방을 만들어 보세요!</string>
+
+    <!-- Empty Room Onboarding -->
+    <string name="empty_room_title">아직 여행방이 없어요</string>
+    <string name="empty_room_subtitle">이렇게 시작해 보세요</string>
+    <string name="empty_step_1_tag">STEP 1</string>
+    <string name="empty_step_1_title">여행방 만들기</string>
+    <string name="empty_step_1_desc">친구와 함께할 여행방을 만들어요</string>
+    <string name="empty_step_2_tag">STEP 2</string>
+    <string name="empty_step_2_title">스크린샷·링크 공유하기</string>
+    <string name="empty_step_2_desc">PinTrip으로 공유하면 장소를 찾아 줘요</string>
+    <string name="empty_step_3_tag">STEP 3</string>
+    <string name="empty_step_3_title">함께 지도 채우기</string>
+    <string name="empty_step_3_desc">모두가 모은 장소가 한 지도에 쌓여요</string>
     <string name="room_list_load_error">방 목록을 불러오지 못했습니다.\n원인: %1$s</string>
     <string name="notice_join_code_feature_later">초대 코드로 참여하기 기능은 다음 업데이트에서 제공됩니다.</string>
 
@@ -250,8 +271,8 @@
     <string name="error_room_join_default">방 가입 중 오류가 발생했습니다. 다시 시도해 주세요.</string>
     <string name="notice_joining_room_in_progress">여행방에 가입하고 있습니다. 잠시만 기다려 주세요.</string>
 
-    <string name="created_room_code_title">방 생성이 완료되었습니다!</string>
-    <string name="created_room_code_subtext">아래 초대 코드를 친구들에게 공유하여 함께 장소를 모아보세요.</string>
+    <string name="created_room_code_title">여행방이 만들어졌어요!</string>
+    <string name="created_room_code_subtext">아래 초대 코드를 친구에게 공유하고\n함께 장소를 모아 보세요</string>
     <string name="created_room_code_label">초대 코드</string>
     <string name="btn_copy_code">코드 복사</string>
     <string name="btn_share_link">링크 공유</string>
@@ -270,12 +291,13 @@
     <!-- Join Result Notices & Dialogs -->
     <string name="notice_join_own_room">직접 만든 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
     <string name="notice_already_joined_room">이미 참여 중인 방입니다. 내 여행방 목록에서 선택해 주세요.</string>
-    <string name="notice_join_own_room_format">‘%1$s’ 방은 내가 만든 여행방입니다.</string>
-    <string name="notice_already_joined_room_format">‘%1$s’ 방은 이미 참여 중인 여행방입니다.</string>
-    <string name="notice_join_room_success_format">‘%1$s’ 방에 참여했습니다.</string>
-    <string name="notice_join_room_rechecked_format">‘%1$s’ 방 참여가 확인되었습니다.</string>
-    <string name="btn_view_places">장소 목록 보기</string>
-    <string name="btn_go_to_list">목록으로</string>
+    <string name="notice_join_own_room_format">‘%1$s’ 방은\n내가 만든 여행방입니다.</string>
+    <string name="notice_already_joined_room_format">‘%1$s’ 방은\n이미 참여 중인 여행방입니다.</string>
+    <string name="notice_join_room_success_format">‘%1$s’ 여행방에\n참여했어요!</string>
+    <string name="notice_join_room_rechecked_format">‘%1$s’ 여행방 참여가\n확인되었어요!</string>
+    <string name="join_success_subtext">친구들이 모은 장소를 확인해 보세요</string>
+    <string name="btn_view_places">여행방 들어가기</string>
+    <string name="btn_go_to_list">닫기</string>
     <string name="btn_close">닫기</string>
     <string name="error_profile_check_required">프로필 정보를 확인해 주세요.</string>
     <string name="place_list_error_cannot_open">장소 목록 화면을 열 수 없습니다.</string>
@@ -316,6 +338,7 @@
     <string name="place_item_date_just_now">방금 전 (서버 타임스탬프)</string>
     <string name="place_item_format">%1$d. 장소 ID: %2$s\n   - 검색어: %3$s\n   - 작성자: %4$s (%5$s)\n   - 생성 시각: %6$s\n   - Kakao URL: %7$s\n\n</string>
     <string name="place_added_by">%1$s님이 추가</string>
+    <string name="place_category_added_by_format">%1$s · %2$s님이 추가</string>
 
     <!-- Place List Screen -->
     <string name="title_activity_place_list">장소 목록</string>
@@ -346,6 +369,8 @@
     <string name="room_map_empty_no_places">아직 저장한 장소가 없어요</string>
     <string name="room_map_empty_category">이 카테고리에 저장한 장소가 없어요</string>
     <string name="cd_random_pick">랜덤으로 장소 고르기</string>
+    <string name="cd_invite_friend">친구 초대</string>
+    <string name="room_header_subtitle_format">%1$s · 장소 %2$d</string>
 
     <!-- Shake to Pick UI Strings -->
     <string name="title_shake_to_pick">흔들어서 장소 고르기</string>
@@ -377,6 +402,7 @@
     <string name="place_detail_added_by_title">추가한 사람</string>
     <string name="place_detail_find_directions">카카오맵에서 길찾기</string>
     <string name="place_detail_open_kakao_map">카카오맵에서 열기</string>
+    <string name="place_detail_open_kakao_map_detail">카카오맵에서 자세히 보기</string>
     <string name="place_detail_not_found_notice">카카오맵에서 장소를 찾을 수 없어요</string>
     <string name="place_detail_deleted_toast">삭제되었거나 존재하지 않는 장소입니다.</string>
     <string name="place_detail_error_cannot_dial">전화 연결을 열 수 있는 앱이 없습니다.</string>
@@ -398,6 +424,9 @@
     <string name="notice_notification_denied">알림 권한이 거부되었습니다. 설정에서 언제든지 켤 수 있습니다.</string>
     <string name="notice_notification_blocked_title">알림이 차단되어 있습니다</string>
     <string name="notice_notification_blocked_message">앱 또는 알림 채널 설정이 꺼져 있습니다. 기기 설정에서 알림을 허용해 주세요.</string>
+    <!-- 끄기는 앱에서 못 하고 기기 설정으로만 가능하다 (안드로이드 제약) -->
+    <string name="notice_notification_turn_off_title">알림을 끌까요?</string>
+    <string name="notice_notification_turn_off_message">앱에서는 알림을 끌 수 없어요. 기기 설정에서 PinTrip 알림을 꺼 주세요.</string>
     <string name="btn_open_settings">설정으로 이동</string>
     <string name="notice_notification_access_denied">접근 권한이 없는 방이거나 이미 삭제된 장소입니다.</string>
     <string name="notice_notification_account_mismatch">다른 계정으로 전달된 알림입니다.</string>
@@ -406,6 +435,11 @@
     <string name="menu_travel_mode_turn_on">여행 모드 켜기</string>
     <string name="menu_travel_mode_turn_off">여행 모드 끄기</string>
     <string name="menu_travel_mode_switch_to_this_room">이 방으로 여행 모드 바꾸기</string>
+    <string name="travel_mode_turn_on">여행 모드 켜기</string>
+    <string name="travel_mode_turn_off">여행 모드 끄기</string>
+    <string name="travel_mode_active">여행 모드 켜짐</string>
+    <string name="travel_mode_turn_off_confirm_title">여행 모드를 끌까요?</string>
+    <string name="travel_mode_turn_off_confirm_message">근처 장소 알림이 더 이상 오지 않아요.</string>
 
     <string name="notification_channel_travel_mode">여행 모드</string>
     <string name="notification_channel_nearby_place">근처 장소</string>
@@ -424,4 +458,14 @@
     <string name="travel_mode_btn_go_to_settings">설정으로 이동</string>
 
     <string name="travel_mode_notification_permission_denied_toast">알림을 허용하면 근처 장소를 알려드려요</string>
+
+    <!-- 15 Add Place Bottom Sheet -->
+    <string name="title_add_place">장소 추가</string>
+    <string name="add_place_subtitle_format">\'%1$s\' 여행방에 바로 추가돼요</string>
+    <string name="add_place_photo_title">사진에서 찾기</string>
+    <string name="add_place_photo_subtitle">스크린샷 속 장소를 자동으로 찾아요</string>
+    <string name="add_place_link_title">링크로 찾기</string>
+    <string name="add_place_link_subtitle">블로그·지도 링크를 붙여 넣어요</string>
+    <string name="add_place_link_hint">https://</string>
+    <string name="add_place_btn_search">찾기</string>
 </resources>

@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.data.repository.PlaceDetailRepository
@@ -28,6 +29,8 @@ sealed class RoomMapUiState {
         val roomName: String,
         val selectedCategory: PlaceCategory,
         val totalPlaceCount: Int,
+        val startDate: Timestamp? = null,
+        val endDate: Timestamp? = null,
     ) : RoomMapUiState()
     data class Error(val messageResId: Int) : RoomMapUiState()
 }
@@ -50,6 +53,8 @@ class RoomMapViewModel(
     private var isDataLoaded = false
     private var allPlaceDetails: List<PlaceDetail> = emptyList()
     private var roomName: String = ""
+    private var roomStartDate: Timestamp? = null
+    private var roomEndDate: Timestamp? = null
     private var selectedCategory: PlaceCategory = PlaceCategory.ALL
 
     fun getAllPlaceDetails(): List<PlaceDetail> = allPlaceDetails
@@ -76,6 +81,8 @@ class RoomMapViewModel(
                 }
 
                 roomName = room.name
+                roomStartDate = room.startDate
+                roomEndDate = room.endDate
                 cachedInviteCode = room.inviteCode.takeIf { it.isNotBlank() }
                 if (_isInviteCodeDialogOpen.value == true && !cachedInviteCode.isNullOrBlank()) {
                     _inviteCodeUiState.value = InviteCodeUiState.Success(cachedInviteCode!!)
@@ -108,6 +115,8 @@ class RoomMapViewModel(
                     roomName = roomName,
                     selectedCategory = selectedCategory,
                     totalPlaceCount = allPlaceDetails.size,
+                    startDate = roomStartDate,
+                    endDate = roomEndDate,
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load room map data: ${e.message}", e)
@@ -136,6 +145,8 @@ class RoomMapViewModel(
                 roomName = roomName,
                 selectedCategory = selectedCategory,
                 totalPlaceCount = allPlaceDetails.size,
+                startDate = roomStartDate,
+                endDate = roomEndDate,
             )
         }
     }

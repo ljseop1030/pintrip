@@ -1,15 +1,17 @@
 package com.pintrip.app.room
 
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,6 +25,7 @@ import com.pintrip.app.auth.TestLoginActivity
 import com.pintrip.app.data.repository.DeviceTokenRepository
 import com.pintrip.app.data.repository.RoomRepository
 import com.pintrip.app.databinding.ActivityRoomListBinding
+import com.pintrip.app.extract.ShareLauncher
 import com.pintrip.app.map.RoomMapActivity
 import com.pintrip.app.notification.PendingNotificationManager
 import com.pintrip.app.place.PlaceDetailActivity
@@ -58,6 +61,15 @@ class RoomListActivity : AppCompatActivity() {
         viewModel.loadRooms(forceRefresh = true)
     }
 
+    // 사진 버튼: 포토피커로 스크린샷을 고르면 16 공유 수신으로 넘김 (방은 16에서 선택)
+    private val pickPhotosLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ShareLauncher.MAX_IMAGES),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            ShareLauncher.openImages(this, uris)
+        }
+    }
+
     companion object {
         const val EXTRA_INVITE_CODE = "extra_invite_code"
     }
@@ -69,9 +81,21 @@ class RoomListActivity : AppCompatActivity() {
         binding = ActivityRoomListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 헤더가 파란 그라데이션이라 상태바 아이콘을 밝게 바꾼다 (기본값은 어두운 아이콘)
+        WindowCompat.getInsetsController(window, binding.main).isAppearanceLightStatusBars = false
+
+        // 헤더가 상태바 영역까지 덮고, top padding은 (상태바 + gap)으로 계산한다.
+        // 시안의 56dp는 상태바 높이를 이미 포함한 값이므로 더하면 그만큼 헤더가 높아진다.
+        val headerGapTop = resources.getDimensionPixelSize(R.dimen.room_header_gap_top)
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            binding.layoutHeader.setPadding(
+                binding.layoutHeader.paddingLeft,
+                systemBars.top + headerGapTop,
+                binding.layoutHeader.paddingRight,
+                binding.layoutHeader.paddingBottom
+            )
             insets
         }
 
@@ -193,9 +217,50 @@ class RoomListActivity : AppCompatActivity() {
             viewModel.loadRooms(forceRefresh = true)
         }
 
-        binding.btnLogout.setOnClickListener {
-            viewModel.logout()
+        binding.tvHeaderAvatar.setOnClickListener {
+            showMyInfoBottomSheet()
         }
+
+        binding.ivChevronDown.setOnClickListener {
+            showMyInfoBottomSheet()
+        }
+
+        binding.btnPhotoAdd.setOnClickListener {
+            pickPhotosLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+            )
+        }
+
+        binding.etLink.setOnEditorActionListener { _, actionId, event ->
+            val isGo = actionId == EditorInfo.IME_ACTION_GO ||
+                    (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            if (isGo) {
+                submitLink()
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    /** 링크바에 입력한 텍스트를 16 공유 수신으로 넘긴다. 링크가 없으면 여기서 바로 알려준다. */
+    private fun submitLink() {
+        val text = binding.etLink.text?.toString()?.trim().orEmpty()
+        if (text.isEmpty()) return
+        if (!ShareLauncher.hasUrl(text)) {
+            Toast.makeText(this, R.string.share_receive_error_no_url, Toast.LENGTH_SHORT).show()
+            return
+        }
+        WindowCompat.getInsetsController(window, binding.etLink).hide(WindowInsetsCompat.Type.ime())
+        binding.etLink.text = null
+        binding.etLink.clearFocus()
+        ShareLauncher.openLink(this, text)
+    }
+
+    private fun showMyInfoBottomSheet() {
+        if (supportFragmentManager.findFragmentByTag(MyInfoBottomSheetFragment.TAG) != null) return
+        val sheet = MyInfoBottomSheetFragment()
+        sheet.show(supportFragmentManager, MyInfoBottomSheetFragment.TAG)
     }
 
     private fun observeViewModel() {
@@ -207,18 +272,6 @@ class RoomListActivity : AppCompatActivity() {
             binding.tvHeaderAvatar.text = avatar
         }
 
-        viewModel.avatarColor.observe(this) { colorHex ->
-            if (!colorHex.isNullOrBlank()) {
-                try {
-                    val parsedColor = Color.parseColor(colorHex)
-                    binding.tvHeaderAvatar.backgroundTintList = ColorStateList.valueOf(parsedColor)
-                    binding.tvHeaderAvatar.setTextColor(Color.WHITE)
-                } catch (_: Exception) {
-                    // Keep layout background if parsing fails
-                }
-            }
-        }
-
         viewModel.uiState.observe(this) { state ->
             when (state) {
                 is RoomListUiState.Loading -> {
@@ -226,18 +279,24 @@ class RoomListActivity : AppCompatActivity() {
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = false
+                    binding.layoutLinkBar.isVisible = false
+                    binding.tvScreenshotHint.isVisible = false
                 }
                 is RoomListUiState.Empty -> {
                     binding.pbLoading.isVisible = false
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = true
                     binding.layoutError.isVisible = false
+                    binding.layoutLinkBar.isVisible = false
+                    binding.tvScreenshotHint.isVisible = false
                 }
                 is RoomListUiState.Success -> {
                     binding.pbLoading.isVisible = false
                     binding.rvRooms.isVisible = true
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = false
+                    binding.layoutLinkBar.isVisible = true
+                    binding.tvScreenshotHint.isVisible = true
                     roomAdapter.submitList(state.rooms)
                 }
                 is RoomListUiState.Error -> {
@@ -245,6 +304,8 @@ class RoomListActivity : AppCompatActivity() {
                     binding.rvRooms.isVisible = false
                     binding.tvEmpty.isVisible = false
                     binding.layoutError.isVisible = true
+                    binding.layoutLinkBar.isVisible = false
+                    binding.tvScreenshotHint.isVisible = false
                     binding.tvErrorMessage.text = getString(state.messageResId)
                 }
             }

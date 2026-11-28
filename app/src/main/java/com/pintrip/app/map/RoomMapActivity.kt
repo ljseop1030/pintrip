@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -18,8 +20,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -38,11 +42,13 @@ import com.kakao.vectormap.label.LabelTextBuilder
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.data.repository.DeviceTokenRepository
+import com.pintrip.app.extract.ShareLauncher
 import com.pintrip.app.databinding.ActivityRoomMapBinding
 import com.pintrip.app.notification.FriendNotificationService
 import com.pintrip.app.place.InviteCodeUiState
 import com.pintrip.app.place.PlaceCategory
 import com.pintrip.app.place.PlaceDetailActivity
+import com.pintrip.app.place.labelResId
 import com.pintrip.app.room.DeepLinkUtils
 import com.pintrip.app.travel.TravelModeService
 import com.pintrip.app.travel.TravelModeState
@@ -52,11 +58,18 @@ import com.pintrip.app.ui.common.NotificationPermissionAction
 import com.pintrip.app.ui.common.NotificationPermissionFlow
 import com.pintrip.app.ui.common.NotificationPermissionHelper
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class RoomMapActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "RoomMapActivity"
+        /** 강조 마커는 주변 핀과 같은 언어를 유지하도록 좌표를 밑변에 둔다 */
+        private const val FOCUS_MARKER_ANCHOR_Y = 1.0f
+        private const val DEFAULT_LABEL_RANK = 0L
+        private const val FOCUSED_LABEL_RANK = 100L
         const val EXTRA_ROOM_ID = "extra_room_id"
 
         fun newIntent(context: Context, roomId: String): Intent {
@@ -72,7 +85,10 @@ class RoomMapActivity : AppCompatActivity() {
 
     private var kakaoMapInstance: KakaoMap? = null
     private var labelStyles: LabelStyles? = null
+    private var focusLabelStyles: LabelStyles? = null
     private val labelPlaceMap = mutableMapOf<Label, String>()
+    /** "지도에서 보기"로 강조 중인 장소. 카테고리 필터로 라벨이 다시 만들어져도 유지한다 */
+    private var focusedPlaceId: String? = null
     private var currentSuccessState: RoomMapUiState.Success? = null
     private var bottomSheetBehavior: BottomSheetBehavior<*>? = null
     private lateinit var roomPlaceAdapter: RoomPlaceAdapter
@@ -82,17 +98,24 @@ class RoomMapActivity : AppCompatActivity() {
     private var shakeDialogBinding: com.pintrip.app.databinding.BottomSheetShakeToPickBinding? = null
 
     private var isCleaningUpForDestroy = false
+    private var isTravelButtonExpanded = false
+    private val headerDateFormat = SimpleDateFormat("MM.dd", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
     private var inviteCodeDialog: androidx.appcompat.app.AlertDialog? = null
     private var inviteCodeDialogBinding: com.pintrip.app.databinding.DialogInviteCodeDisplayBinding? = null
 
-    private val friendNotificationPermissionLauncher = NotificationPermissionHelper.registerNotificationPermissionLauncher(this) { isGranted ->
-        if (isGranted) {
-            Toast.makeText(this, R.string.notice_notification_granted, Toast.LENGTH_SHORT).show()
-            lifecycleScope.launch {
-                DeviceTokenRepository.getInstance(applicationContext).syncToken()
-            }
-        } else {
-            Toast.makeText(this, R.string.notice_notification_denied, Toast.LENGTH_SHORT).show()
+    private var addPlaceBottomSheetDialog: com.google.android.material.bottomsheet.BottomSheetDialog? = null
+    private var addPlaceDialogBinding: com.pintrip.app.databinding.BottomSheetAddPlaceBinding? = null
+
+    // 06 내 여행방과 같은 경로(ShareLauncher)를 써서 장수 제한과 링크 검증을 맞춘다
+    private val pickPhotoLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ShareLauncher.MAX_IMAGES),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+            ShareLauncher.openImages(this, uris, roomId)
+            dismissAddPlaceBottomSheet()
         }
     }
 
@@ -135,13 +158,27 @@ class RoomMapActivity : AppCompatActivity() {
         binding = ActivityRoomMapBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 헤더가 파란 그라데이션이라 상태바 아이콘을 밝게 바꾼다 (기본값은 어두운 아이콘)
+        WindowCompat.getInsetsController(window, binding.main).isAppearanceLightStatusBars = false
+
+        // 06 내 여행방과 같은 규칙: 지도와 헤더가 상태바까지 올라가고,
+        // 헤더 top padding만 (상태바 + gap)으로 계산한다. root에 top을 주면
+        // 상태바 자리에 화면 배경색이 드러나 06과 다르게 보인다.
+        val headerGapTop = resources.getDimensionPixelSize(R.dimen.room_map_header_gap_top)
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            binding.layoutHeader.setPadding(
+                binding.layoutHeader.paddingLeft,
+                systemBars.top + headerGapTop,
+                binding.layoutHeader.paddingRight,
+                binding.layoutHeader.paddingBottom
+            )
             insets
         }
 
-        setupToolbar()
+        setupHeader()
+        setupTravelModeButton()
         setupBottomSheet()
         setupRecyclerView(roomId)
         setupCategoryChips()
@@ -215,41 +252,79 @@ class RoomMapActivity : AppCompatActivity() {
         inviteCodeDialog?.dismiss()
         inviteCodeDialog = null
         inviteCodeDialogBinding = null
+
+        dismissAddPlaceBottomSheet()
     }
 
-    private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
+    private fun setupHeader() {
+        binding.ivBack.setOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
-        binding.toolbar.inflateMenu(R.menu.menu_room_home)
-        binding.toolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_notification_settings -> {
-                    handleNotificationSettingsClick()
-                    true
-                }
-                R.id.action_invite_code -> {
-                    viewModel.onInviteCodeClick()
-                    true
-                }
-                R.id.action_travel_mode -> {
-                    handleTravelModeMenuClick()
-                    true
-                }
-                else -> false
-            }
+        binding.btnInvite.setOnClickListener {
+            viewModel.onInviteCodeClick()
         }
-        observeTravelModeState()
     }
 
-    private fun observeTravelModeState() {
+    private fun setupTravelModeButton() {
+        binding.btnTravelMode.setOnClickListener {
+            val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+            val travelState = TravelModeState.state.value
+            val isOnInThisRoom = travelState.isRunning && travelState.roomId == roomId
+            when {
+                isOnInThisRoom -> showTravelModeTurnOffDialog()
+                !isTravelButtonExpanded -> {
+                    isTravelButtonExpanded = true
+                    renderTravelModeButton(travelState)
+                }
+                else -> {
+                    isTravelButtonExpanded = false
+                    handleTravelModeMenuClick()
+                    renderTravelModeButton(travelState)
+                }
+            }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 TravelModeState.state.collect { travelState ->
-                    updateTravelModeMenuItem(travelState)
+                    renderTravelModeButton(travelState)
                 }
             }
         }
+    }
+
+    private fun renderTravelModeButton(travelState: TravelState) {
+        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+        val isOnInThisRoom = travelState.isRunning && travelState.roomId == roomId
+        if (isOnInThisRoom) isTravelButtonExpanded = false
+
+        val bgColor = ContextCompat.getColor(this, if (isOnInThisRoom) R.color.pintrip_blue else R.color.white)
+        val textColor = ContextCompat.getColor(this, if (isOnInThisRoom) R.color.white else R.color.button_outlined_text)
+        val iconColor = ContextCompat.getColor(this, if (isOnInThisRoom) R.color.white else R.color.pintrip_blue)
+
+        binding.btnTravelMode.setCardBackgroundColor(bgColor)
+        ImageViewCompat.setImageTintList(binding.ivTravelIcon, ColorStateList.valueOf(iconColor))
+        binding.tvTravelModeText.setTextColor(textColor)
+        binding.tvTravelModeText.setText(
+            when {
+                isOnInThisRoom -> R.string.travel_mode_active
+                travelState.isRunning -> R.string.menu_travel_mode_switch_to_this_room
+                else -> R.string.travel_mode_turn_on
+            }
+        )
+        binding.tvTravelModeText.isVisible = isOnInThisRoom || isTravelButtonExpanded
+        binding.viewTravelDot.isVisible = isOnInThisRoom
+        binding.btnTravelMode.contentDescription = binding.tvTravelModeText.text
+    }
+
+    private fun showTravelModeTurnOffDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.travel_mode_turn_off_confirm_title)
+            .setMessage(R.string.travel_mode_turn_off_confirm_message)
+            .setPositiveButton(R.string.travel_mode_turn_off) { _, _ ->
+                handleTravelModeMenuClick()
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
     }
 
     private fun handleTravelModeMenuClick() {
@@ -300,108 +375,14 @@ class RoomMapActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun updateTravelModeMenuItem(travelState: TravelState) {
-        val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
-        val menuItem = binding.toolbar.menu.findItem(R.id.action_travel_mode) ?: return
-
-        val titleResId = when {
-            !travelState.isRunning -> R.string.menu_travel_mode_turn_on
-            travelState.roomId == roomId -> R.string.menu_travel_mode_turn_off
-            else -> R.string.menu_travel_mode_switch_to_this_room
-        }
-        menuItem.setTitle(titleResId)
-    }
-
-    private fun handleNotificationSettingsClick() {
-        FriendNotificationService.createNotificationChannel(applicationContext)
-
-        val isGranted = NotificationPermissionHelper.isNotificationPermissionGranted(this)
-        val prefs = getSharedPreferences("pintrip_device_prefs", Context.MODE_PRIVATE)
-        val hasRequestedBefore = prefs.getBoolean("requested_notif_perm", false)
-        val shouldShowRationale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            false
-        }
-
-        val appNotificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
-        var isChannelEnabled = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val channel = manager.getNotificationChannel(FriendNotificationService.CHANNEL_ID)
-            if (channel != null && channel.importance == NotificationManager.IMPORTANCE_NONE) {
-                isChannelEnabled = false
-            }
-        }
-
-        val action = NotificationPermissionFlow.determineAction(
-            isRuntimePermissionGranted = isGranted,
-            hasRequestedBefore = hasRequestedBefore,
-            shouldShowRationale = shouldShowRationale,
-            areAppNotificationsEnabled = appNotificationsEnabled,
-            isChannelEnabled = isChannelEnabled
-        )
-
-        when (action) {
-            NotificationPermissionAction.REQUEST_RUNTIME_PERMISSION -> {
-                prefs.edit().putBoolean("requested_notif_perm", true).apply()
-                NotificationPermissionHelper.requestNotificationPermission(this, friendNotificationPermissionLauncher) {
-                    Toast.makeText(this, R.string.notice_notification_enabled, Toast.LENGTH_SHORT).show()
-                    lifecycleScope.launch {
-                        DeviceTokenRepository.getInstance(applicationContext).syncToken()
-                    }
-                }
-            }
-            NotificationPermissionAction.OPEN_APP_SETTINGS -> {
-                showNotificationSettingsDialog(isChannel = false)
-            }
-            NotificationPermissionAction.OPEN_CHANNEL_SETTINGS -> {
-                showNotificationSettingsDialog(isChannel = true)
-            }
-            NotificationPermissionAction.SHOW_GRANTED_TOAST_AND_SYNC -> {
-                Toast.makeText(this, R.string.notice_notification_enabled, Toast.LENGTH_SHORT).show()
-                lifecycleScope.launch {
-                    DeviceTokenRepository.getInstance(applicationContext).syncToken()
-                }
-            }
-        }
-    }
-
-    private fun showNotificationSettingsDialog(isChannel: Boolean) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.notice_notification_blocked_title)
-            .setMessage(R.string.notice_notification_blocked_message)
-            .setPositiveButton(R.string.btn_open_settings) { _, _ ->
-                val intent = if (isChannel && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                        putExtra(Settings.EXTRA_CHANNEL_ID, FriendNotificationService.CHANNEL_ID)
-                    }
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    }
-                } else {
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", packageName, null)
-                    }
-                }
-                try {
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to launch notification settings: ${e.message}")
-                }
-            }
-            .setNegativeButton(R.string.btn_cancel, null)
-            .show()
-    }
-
     private fun setupBottomSheet() {
         bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
     }
 
     private fun setupRecyclerView(roomId: String) {
         roomPlaceAdapter = RoomPlaceAdapter { kakaoPlaceId ->
+            // 상세를 보고 돌아왔을 때 어느 곳을 봤는지 지도에 남는다
+            applyFocusedMarker(kakaoPlaceId)
             startActivity(PlaceDetailActivity.newIntent(this, roomId, kakaoPlaceId))
         }
         binding.rvPlaces.apply {
@@ -443,7 +424,26 @@ class RoomMapActivity : AppCompatActivity() {
             map.moveCamera(CameraUpdateFactory.newCenterPosition(LatLng.from(foundPlace.lat, foundPlace.lng), 15))
         }
 
+        applyFocusedMarker(kakaoPlaceId)
+
         bottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+    }
+
+    /**
+     * 강조할 장소의 라벨만 마스코트 마커로 바꾸고 맨 앞으로 올린다.
+     * 나머지는 기본 핀으로 되돌린다.
+     */
+    private fun applyFocusedMarker(kakaoPlaceId: String?) {
+        focusedPlaceId = kakaoPlaceId
+        val defaultStyles = labelStyles ?: return
+        val highlightStyles = focusLabelStyles
+
+        labelPlaceMap.forEach { (label, placeId) ->
+            val isFocused = placeId == kakaoPlaceId && highlightStyles != null
+            label.setStyles(if (isFocused) highlightStyles else defaultStyles)
+            label.changeRank(if (isFocused) FOCUSED_LABEL_RANK else DEFAULT_LABEL_RANK)
+            label.invalidate()
+        }
     }
 
     private fun setupMapView() {
@@ -451,9 +451,9 @@ class RoomMapActivity : AppCompatActivity() {
             override fun onMapError(error: Exception) {
                 Log.e(TAG, "onMapError: ${error.message} (cause: ${error.cause})", error)
                 val isAuthError = error is com.kakao.vectormap.MapAuthException ||
-                    error.javaClass.name.contains("Auth", ignoreCase = true) ||
-                    error.message?.contains("auth", ignoreCase = true) == true ||
-                    error.message?.contains("인증", ignoreCase = true) == true
+                        error.javaClass.name.contains("Auth", ignoreCase = true) ||
+                        error.message?.contains("auth", ignoreCase = true) == true ||
+                        error.message?.contains("인증", ignoreCase = true) == true
 
                 runOnUiThread {
                     binding.mapView.isVisible = false
@@ -484,6 +484,7 @@ class RoomMapActivity : AppCompatActivity() {
             val kakaoPlaceId = labelPlaceMap[label]
             if (!kakaoPlaceId.isNullOrBlank()) {
                 val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
+                applyFocusedMarker(kakaoPlaceId)
                 startActivity(PlaceDetailActivity.newIntent(this@RoomMapActivity, roomId, kakaoPlaceId))
             }
             true
@@ -493,6 +494,13 @@ class RoomMapActivity : AppCompatActivity() {
     private fun initLabelStyles(kakaoMap: KakaoMap) {
         if (labelStyles != null) return
         labelStyles = KakaoMapHelper.createLabelStyles(this, kakaoMap)
+        focusLabelStyles = KakaoMapHelper.createMascotLabelStyles(
+            context = this,
+            kakaoMap = kakaoMap,
+            widthDimenResId = R.dimen.map_marker_mascot_width,
+            anchorY = FOCUS_MARKER_ANCHOR_Y,
+            withText = true,
+        )
     }
 
     override fun onResume() {
@@ -523,17 +531,63 @@ class RoomMapActivity : AppCompatActivity() {
         binding.btnRetry.setOnClickListener {
             viewModel.retry(roomId)
         }
+        binding.btnAddPlace.setOnClickListener {
+            val roomName = currentSuccessState?.roomName
+                ?: binding.tvTitle.text.toString().ifBlank { roomId }
+            showAddPlaceBottomSheet(roomId, roomName)
+        }
     }
 
-    private fun getCategoryNameResId(category: PlaceCategory): Int {
-        return when (category) {
-            PlaceCategory.ALL -> R.string.category_all
-            PlaceCategory.DINING -> R.string.category_dining
-            PlaceCategory.CAFE -> R.string.category_cafe
-            PlaceCategory.SIGHTS -> R.string.category_sights
-            PlaceCategory.STAY -> R.string.category_stay
-            PlaceCategory.ETC -> R.string.category_etc
+    private fun showAddPlaceBottomSheet(roomId: String, roomName: String) {
+        if (addPlaceBottomSheetDialog?.isShowing == true) return
+
+        val dialogBinding = com.pintrip.app.databinding.BottomSheetAddPlaceBinding.inflate(layoutInflater)
+        addPlaceDialogBinding = dialogBinding
+
+        dialogBinding.tvSheetTitle.setText(R.string.title_add_place)
+        dialogBinding.tvSheetSubtitle.text = getString(R.string.add_place_subtitle_format, roomName)
+
+        dialogBinding.btnClose.setOnClickListener {
+            dismissAddPlaceBottomSheet()
         }
+
+        dialogBinding.cardAddFromPhoto.setOnClickListener {
+            pickPhotoLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+            )
+        }
+
+        dialogBinding.btnSearchLink.setOnClickListener {
+            val linkText = dialogBinding.etLinkInput.text.toString().trim()
+            if (linkText.isEmpty()) return@setOnClickListener
+            if (!ShareLauncher.hasUrl(linkText)) {
+                Toast.makeText(this, R.string.share_receive_error_no_url, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            ShareLauncher.openLink(this, linkText, roomId)
+            dismissAddPlaceBottomSheet()
+        }
+
+        addPlaceBottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this).apply {
+            setContentView(dialogBinding.root)
+            setCancelable(true)
+
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            behavior.skipCollapsed = true
+
+            setOnDismissListener {
+                addPlaceDialogBinding = null
+                addPlaceBottomSheetDialog = null
+            }
+            show()
+        }
+    }
+
+    private fun dismissAddPlaceBottomSheet() {
+        addPlaceBottomSheetDialog?.setOnDismissListener(null)
+        addPlaceBottomSheetDialog?.dismiss()
+        addPlaceBottomSheetDialog = null
+        addPlaceDialogBinding = null
     }
 
     private fun observeViewModel() {
@@ -549,13 +603,23 @@ class RoomMapActivity : AppCompatActivity() {
                     binding.layoutError.isVisible = false
                     currentSuccessState = state
 
-                    binding.toolbar.title = state.roomName
+                    binding.tvTitle.text = state.roomName
+                    val dateText = if (state.startDate != null && state.endDate != null) {
+                        getString(
+                            R.string.date_range_format,
+                            headerDateFormat.format(state.startDate.toDate()),
+                            headerDateFormat.format(state.endDate.toDate()),
+                        )
+                    } else {
+                        getString(R.string.date_to_be_determined)
+                    }
+                    binding.tvSubtitle.text = getString(R.string.room_header_subtitle_format, dateText, state.totalPlaceCount)
 
                     val count = state.placeDetails.size
                     if (state.selectedCategory == PlaceCategory.ALL) {
                         binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_all_format, count)
                     } else {
-                        val categoryName = getString(getCategoryNameResId(state.selectedCategory))
+                        val categoryName = getString(state.selectedCategory.labelResId())
                         binding.tvSheetTitle.text = getString(R.string.room_map_saved_places_category_format, categoryName, count)
                     }
 
@@ -745,7 +809,7 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.layoutResult.isVisible = false
                 dialogBinding.layoutEmpty.isVisible = false
 
-                val categoryName = getString(getCategoryNameResId(state.category))
+                val categoryName = getString(state.category.labelResId())
                 dialogBinding.tvReadySubtitle.text = getString(
                     R.string.shake_ready_subtitle_format,
                     categoryName,
@@ -764,7 +828,8 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.tvResultPlaceName.text = place.name.orEmpty().ifBlank { place.place.searchKeyword }
 
                 val actualCategoryEnum = com.pintrip.app.place.PlaceCategory.fromCode(place.category)
-                val actualCategoryName = getString(getCategoryNameResId(actualCategoryEnum))
+                val actualCategoryName = getString(actualCategoryEnum.labelResId())
+                dialogBinding.tvResultCategoryBadge.text = actualCategoryName
                 val address = place.address.orEmpty()
                 val addedBy = place.place.addedByNickname.orEmpty()
 
@@ -787,7 +852,7 @@ class RoomMapActivity : AppCompatActivity() {
                 dialogBinding.layoutResult.isVisible = false
                 dialogBinding.layoutEmpty.isVisible = true
 
-                val categoryName = getString(getCategoryNameResId(state.category))
+                val categoryName = getString(state.category.labelResId())
                 dialogBinding.tvEmptyMessage.text = when (state.reason) {
                     com.pintrip.app.place.EmptyReason.NO_SAVED_PLACES -> getString(R.string.shake_empty_no_saved_places)
                     com.pintrip.app.place.EmptyReason.NO_AVAILABLE_PLACES -> getString(R.string.shake_empty_no_available_places)
@@ -975,6 +1040,9 @@ class RoomMapActivity : AppCompatActivity() {
         }
 
         Log.d(TAG, "foundPlaces: ${foundPlaces.size}, addedLabels: $addedLabelCount, isStyleNull: ${labelStyles == null}")
+
+        // 라벨을 모두 지우고 다시 만들었으므로 강조 상태를 복원한다
+        focusedPlaceId?.let { applyFocusedMarker(it) }
 
         when (val cmd = success.cameraCommand) {
             is CameraCommand.FitPoints -> {

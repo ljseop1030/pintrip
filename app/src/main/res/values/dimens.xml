@@ -17,10 +17,72 @@
     <dimen name="start_signup_padding">8dp</dimen>
 
     <!-- Text sizes (DESIGN.md Design tokens) -->
+    <dimen name="text_headline_large">24sp</dimen> <!-- 04 회원가입 · 16 공유 수신 헤드라인 -->
     <dimen name="text_title">22sp</dimen>
     <dimen name="text_title_sheet">20sp</dimen>
-    <dimen name="text_tagline">17sp</dimen> <!-- TODO: confirm with Figma 02 Start / 03 Login -->
-    <dimen name="text_body">15sp</dimen>
+    <dimen name="text_tagline">17sp</dimen>
+    <dimen name="text_card_title">16sp</dimen>
+    <dimen name="text_btn_small">15sp</dimen>
+    <dimen name="text_greeting">13sp</dimen> <!-- 인사말 · 카드 설명문 -->
+    <dimen name="text_label">13sp</dimen> <!-- 입력칸 라벨 (03 · 04 · 07) -->
+    <dimen name="text_body">15sp</dimen> <!-- 본문 · 입력칸 텍스트 -->
     <dimen name="text_btn">17sp</dimen>
     <dimen name="text_signup">14sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_badge">12sp</dimen>
+    <dimen name="input_box_corner_radius">14dp</dimen>
+    <dimen name="text_chip">13sp</dimen> <!-- 11 방 홈 카테고리 칩 -->
+    <dimen name="text_chip_room_icon">14sp</dimen> <!-- 07 방 만들기 대표 아이콘 칩 -->
+
+    <!-- 11 Room home floating buttons -->
+    <dimen name="text_travel_btn">14sp</dimen>
+    <dimen name="fab_travel_offset">-20dp</dimen>
+    <dimen name="fab_dice_offset">-80dp</dimen>
+
+    <!-- 05 · 06 · 11 방 헤더 그림자 (시안 0 8px 24px) -->
+    <dimen name="room_header_elevation">8dp</dimen>
+
+    <!--
+      시안의 헤더 top padding(06=56 / 11=48)은 상태바 높이(47)를 이미 포함한 값이다.
+      런타임에 (상태바 + 아래 gap)으로 계산하므로 여기 값은 gap만 담는다.
+    -->
+    <!--
+      06은 시안(상태바 아래 9px)보다 넉넉하게 둔다. 안드로이드 상태바가 기기마다 24~48dp로
+      달라 같은 값이어도 체감이 다르고, 좁게 두면 제목이 상태바에 붙어 보인다.
+    -->
+    <dimen name="room_header_gap_top">32dp</dimen>
+    <!-- 위 gap을 늘린 만큼 아래를 줄여 헤더 높이는 그대로 두고 내용만 내린다 -->
+    <dimen name="room_header_padding_bottom">24dp</dimen>
+    <dimen name="room_map_header_gap_top">4dp</dimen>
+    <dimen name="place_detail_back_gap_top">4dp</dimen>
+    <!-- 하단 바 안쪽 여백. 네비게이션 바 인셋은 런타임에 더한다 -->
+    <dimen name="bottom_bar_padding_bottom">12dp</dimen>
+
+    <!--
+      마스코트는 시안에서 헤더 바깥으로 5px 삐져나간다(bottom: -5px).
+      ConstraintLayout 제약은 padding box 기준이라 paddingBottom만큼 되밀어야 한다.
+    -->
+    <dimen name="room_header_mascot_offset">29dp</dimen> <!-- room_header_padding_bottom 24 + 5 -->
+    <dimen name="room_map_mascot_offset">21dp</dimen> <!-- paddingBottom 16 + 5 -->
+    <!-- 17 장소 선택 후보 선택 항목 / 18 위치 선택 선택된 후보 테두리 -->
+    <dimen name="card_stroke_width_selected">2dp</dimen>
+    <dimen name="card_stroke_width_none">0dp</dimen>
+
+    <!-- 18 위치 선택 후보 라디오 (btn_radio_candidate.xml) -->
+    <dimen name="radio_candidate_size">22dp</dimen>
+    <dimen name="radio_candidate_stroke">2dp</dimen>
+    <dimen name="radio_candidate_stroke_checked">7dp</dimen>
+
+    <!-- 17 장소 선택 체크박스 (btn_checkbox_place.xml) -->
+    <dimen name="checkbox_place_size">24dp</dimen>
+    <dimen name="checkbox_place_corner_radius">8dp</dimen>
+    <dimen name="checkbox_place_stroke">2dp</dimen>
+    <dimen name="checkbox_place_check_size">16dp</dimen>
+    <!--
+      마스코트 마커 폭. 12 장소 상세와 11 "지도에서 보기" 강조가 같은 크기를 쓴다.
+      몸체가 기본 핀(30dp)보다 아주 조금 커 보이는 값 (이미지 폭의 약 54%가 몸체).
+    -->
+    <dimen name="map_marker_mascot_width">64dp</dimen>
+    <!-- 11 -> 12 진입 연출: 콘텐츠가 올라오는 거리 -->
+    <dimen name="place_detail_enter_translation">160dp</dimen>
 </resources>

@@ -16,9 +16,12 @@ open class UserRepository(
     private val db: FirebaseFirestore by lazy { db ?: FirebaseFirestore.getInstance() }
     private val auth: FirebaseAuth by lazy { auth ?: FirebaseAuth.getInstance() }
     companion object {
+        /**
+         * 아바타 배경 색. 시안 12 좋아요 스택의 파스텔 4색과 같은 순서이며,
+         * 글자색 쌍은 `ui/common/AvatarPalette` 가 인덱스로 맞춰 쓴다.
+         */
         val AVATAR_COLORS = listOf(
-            "#3A4A90", "#FF5722", "#4CAF50", "#9C27B0",
-            "#E91E63", "#00BCD4", "#FF9800", "#3F51B5",
+            "#E5EBFE", "#DDF3EA", "#EDE7FB", "#FFEDE3",
         )
     }
 

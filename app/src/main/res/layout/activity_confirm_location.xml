@@ -5,38 +5,43 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/pintrip_bg_gray"
+    android:background="@color/pintrip_surface"
     tools:context=".extract.ConfirmLocationActivity">
 
-    <!-- Top App Bar -->
+    <!-- Top App Bar Header -->
     <LinearLayout
         android:id="@+id/layoutHeader"
         android:layout_width="0dp"
         android:layout_height="56dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
+        android:paddingHorizontal="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
+        <ImageView
             android:id="@+id/btnBack"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
+            android:padding="10dp"
             android:src="@drawable/ic_arrow_back"
-            app:tint="@color/text_dark" />
+            app:tint="@color/text_dark_navy" />
 
         <TextView
             android:id="@+id/tvHeaderTitle"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:fontFamily="@font/pretendard_bold"
+            android:gravity="start|center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
             android:text="@string/confirm_location_title"
-            android:textColor="@color/text_dark"
-            android:textSize="18sp"
+            android:textColor="@color/text_dark_navy"
+            android:textSize="16sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -53,7 +58,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="24dp">
 
             <!-- Recognized Text Card -->
             <com.google.android.material.card.MaterialCardView
@@ -69,15 +76,17 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
                     <TextView
                         android:id="@+id/tvRecognizedTextLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/pretendard_bold"
                         android:text="@string/confirm_location_recognized_text_label"
                         android:textColor="@color/badge_check_text"
-                        android:textSize="13sp"
+                        android:textSize="@dimen/text_caption"
                         android:textStyle="bold" />
 
                     <TextView
@@ -85,24 +94,25 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:textColor="@color/text_dark"
-                        android:textSize="16sp"
+                        android:fontFamily="@font/pretendard_bold"
+                        android:textColor="@color/text_dark_navy"
+                        android:textSize="15sp"
                         android:textStyle="bold"
-                        tools:text="&quot;3. Momos Coffee&quot;" />
+                        tools:text="&quot;3. 모모스커피&quot;" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Candidates Section Title -->
             <TextView
                 android:id="@+id/tvCandidatesGuide"
+                style="@style/Widget.Pintrip.TextView.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
                 android:layout_marginBottom="12dp"
-                android:textColor="@color/text_dark"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                tools:text="후보 3개 중 선택" />
+                android:textColor="@color/text_dark_navy"
+                android:textSize="18sp"
+                tools:text="3개 후보 중 선택" />
 
             <!-- All Candidates Outside Region Notice -->
             <TextView
@@ -110,9 +120,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
+                android:fontFamily="@font/pretendard"
                 android:text="@string/confirm_location_all_candidates_outside_region"
                 android:textColor="@color/badge_exception_text"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
@@ -124,88 +135,85 @@
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_confirm_candidate" />
 
-            <!-- Manual Search Placeholder Section -->
+            <!-- Manual Search Placeholder Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardManualSearch"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_height="52dp"
+                android:layout_marginTop="10dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/card_stroke"
+                app:strokeColor="@color/button_outlined_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
+                    android:baselineAligned="false"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="16dp">
+                    android:paddingHorizontal="16dp">
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_search"
-                        app:tint="@color/text_sub_gray" />
+                        app:tint="@color/button_outlined_text" />
 
                     <TextView
                         android:id="@+id/tvManualSearchHint"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
+                        android:layout_marginStart="10dp"
+                        android:fontFamily="@font/pretendard_bold"
                         android:text="@string/confirm_location_manual_search_placeholder"
-                        android:textColor="@color/text_sub_gray"
-                        android:textSize="14sp" />
+                        android:textColor="@color/button_outlined_text"
+                        android:textSize="@dimen/text_signup"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Bottom Action Buttons Container -->
+    <!-- Bottom Action Bar -->
     <LinearLayout
         android:id="@+id/layoutBottomBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_bottom_sheet"
+        android:elevation="8dp"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- Exclude Button -->
+        <!-- Exclude Button (removed in Figma UI v2, kept hidden for code compatibility) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExclude"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Pintrip.Button.Secondary"
             android:layout_width="0dp"
             android:layout_height="54dp"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:text="@string/confirm_location_btn_exclude"
-            android:textColor="@color/text_dark"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/card_stroke"
-            app:strokeWidth="1dp" />
+            android:visibility="gone" />
 
         <!-- Select This Location Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectThisLocation"
+            style="@style/Widget.Pintrip.Button.Primary"
             android:layout_width="0dp"
             android:layout_height="54dp"
-            android:layout_marginStart="8dp"
-            android:layout_weight="2"
-            android:text="@string/confirm_location_btn_select_this_location"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:backgroundTint="@color/btn_primary_bg"
-            app:cornerRadius="12dp" />
+            android:layout_weight="1"
+            android:text="@string/confirm_location_btn_select_this_location" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
