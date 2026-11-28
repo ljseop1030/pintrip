@@ -2,7 +2,6 @@ package com.pintrip.app.room
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Patterns
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
@@ -248,7 +247,7 @@ class RoomListActivity : AppCompatActivity() {
     private fun submitLink() {
         val text = binding.etLink.text?.toString()?.trim().orEmpty()
         if (text.isEmpty()) return
-        if (!Patterns.WEB_URL.matcher(text).find()) {
+        if (!ShareLauncher.hasUrl(text)) {
             Toast.makeText(this, R.string.share_receive_error_no_url, Toast.LENGTH_SHORT).show()
             return
         }

@@ -12,6 +12,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -41,6 +42,7 @@ import com.kakao.vectormap.label.LabelTextBuilder
 import com.pintrip.app.R
 import com.pintrip.app.data.model.PlaceDetail
 import com.pintrip.app.data.repository.DeviceTokenRepository
+import com.pintrip.app.extract.ShareLauncher
 import com.pintrip.app.databinding.ActivityRoomMapBinding
 import com.pintrip.app.notification.FriendNotificationService
 import com.pintrip.app.place.InviteCodeUiState
@@ -106,16 +108,13 @@ class RoomMapActivity : AppCompatActivity() {
     private var addPlaceBottomSheetDialog: com.google.android.material.bottomsheet.BottomSheetDialog? = null
     private var addPlaceDialogBinding: com.pintrip.app.databinding.BottomSheetAddPlaceBinding? = null
 
-    private val pickPhotoLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri != null) {
+    // 06 내 여행방과 같은 경로(ShareLauncher)를 써서 장수 제한과 링크 검증을 맞춘다
+    private val pickPhotoLauncher = registerForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(ShareLauncher.MAX_IMAGES),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
             val roomId = intent.getStringExtra(EXTRA_ROOM_ID).orEmpty()
-            val intent = com.pintrip.app.extract.ShareReceiveActivity.newIntent(this, roomId).apply {
-                action = Intent.ACTION_SEND
-                type = "image/*"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(intent)
+            ShareLauncher.openImages(this, uris, roomId)
             dismissAddPlaceBottomSheet()
         }
     }
@@ -554,23 +553,19 @@ class RoomMapActivity : AppCompatActivity() {
 
         dialogBinding.cardAddFromPhoto.setOnClickListener {
             pickPhotoLauncher.launch(
-                androidx.activity.result.PickVisualMediaRequest(
-                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                )
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
             )
         }
 
         dialogBinding.btnSearchLink.setOnClickListener {
             val linkText = dialogBinding.etLinkInput.text.toString().trim()
-            if (linkText.isNotBlank()) {
-                val intent = com.pintrip.app.extract.ShareReceiveActivity.newIntent(this, roomId).apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, linkText)
-                }
-                startActivity(intent)
-                dismissAddPlaceBottomSheet()
+            if (linkText.isEmpty()) return@setOnClickListener
+            if (!ShareLauncher.hasUrl(linkText)) {
+                Toast.makeText(this, R.string.share_receive_error_no_url, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
+            ShareLauncher.openLink(this, linkText, roomId)
+            dismissAddPlaceBottomSheet()
         }
 
         addPlaceBottomSheetDialog = com.google.android.material.bottomsheet.BottomSheetDialog(this).apply {

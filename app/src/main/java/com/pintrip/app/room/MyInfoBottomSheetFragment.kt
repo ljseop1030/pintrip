@@ -102,7 +102,11 @@ class MyInfoBottomSheetFragment : BottomSheetDialogFragment() {
                     }
                 )
             } else {
-                NotificationSettingsHandler.showNotificationSettingsDialog(activity, isChannel = false)
+                NotificationSettingsHandler.showNotificationSettingsDialog(
+                    activity,
+                    isChannel = false,
+                    isTurningOff = true,
+                )
                 updateNotificationSwitchState()
             }
         }

@@ -306,7 +306,7 @@ class PlaceDetailActivity : AppCompatActivity() {
         val addedBy = state.addedByUserInfo
         binding.tvAddedByNickname.text = addedBy.nickname
         binding.tvAddedByAvatar.text = addedBy.nickname.take(1).uppercase()
-        val addedByColors = AvatarPalette.colorsFor(addedBy.avatarColor, addedBy.nickname)
+        val addedByColors = AvatarPalette.colorsFor(addedBy.avatarColor, addedBy.uid)
         val addedByBg = ContextCompat.getDrawable(this, R.drawable.bg_circle_avatar)?.mutate()
         addedByBg?.setTint(ContextCompat.getColor(this, addedByColors.backgroundRes))
         binding.tvAddedByAvatar.background = addedByBg

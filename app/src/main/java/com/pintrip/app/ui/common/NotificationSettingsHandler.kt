@@ -38,7 +38,11 @@ object NotificationSettingsHandler {
         return isRuntimeGranted && areAppNotificationsEnabled && isChannelEnabled
     }
 
-    fun showNotificationSettingsDialog(context: Context, isChannel: Boolean) {
+    /**
+     * @param isTurningOff 사용자가 알림을 끄려는 경우. 안드로이드는 앱이 알림 권한을 스스로
+     *   해제하거나 채널을 끌 수 없어서 끄기도 기기 설정으로 보내야 하므로, 안내 문구만 바꾼다.
+     */
+    fun showNotificationSettingsDialog(context: Context, isChannel: Boolean, isTurningOff: Boolean = false) {
         val intent = if (isChannel && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
                 putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -54,9 +58,20 @@ object NotificationSettingsHandler {
             }
         }
 
+        val titleResId = if (isTurningOff) {
+            R.string.notice_notification_turn_off_title
+        } else {
+            R.string.notice_notification_blocked_title
+        }
+        val messageResId = if (isTurningOff) {
+            R.string.notice_notification_turn_off_message
+        } else {
+            R.string.notice_notification_blocked_message
+        }
+
         AlertDialog.Builder(context)
-            .setTitle(R.string.notice_notification_blocked_title)
-            .setMessage(R.string.notice_notification_blocked_message)
+            .setTitle(titleResId)
+            .setMessage(messageResId)
             .setPositiveButton(R.string.btn_open_settings) { _, _ ->
                 try {
                     context.startActivity(intent)
